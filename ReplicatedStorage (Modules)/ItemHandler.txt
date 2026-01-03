@@ -31,16 +31,43 @@ end
 function module.DROP_ORE(PLOT, MINE, DROP_PART, ORE_SIZE, ORE_COLOR, ORE_MATERIAL, ORE_WORTH)
 	local PLOT_OWNER = Plrs:FindFirstChild(PLOT.Owner.Value)
 	if PLOT_OWNER then
-		local ORE = Instance.new("Part")
-		ORE.Name = MINE.Name
-		ORE.Size = ORE_SIZE
-		local CASH_VALUE = Instance.new("NumberValue", ORE)
-		CASH_VALUE.Name = "Cash"
-		CASH_VALUE.Value = ORE_WORTH
-		ORE.Color = ORE_COLOR
-		ORE.Material = ORE_MATERIAL
-		ORE.CFrame = DROP_PART.CFrame
-		return ORE, CASH_VALUE
+		-- Get the mine info to find the custom model name
+		local MINE_INFO = require(MINE.ItemStats)
+		local modelName = MINE_INFO.OreModelName or "StoneOreModel"
+
+		-- Look for ore models in the OreModels folder
+		local oreFolder = RepStorage:FindFirstChild("OreModels")
+		if not oreFolder then
+			warn("OreModels folder not found in ReplicatedStorage!")
+			return nil, nil
+		end
+
+		local ORE_MODEL = oreFolder:FindFirstChild(modelName)
+
+		if ORE_MODEL then
+			-- Make sure it has a PrimaryPart
+			if not ORE_MODEL.PrimaryPart then
+				warn(modelName .. " does not have a PrimaryPart set!")
+				return nil, nil
+			end
+
+			-- Clone the model
+			local ORE = ORE_MODEL:Clone()
+			ORE.Name = MINE.Name
+
+			-- Add the cash value to the model
+			local CASH_VALUE = Instance.new("NumberValue", ORE)
+			CASH_VALUE.Name = "Cash"
+			CASH_VALUE.Value = ORE_WORTH
+
+			-- Position the ore at the drop point
+			ORE:SetPrimaryPartCFrame(DROP_PART.CFrame)
+
+			return ORE, CASH_VALUE
+		else
+			warn("Ore model '" .. modelName .. "' not found in OreModels folder!")
+			return nil, nil
+		end
 	end
 	return nil, nil
 end
