@@ -39,6 +39,8 @@ local function SAVE_DATA(Plr)
 	end
 	-- Save the Player's Inventory!
 	plr_data["InvItemSaveData"] = _G["global_data"][Plr.Name]["Items"]
+	-- Save Research Progress
+	plr_data["ResearchData"] = _G["global_data"][Plr.Name]["Research"]
 	-- Save the Player's Plot Items!
 	local base_data = game.HttpService:JSONEncode(DATA_FUNCTION_HANDLING.UNLOAD_PLOT(Plr))
 	plr_data["PlotItemPlaced"] = base_data
@@ -77,6 +79,13 @@ local function LOAD_DATA(Plr)
 		val_obj.Name = val_name
 		val_obj.Value = plr_data["setting"..val_name] or val_data["DEFAULT"]
 	end
+	-- Research Mode Toggle
+	if not Plr:FindFirstChild("ResearchMode") then
+		local researchMode = Instance.new("BoolValue", Plr)
+		researchMode.Name = "ResearchMode"
+		researchMode.Value = false
+		print("Created ResearchMode for", Plr.Name)
+	end
 	-- Cash Loading
 	local plr_cash = Instance.new("NumberValue", ServerStorage.ServerLockedPlayerInfo.PlayerCash)
 	plr_cash.Name = Plr.Name
@@ -107,6 +116,12 @@ local function LOAD_DATA(Plr)
 			end
 		end
 	end
+	-- Load Research Progress
+	_G["global_data"][Plr.Name]["Research"] = plr_data["ResearchData"] or {
+		CompletedObjectives = {},
+		ActiveObjectives = {},
+		ObjectiveProgress = {},
+	}
 	-- Load the Player's Plot Items!
 	local plot_data = plr_data["PlotItemPlaced"] or {}
 	if plot_data ~= {} then
