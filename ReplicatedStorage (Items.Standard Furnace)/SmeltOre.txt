@@ -1,0 +1,15 @@
+local RepStorage = game:GetService("ReplicatedStorage")
+local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
+local ITEM_INFO = require(script.Parent.Parent.ItemStats)
+local PLOT = script.Parent.Parent.Parent.Parent
+
+script.Parent.Smelt.Touched:Connect(function(ORE)
+	if ORE:FindFirstChild("Cash") then
+		if ORE.Cash.Value >= 0 then
+			local PROCESSED = ITEM_HANDLER.PROCESS_ORE(PLOT, script.Parent.Parent, script.Parent.Smelt, ITEM_INFO.Addition, ITEM_INFO.Multiplier, ORE)
+			if PROCESSED then
+				ORE:Destroy()
+			end
+		end
+	end
+end)

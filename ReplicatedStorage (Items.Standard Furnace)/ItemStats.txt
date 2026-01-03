@@ -1,0 +1,24 @@
+local module = {}
+
+module.ItemId = 3
+module.TierId = 1
+module.Description = "The key to collecting that sweet cash from ores!"
+module.ThumbnailId = "rbxassetid://7435970470"
+module.Cost = 100
+module.CostType = "Cash"
+module.ItemType = "ProcessorTab"
+module.TabItem = "Processor"
+
+module.ConveyorSpeed = 0
+module.Multiplier = 10
+module.Addition = 0
+module.DropWorth = 0
+module.DropSize = 0
+module.DropSpeed = 0
+
+module.Creators = {"Zonix_Official"}
+module.SpecialTags = {
+	
+}
+
+return module
