@@ -5,17 +5,18 @@ local ITEM_INFO = require(script.Parent.Parent.ItemStats)
 local PLOT = script.Parent.Parent.Parent.Parent
 
 while wait(ITEM_INFO.DropSpeed) do
-	-- Plot Owner is checked in this loop simply due to it preventing the mine from dropping ores if it somehow exists and the plot owner isn't there.
 	local plot_owner = Plrs:FindFirstChild(PLOT.Owner.Value)
 	if plot_owner ~= nil then
-		-- Check if the mines are active
 		if plot_owner.Settings.MinesActive.Value then
-			-- Create the ore
 			local ORE, CASH_VALUE = ITEM_HANDLER.DROP_ORE(PLOT, script.Parent.Parent, script.Parent.Drop, Vector3.new(ITEM_INFO.DropSize, ITEM_INFO.DropSize, ITEM_INFO.DropSize), ITEM_INFO.DropColor, ITEM_INFO.DropMaterial, ITEM_INFO.DropWorth)
 			if ORE then
-				-- Drop the ore then set the network ownership to the plot owner for that sweet client-side ore handling!
 				ORE.Parent = PLOT.MiscInfo.OresDropped
-				ORE:SetNetworkOwner(plot_owner)
+				-- Set network ownership properly for models vs parts
+				if ORE:IsA("Model") and ORE.PrimaryPart then
+					ORE.PrimaryPart:SetNetworkOwner(plot_owner)
+				elseif ORE:IsA("BasePart") then
+					ORE:SetNetworkOwner(plot_owner)
+				end
 			end
 		end
 	end
