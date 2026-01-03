@@ -11,9 +11,18 @@ for I, PLOT in pairs(workspace.Plots:GetChildren()) do
 		local FOLDER = Instance.new("Folder", PLOT.MiscInfo)
 		FOLDER.Name = MISC_FOLDER_NAME
 	end
-	PLOT.BasePlot.Touched:Connect(function(ORE)
-		if ORE:FindFirstChild("Cash") then
-			ORE:Destroy()
+
+	-- Updated to handle both Parts and Models
+	PLOT.BasePlot.Touched:Connect(function(HIT)
+		-- Check if the hit part has a Cash value (old system - single part)
+		if HIT:FindFirstChild("Cash") then
+			HIT:Destroy()
+		else
+			-- Check if the hit part's parent is a model with Cash value (new system - model)
+			local parent = HIT.Parent
+			if parent and parent:IsA("Model") and parent:FindFirstChild("Cash") then
+				parent:Destroy()
+			end
 		end
 	end)
 end
