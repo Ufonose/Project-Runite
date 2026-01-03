@@ -6,6 +6,27 @@ local MainLib = require(RepStorage.Modules.MainLib)
 local DataHandling = {}
 
 local function LOAD_ITEM_BASICS(ITEM)
+	-- ADD THIS: Add layer information when loading items
+	if ITEM:FindFirstChild("ItemStats") then
+		local itemStats = require(ITEM.ItemStats)
+
+		-- Add PlacementLayer if it doesn't exist
+		if not ITEM:FindFirstChild("PlacementLayer") then
+			local layerValue = Instance.new("IntValue", ITEM)
+			layerValue.Name = "PlacementLayer"
+
+			if type(itemStats.PlacementLayer) == "table" then
+				-- If multiple layers, store as a string
+				layerValue.Value = itemStats.PlacementLayer[1]
+				local layersString = Instance.new("StringValue", ITEM)
+				layersString.Name = "PlacementLayers"
+				layersString.Value = table.concat(itemStats.PlacementLayer, ",")
+			else
+				layerValue.Value = itemStats.PlacementLayer or 1
+			end
+		end
+	end
+
 	for I, DESCENDANT in pairs(ITEM:GetDescendants()) do
 		if DESCENDANT:IsA("Script") then
 			DESCENDANT.Disabled = DESCENDANT:FindFirstChild("ForceDisabled")
