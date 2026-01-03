@@ -1,0 +1,19 @@
+local ORIG_COLOR = script.Parent.Upgrade.Color
+local RepStorage = game:GetService("ReplicatedStorage")
+local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
+local ITEM_INFO = require(script.Parent.Parent.ItemStats)
+local PLOT = script.Parent.Parent.Parent.Parent
+
+script.Parent.Upgrade.Touched:Connect(function(ORE)
+	if ORE:FindFirstChild("Cash") then
+		local PLOT = script.Parent.Parent.Parent.Parent
+		local UPGRADE_ORE = ITEM_HANDLER.UPGRADE_ORE(PLOT, script.Parent.Parent, ORE, ITEM_INFO.Addition, ITEM_INFO.Multiplier, ITEM_INFO.ItemId, 30)
+		if UPGRADE_ORE == true then
+			
+		elseif UPGRADE_ORE == false then
+			script.Parent.Upgrade.Color = Color3.fromRGB(99, 99, 99)
+			wait(.2)
+			script.Parent.Upgrade.Color = ORIG_COLOR
+		end
+	end
+end)
