@@ -1,0 +1,26 @@
+local module = {}
+
+module.ItemId = 1
+module.TierId = 1
+module.Description = "A miners starting place...\nThis will mine ores from the underground and give you sweet cash!"
+module.ThumbnailId = "rbxassetid://7435467441"
+module.Cost = 50
+module.CostType = "Cash"
+module.ItemType = "MineTab"
+module.TabItem = "Mine"
+
+module.ConveyorSpeed = 0
+module.Multiplier = 0
+module.Addition = 0
+module.DropWorth = 1
+module.DropSize = 1
+module.DropSpeed = 1.15
+module.DropColor = Color3.fromRGB(116, 116, 116)
+module.DropMaterial = Enum.Material.Slate
+
+module.Creators = {"Zonix_Official"}
+module.SpecialTags = {
+
+}
+
+return module
