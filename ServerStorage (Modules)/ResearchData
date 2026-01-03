@@ -1,0 +1,104 @@
+local ResearchData = {}
+
+-- Define all research objectives
+ResearchData.Objectives = {
+	-- Tier 1 - Starting objectives
+	{
+		Id = 1,
+		Name = "Stone Collector",
+		Description = "Collect raw stone ore",
+		Tier = 1,
+		RequiredObjectives = {}, -- No prerequisites
+		Requirements = {
+			{ItemName = "StoneOreModel", Amount = 50}, -- Using actual ore model name
+		},
+		Rewards = {
+			ResearchTokens = 5,
+			UnlockMachines = {}, -- Add machine IDs you want to unlock
+		},
+		Icon = "rbxassetid://7435467441", -- Using stone mine icon
+	},
+
+	{
+		Id = 2,
+		Name = "Stone Refiner",
+		Description = "Refine stone into processed ore",
+		Tier = 1,
+		RequiredObjectives = {},
+		Requirements = {
+			{ItemName = "StoneOreModel_Refined", Amount = 30}, -- Using refined ore model name
+		},
+		Rewards = {
+			ResearchTokens = 8,
+			UnlockMachines = {},
+		},
+		Icon = "rbxassetid://7435467441",
+	},
+
+	-- Tier 2 - Requires Tier 1 completion
+	{
+		Id = 3,
+		Name = "Master Stone Processor",
+		Description = "Process large quantities of stone",
+		Tier = 2,
+		RequiredObjectives = {1, 2}, -- Need to complete both tier 1 objectives
+		Requirements = {
+			{ItemName = "StoneOreModel", Amount = 200},
+			{ItemName = "StoneOreModel_Refined", Amount = 100},
+		},
+		Rewards = {
+			ResearchTokens = 25,
+			UnlockMachines = {9},
+		},
+		Icon = "rbxassetid://7435467441",
+	},
+}
+
+-- Get objective by ID
+function ResearchData.GetObjective(objectiveId)
+	for _, objective in pairs(ResearchData.Objectives) do
+		if objective.Id == objectiveId then
+			return objective
+		end
+	end
+	return nil
+end
+
+-- Get all objectives for a tier
+function ResearchData.GetObjectivesByTier(tier)
+	local objectives = {}
+	for _, objective in pairs(ResearchData.Objectives) do
+		if objective.Tier == tier then
+			table.insert(objectives, objective)
+		end
+	end
+	return objectives
+end
+
+-- Get highest tier available
+function ResearchData.GetMaxTier()
+	local maxTier = 1
+	for _, objective in pairs(ResearchData.Objectives) do
+		if objective.Tier > maxTier then
+			maxTier = objective.Tier
+		end
+	end
+	return maxTier
+end
+
+-- Check if player can start an objective (prerequisites met)
+function ResearchData.CanStartObjective(objectiveId, completedObjectives)
+	local objective = ResearchData.GetObjective(objectiveId)
+	if not objective then return false end
+
+	-- Check if all required objectives are completed
+	for _, requiredId in pairs(objective.RequiredObjectives) do
+		if not table.find(completedObjectives, requiredId) then
+			return false
+		end
+	end
+
+	return true
+end
+
+return ResearchData
