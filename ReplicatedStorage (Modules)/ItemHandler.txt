@@ -55,6 +55,11 @@ function module.DROP_ORE(PLOT, MINE, DROP_PART, ORE_SIZE, ORE_COLOR, ORE_MATERIA
 			local ORE = ORE_MODEL:Clone()
 			ORE.Name = MINE.Name
 
+			-- ADD THIS: Store the original ore model name for refinement
+			local oreModelTag = Instance.new("StringValue", ORE)
+			oreModelTag.Name = "OreModelName"
+			oreModelTag.Value = modelName
+
 			-- Add the cash value to the model
 			local CASH_VALUE = Instance.new("NumberValue", ORE)
 			CASH_VALUE.Name = "Cash"
