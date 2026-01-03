@@ -1,0 +1,170 @@
+-- Services
+local RepStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local Plrs = game:GetService("Players")
+-- Modules
+local MAIN_LIB = require(RepStorage.Modules.MainLib)
+-- Variables
+	-- Arrays
+local DEBOUNCE = {}
+
+warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] loading...")
+
+function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
+	if Plr and PLACED_ITEMS and ITEMS then
+		local ITEM_FAILED = false
+		for I, ITEM in pairs(ITEMS) do
+			local ITEM_REP = RepStorage.Items:FindFirstChild(ITEM["ITEM_NAME"])
+			local ITEM_INFO = require(ITEM_REP.ItemStats)
+			if _G["global_data"][Plr.Name]["Items"][ITEM_INFO.ItemId]["Amount"] > 0 then
+				local REAL_ITEM = ITEM_REP:Clone()
+				REAL_ITEM:SetPrimaryPartCFrame(ITEM["ITEM_LOCATION"])
+				REAL_ITEM.Parent = PLACED_ITEMS
+				_G["global_data"][Plr.Name]["Items"][ITEM_INFO.ItemId]["Amount"] -= 1
+				spawn(function()
+					for E, DESCENDANT in pairs(REAL_ITEM:GetDescendants()) do
+						if DESCENDANT:IsA("Script") then
+							DESCENDANT.Disabled = DESCENDANT:FindFirstChild("ForceDisabled")
+						end
+						if E%50 == 0 then
+							wait()
+						end
+					end
+					RepStorage.Events.InventoryUpdate:FireClient(Plr)
+				end)
+			else
+				ITEM_FAILED = true
+			end
+		end
+		return not ITEM_FAILED
+	end
+	return false
+end
+
+function GET_INVENTORY(Plr, INVENTORY_TYPE)
+	local INV_GETTING = Plr		-- Make this be the Plot Owner if possible but if not be the Plr
+	return _G["global_data"][INV_GETTING.Name][INVENTORY_TYPE]
+end
+
+function BUY_ITEM(Plr, ITEM_ID, AMOUNT)
+	local CASH = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
+	if CASH then
+		local CANT_BUY_TYPES = {"special", "cantbuy"}
+		local AMOUNT = AMOUNT or 1
+		local ITEM_ID = ITEM_ID
+		local COST_VAL = 0
+		if type(ITEM_ID) ~= "table" then
+			ITEM_ID = {ITEM_ID}
+		end
+		local BOUGHT_ITEMS = {}
+		for I, REAL_ID in pairs(ITEM_ID) do
+			local REAL_ITEM = MAIN_LIB.ITEM_FROM_ID(REAL_ID)
+			local ITEM_INFO = require(REAL_ITEM.ItemStats)
+			if table.find(CANT_BUY_TYPES, ITEM_INFO.ItemType) == nil then	-- string.lower(ITEM_INFO.ItemType) == "special" or string.lower(ITEM_INFO.CostType) == "cantbuy" then
+				if CASH.Value >= math.floor(ITEM_INFO.Cost*AMOUNT) then
+					COST_VAL += math.floor(ITEM_INFO.Cost*AMOUNT)
+					BOUGHT_ITEMS[#BOUGHT_ITEMS+1] = REAL_ID
+				end
+			end
+		end
+		if #BOUGHT_ITEMS == #ITEM_ID then
+			CASH.Value -= COST_VAL
+			for I, ITEM_ID in pairs(BOUGHT_ITEMS) do
+				ServerStorage.Events.ItemGive:Invoke(Plr, ITEM_ID, AMOUNT)
+			end
+			return true
+		end
+	end
+	return false
+end
+
+function SELL_ITEM(Plr, ITEMS)
+	local CASH = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
+	if CASH then
+		local CANT_SELL_TYPES = {"special", "cantbuy"}
+		local ITEM_ID = ITEMS
+		local COST_VAL = 0
+		if type(ITEM_ID) ~= "table" then
+			ITEM_ID = {ITEM_ID}
+		end
+		for I, REAL_ID in pairs(ITEM_ID) do
+			local ITEM_INFO = require(REAL_ID.ItemStats)
+			if table.find(CANT_SELL_TYPES, ITEM_INFO.ItemType) == nil then	-- string.lower(ITEM_INFO.ItemType) == "special" or string.lower(ITEM_INFO.CostType) == "cantbuy" then
+				if CASH.Value >= math.floor(ITEM_INFO.Cost) then
+					CASH.Value += ITEM_INFO.Cost
+					REAL_ID:Destroy()
+				end
+			end
+		end
+		return true
+	end
+	return false
+end
+
+function WITHDRAW_ITEMS(Plr, ITEMS)
+	if DEBOUNCE[Plr.Name] then
+		return false
+	else
+		DEBOUNCE[Plr.Name] = true
+		spawn(function()
+			wait(.3)
+			DEBOUNCE[Plr.Name] = nil
+		end)
+	end
+	if Plr then
+		for I, ITEM in pairs(ITEMS) do
+			local ITEM_INFO = require(ITEM.ItemStats)
+			_G["global_data"][Plr.Name]["Items"][ITEM_INFO.ItemId]["Amount"] += 1
+			ITEM:Destroy()
+		end
+		RepStorage.Events.InventoryUpdate:FireClient(Plr)
+		return true
+	end
+	return false
+end
+
+function UPDATE_STORT(Plr, SORT_VAL_NAME, NEW_SORT)
+	local SORT_VAL = Plr:FindFirstChild(SORT_VAL_NAME)
+	if SORT_VAL then
+		if NEW_SORT ~= SORT_VAL.Value then
+			SORT_VAL.Value = NEW_SORT
+			return true
+		end
+	end
+	return false
+end
+
+function toggle_update(plr, toggle_name)
+	local real_setting = plr.Settings:FindFirstChild(toggle_name)
+	if real_setting ~= nil then
+		real_setting.Value = not real_setting.Value
+		return true
+	end
+	warn(toggle_name.." doesn't exist for "..plr.Name.." so it's either failed to load or not been implemented!")
+	return false
+end
+
+-- Function/Event Responses
+RepStorage.Events.GetInventoryType.OnServerInvoke = GET_INVENTORY
+RepStorage.Events.WithdrawItems.OnServerInvoke = WITHDRAW_ITEMS
+RepStorage.Events.UpdateStorting.OnServerInvoke = UPDATE_STORT
+RepStorage.Events.UpdateToggle.OnServerInvoke = toggle_update
+RepStorage.Events.PlaceItem.OnServerInvoke = PLACE_ITEM
+RepStorage.Events.SellItem.OnServerInvoke = SELL_ITEM
+RepStorage.Events.BuyItem.OnServerInvoke = BUY_ITEM
+
+-- Server Locked Stuff
+function ItemGive(Plr, ITEM_ID, AMOUNT)
+	if _G["global_data"][Plr.Name]["Items"][ITEM_ID] then
+		_G["global_data"][Plr.Name]["Items"][ITEM_ID]["Amount"] += AMOUNT
+		RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "You got x"..AMOUNT.." "..MAIN_LIB.ITEM_FROM_ID(ITEM_ID).Name.."'s!"})
+		RepStorage.Events.InventoryUpdate:FireClient(Plr)
+		return true
+	end
+	return false
+end
+
+-- Server Locked Functions/Events
+ServerStorage.Events.ItemGive.OnInvoke = ItemGive
+
+warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] loaded!")
