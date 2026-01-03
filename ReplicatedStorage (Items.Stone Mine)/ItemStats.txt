@@ -17,6 +17,7 @@ module.DropSize = 1
 module.DropSpeed = 1.15
 module.DropColor = Color3.fromRGB(116, 116, 116)
 module.DropMaterial = Enum.Material.Slate
+module.OreModelName = "StoneOreModel"
 
 module.Creators = {"Zonix_Official"}
 module.SpecialTags = {
