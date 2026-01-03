@@ -4,13 +4,26 @@ local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
 local ITEM_INFO = require(script.Parent.Parent.ItemStats)
 local PLOT = script.Parent.Parent.Parent.Parent
 
-script.Parent.Upgrade.Touched:Connect(function(ORE)
-	if ORE:FindFirstChild("Cash") then
-		local PLOT = script.Parent.Parent.Parent.Parent
+script.Parent.Upgrade.Touched:Connect(function(HIT)
+	local ORE = nil
+	
+	-- Check if the hit part itself has Cash (old system - single part)
+	if HIT:FindFirstChild("Cash") then
+		ORE = HIT
+	else
+		-- Check if the hit part's parent is a model with Cash (new system - model)
+		if HIT.Parent and HIT.Parent:IsA("Model") and HIT.Parent:FindFirstChild("Cash") then
+			ORE = HIT.Parent
+		end
+	end
+	
+	-- Upgrade the ore if we found one
+	if ORE and ORE:FindFirstChild("Cash") then
 		local UPGRADE_ORE = ITEM_HANDLER.UPGRADE_ORE(PLOT, script.Parent.Parent, ORE, ITEM_INFO.Addition, ITEM_INFO.Multiplier, ITEM_INFO.ItemId, 30)
 		if UPGRADE_ORE == true then
-			
+			-- Successfully upgraded
 		elseif UPGRADE_ORE == false then
+			-- Hit the upgrade limit, flash gray
 			script.Parent.Upgrade.Color = Color3.fromRGB(99, 99, 99)
 			wait(.2)
 			script.Parent.Upgrade.Color = ORIG_COLOR
