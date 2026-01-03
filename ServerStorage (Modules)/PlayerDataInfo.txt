@@ -1,12 +1,6 @@
 local PLAYER_DATA = {}
 
 PLAYER_DATA.SETTINGS_VALUES = {
-	--[[
-	["Template"] = {
-		["VALUE_TYPE"] = "BoolValue",
-		["DEFAULT"] = true,
-	},
-	]]
 	["MinesActive"] = {
 		["VALUE_TYPE"] = "BoolValue",
 		["DEFAULT"] = true,
@@ -14,12 +8,6 @@ PLAYER_DATA.SETTINGS_VALUES = {
 }
 
 PLAYER_DATA.SIMPLE_VALS = {
-	--[[
-	["Template"] = {
-		["VALUE_TYPE"] = "NumberValue",
-		["DEFAULT"] = 500,
-	},
-	]]
 	["Rebirth"] = {
 		["VALUE_TYPE"] = "NumberValue",
 		["DEFAULT"] = 0,
@@ -36,10 +24,16 @@ PLAYER_DATA.SIMPLE_VALS = {
 		["VALUE_TYPE"] = "NumberValue",
 		["DEFAULT"] = 0,
 	},
+	-- ADD THIS:
+	["ResearchTokens"] = {
+		["VALUE_TYPE"] = "NumberValue",
+		["DEFAULT"] = 0,
+	},
 }
 
 PLAYER_DATA.INVENTORY_TYPES = {
 	"Items",
+	"CraftedItems", -- ADD THIS: For items like swords, helms, etc.
 }
 
 return PLAYER_DATA
