@@ -1,0 +1,65 @@
+-- Services
+local RepStorage = game:GetService("ReplicatedStorage")
+-- Modules
+local ITEM_HANDLING = require(RepStorage.Modules.ItemHandler)
+local TIER_HANDLER = require(RepStorage.Modules.TierHandler)
+
+-- MainLib
+local module = {}
+
+function module.SET_PLOT(Plr)
+	-- Variables
+	-- Arrays
+	local OPEN_PLOTS = {}
+	-- Objects
+	local PLOTS = workspace.Plots
+	-- Get the Open Plots
+	for I, PLOT in pairs(PLOTS:GetChildren()) do
+		if PLOT.Owner.Value == "Empty Plot" then
+			OPEN_PLOTS[#OPEN_PLOTS+1] = PLOT
+		end
+	end
+	-- Choose a random plot if there is more than one, if not then return that one plot's name.
+	if #OPEN_PLOTS == 1 then
+		return OPEN_PLOTS[1]
+	else
+		return OPEN_PLOTS[math.random(1, #OPEN_PLOTS)]
+	end
+end
+
+function module.CLEAR_PLOT(Plr)
+	-- Objects
+	local PLOTS = workspace.Plots
+	local REAL_PLOT = Plr.SetPlot.Value
+	-- Clear the owner of the plot
+	REAL_PLOT.Owner.Value = "Empty Plot"
+	-- Clear Placed Items
+	REAL_PLOT.PlacedItems:ClearAllChildren()
+	-- Clear Misc Info (Ores etc.)
+	for I, MISC_INFO in pairs(REAL_PLOT.MiscInfo:GetChildren()) do
+		MISC_INFO:ClearAllChildren()
+	end
+	-- Now it's done, tell the game it's cleared!
+	warn(Plr.Name.." PLOT HAS BEEN CLEARED, SUCCESS!")
+end
+
+function module.ITEM_FROM_ID(ITEM_ID)
+	for I, ITEM in pairs(RepStorage.Items:GetChildren()) do
+		if require(ITEM.ItemStats).ItemId == ITEM_ID then
+			return ITEM
+		end
+	end
+end
+
+function module.GET_ITEM_TIER_INFO(ITEM_NAME)
+	local REAL_ITEM = RepStorage.Items:FindFirstChild(ITEM_NAME)
+	local ITEM_INFO = require(REAL_ITEM.ItemStats)
+	local ITEM_TIER_ID = ITEM_HANDLING.GET_REAL_TIER(ITEM_INFO)
+	for TIER_NAME, TIER_DATA in pairs(TIER_HANDLER.ITEM_TIERS) do
+		if TIER_DATA["TIER_ID"] == ITEM_TIER_ID then
+			return TIER_NAME, TIER_DATA
+		end
+	end 
+end
+
+return module
