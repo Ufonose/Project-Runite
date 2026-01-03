@@ -3,8 +3,21 @@ local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
 local ITEM_INFO = require(script.Parent.Parent.ItemStats)
 local PLOT = script.Parent.Parent.Parent.Parent
 
-script.Parent.Smelt.Touched:Connect(function(ORE)
-	if ORE:FindFirstChild("Cash") then
+script.Parent.Smelt.Touched:Connect(function(HIT)
+	local ORE = nil
+
+	-- Check if the hit part itself has Cash (old system - single part)
+	if HIT:FindFirstChild("Cash") then
+		ORE = HIT
+	else
+		-- Check if the hit part's parent is a model with Cash (new system - model)
+		if HIT.Parent and HIT.Parent:IsA("Model") and HIT.Parent:FindFirstChild("Cash") then
+			ORE = HIT.Parent
+		end
+	end
+
+	-- Process the ore if we found one
+	if ORE and ORE:FindFirstChild("Cash") then
 		if ORE.Cash.Value >= 0 then
 			local PROCESSED = ITEM_HANDLER.PROCESS_ORE(PLOT, script.Parent.Parent, script.Parent.Smelt, ITEM_INFO.Addition, ITEM_INFO.Multiplier, ORE)
 			if PROCESSED then
