@@ -20,6 +20,20 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 				local REAL_ITEM = ITEM_REP:Clone()
 				REAL_ITEM:SetPrimaryPartCFrame(ITEM["ITEM_LOCATION"])
 				REAL_ITEM.Parent = PLACED_ITEMS
+
+				-- ADD THIS: Store the placement layer on the item
+				local layerValue = Instance.new("IntValue", REAL_ITEM)
+				layerValue.Name = "PlacementLayer"
+				if type(ITEM_INFO.PlacementLayer) == "table" then
+					-- If multiple layers, store as a string (e.g., "1,2")
+					layerValue.Value = ITEM_INFO.PlacementLayer[1] -- Store first layer as reference
+					local layersString = Instance.new("StringValue", REAL_ITEM)
+					layersString.Name = "PlacementLayers"
+					layersString.Value = table.concat(ITEM_INFO.PlacementLayer, ",")
+				else
+					layerValue.Value = ITEM_INFO.PlacementLayer or 1
+				end
+
 				_G["global_data"][Plr.Name]["Items"][ITEM_INFO.ItemId]["Amount"] -= 1
 				spawn(function()
 					for E, DESCENDANT in pairs(REAL_ITEM:GetDescendants()) do
