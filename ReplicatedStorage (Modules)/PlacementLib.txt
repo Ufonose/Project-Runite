@@ -177,34 +177,89 @@ end
 
 local function obstacleCollision(obstacles)
 	local px, pz = cx, cz
-	
+
 	local collision = false
 	local obstacles = obstacles or currentPlane.obstacles
-	
+
 	for _, model in pairs(obstacles:GetChildren()) do
 		if (model.PrimaryPart) then
-			
+
+			-- NEW: Check if this obstacle is on the same layer
+			local obstacleLayer = model:FindFirstChild("PlacementLayer")
+			local obstacleLayers = model:FindFirstChild("PlacementLayers")
+
+			-- Get the current item's layer(s)
+			local currentLayer = nil
+			local currentLayers = {}
+
+			if currentObjects[1] and currentObjects[1].model then
+				local currentModel = currentObjects[1].model
+				local layerValue = currentModel:FindFirstChild("PlacementLayer")
+				local layersString = currentModel:FindFirstChild("PlacementLayers")
+
+				if layersString then
+					-- Parse multiple layers
+					for layer in string.gmatch(layersString.Value, "[^,]+") do
+						currentLayers[tonumber(layer)] = true
+					end
+				elseif layerValue then
+					currentLayer = layerValue.Value
+					currentLayers[currentLayer] = true
+				else
+					currentLayer = 1 -- Default to ground level
+					currentLayers[1] = true
+				end
+			end
+
+			-- Check if obstacle is on the same layer
+			local sameLayer = false
+
+			if obstacleLayers then
+				-- Obstacle occupies multiple layers
+				for layer in string.gmatch(obstacleLayers.Value, "[^,]+") do
+					if currentLayers[tonumber(layer)] then
+						sameLayer = true
+						break
+					end
+				end
+			elseif obstacleLayer then
+				-- Obstacle on single layer
+				if currentLayers[obstacleLayer.Value] then
+					sameLayer = true
+				end
+			else
+				-- No layer specified, assume ground level (1)
+				if currentLayers[1] then
+					sameLayer = true
+				end
+			end
+
+			-- Only check collision if on the same layer
+			if not sameLayer then
+				continue -- Skip this obstacle, different layer
+			end
+
 			local extentsX1, extentsZ1 = calculateExtents(model.PrimaryPart)
 			local x1, z1 = project(model.PrimaryPart.Position.X, model.PrimaryPart.Position.Y, model.PrimaryPart.Position.Z)			
-						
+
 			for i = 1, #currentObjects do
 				local object = currentObjects[i]
-				
+
 				if (not object.collision) then
 					local r = (object.r + cr) % 4			
-					
+
 					local x0, z0 = translate(object.px, -object.pz, cr)
 					x0 = x0 + px
 					z0 = z0 + pz
-					
+
 					local extentsX0, extentsZ0				
-								
+
 					if (r == 1 or r == 3) then
 						extentsX0, extentsZ0 = object.sz, object.sx
 					else
 						extentsX0, extentsZ0 = object.sx, object.sz
 					end		
-					
+
 					if (floatLesser(x0 - extentsX0/2, x1 + extentsX1/2) and floatGreater(x0 + extentsX0/2, x1 - extentsX1/2) and floatLesser(z0 - extentsZ0/2, z1 + extentsZ1/2) and floatGreater(z0 + extentsZ0/2, z1 - extentsZ1/2)) then
 						collision = true
 						object.collision = true
@@ -214,17 +269,17 @@ local function obstacleCollision(obstacles)
 			end
 		end
 	end
-	
+
 	for i = 1, #currentObjects do
 		local object = currentObjects[i]
-		
+
 		if (not object.collision and object.state == states.collision) then
 			setState(object, states.neutral, true)
 		else
 			object.collision = nil
 		end
 	end
-	
+
 	return not collision
 end
 
@@ -445,6 +500,25 @@ local function enablePlacement(plane, models, prealigned)
 			local model = models[i]
 			local object = {}
 			object.model = model
+
+			-- ADD THIS: Add layer information from ItemStats to the model
+			if model:FindFirstChild("ItemStats") then
+				local itemStats = require(model.ItemStats)
+
+				if not model:FindFirstChild("PlacementLayer") then
+					local layerValue = Instance.new("IntValue", model)
+					layerValue.Name = "PlacementLayer"
+
+					if type(itemStats.PlacementLayer) == "table" then
+						layerValue.Value = itemStats.PlacementLayer[1]
+						local layersString = Instance.new("StringValue", model)
+						layersString.Name = "PlacementLayers"
+						layersString.Value = table.concat(itemStats.PlacementLayer, ",")
+					else
+						layerValue.Value = itemStats.PlacementLayer or 1
+					end
+				end
+			end
 
 			local lookVector = object.model.PrimaryPart.CFrame.lookVector	
 			local theta
