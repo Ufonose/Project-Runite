@@ -8,15 +8,15 @@ ResearchData.Objectives = {
 		Name = "Stone Collector",
 		Description = "Collect raw stone ore",
 		Tier = 1,
-		RequiredObjectives = {}, -- No prerequisites
+		RequiredObjectives = {},
 		Requirements = {
-			{ItemName = "StoneOreModel", Amount = 50}, -- Using actual ore model name
+			{ItemName = "StoneOreModel", Amount = 10},
 		},
 		Rewards = {
 			ResearchTokens = 5,
-			UnlockMachines = {}, -- Add machine IDs you want to unlock
+			UnlockMachines = {4}, -- Unlocks Standard Refiner (ID 4)
 		},
-		Icon = "rbxassetid://7435467441", -- Using stone mine icon
+		Icon = "rbxassetid://7435467441",
 	},
 
 	{
@@ -26,29 +26,29 @@ ResearchData.Objectives = {
 		Tier = 1,
 		RequiredObjectives = {},
 		Requirements = {
-			{ItemName = "StoneOreModel_Refined", Amount = 30}, -- Using refined ore model name
+			{ItemName = "StoneOreModel_Refined", Amount = 10},
 		},
 		Rewards = {
 			ResearchTokens = 8,
-			UnlockMachines = {},
+			UnlockMachines = {5}, -- Unlocks another machine
 		},
 		Icon = "rbxassetid://7435467441",
 	},
 
-	-- Tier 2 - Requires Tier 1 completion
+	-- Tier 2
 	{
 		Id = 3,
 		Name = "Master Stone Processor",
 		Description = "Process large quantities of stone",
 		Tier = 2,
-		RequiredObjectives = {1, 2}, -- Need to complete both tier 1 objectives
+		RequiredObjectives = {1, 2},
 		Requirements = {
 			{ItemName = "StoneOreModel", Amount = 200},
 			{ItemName = "StoneOreModel_Refined", Amount = 100},
 		},
 		Rewards = {
 			ResearchTokens = 25,
-			UnlockMachines = {9},
+			UnlockMachines = {6, 7},
 		},
 		Icon = "rbxassetid://7435467441",
 	},
@@ -99,6 +99,20 @@ function ResearchData.CanStartObjective(objectiveId, completedObjectives)
 	end
 
 	return true
+end
+
+-- NEW: Find which research objective unlocks a specific machine ID
+function ResearchData.GetUnlockingResearch(machineId)
+	for _, objective in pairs(ResearchData.Objectives) do
+		if objective.Rewards.UnlockMachines then
+			for _, unlockedId in pairs(objective.Rewards.UnlockMachines) do
+				if unlockedId == machineId then
+					return objective
+				end
+			end
+		end
+	end
+	return nil -- No research unlocks this (default unlocked)
 end
 
 return ResearchData
