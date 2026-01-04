@@ -15,16 +15,18 @@ function module.LOAD(MODULE_INFO)
 	local Plr = Plrs.LocalPlayer
 	local Mouse = Plr:GetMouse()
 	-- Variables
-		-- Booleans
+	-- Booleans
 	local DB = true
-		-- Integers
+	-- Integers
 	local AMOUNT = tonumber(script.Parent.Contents.SelectedFrame.Amount.Amount.Text) or tonumber(script.Parent.Contents.SelectedFrame.Amount.Amount.PlaceholderText)
 	local CURRENT_COST = 0
-		-- String
+	-- String
 	local CURRENT_TAB = "AllTab"
 	local LAST_TAB
-		-- Objects
+	-- Objects
 	local SELECTED_ITEM
+	-- Tables
+	local INV
 
 	script.Parent.Contents.SelectedFrame.Visible = false
 	script.Parent.Contents.Items.TemplateItem.Visible = false
@@ -33,8 +35,18 @@ function module.LOAD(MODULE_INFO)
 		Main.CLOSE_MENU(script.Parent)
 	end)
 
+	local function IS_ITEM_UNLOCKED(ITEM_ID)
+		if INV and INV[ITEM_ID] then
+			return INV[ITEM_ID].Unlocked == true
+		end
+		return false
+	end
+
 	local function SEARCH_ITEM(ITEM_BUTTON, ITEM_INFO)
 		local CAN_SHOW = true
+
+		-- No longer hide locked items - just show them all
+
 		if string.len(script.Parent.Contents.Top.SearchBar.Text) > 0 then
 			script.Parent.Contents.Top.SearchBar.Clear.Visible = true
 			if not string.find(string.lower(ITEM_BUTTON:GetAttribute("ITEM_NAME")), string.lower(script.Parent.Contents.Top.SearchBar.Text)) then
@@ -42,7 +54,6 @@ function module.LOAD(MODULE_INFO)
 			end
 		else
 			script.Parent.Contents.Top.SearchBar.Clear.Visible = false
-			CAN_SHOW = true
 		end
 		if CAN_SHOW and CURRENT_TAB ~= "AllTab" then
 			if CURRENT_TAB ~= ITEM_INFO.ItemType then
@@ -58,6 +69,13 @@ function module.LOAD(MODULE_INFO)
 
 	local function BUY_ITEM()
 		local ITEM_INFO = require(SELECTED_ITEM.ItemStats)
+
+		-- Check if item is unlocked before buying
+		if not IS_ITEM_UNLOCKED(ITEM_INFO.ItemId) then
+			warn("Cannot buy locked item!")
+			return
+		end
+
 		AMOUNT = tonumber(script.Parent.Contents.SelectedFrame.Amount.Amount.Text) or tonumber(script.Parent.Contents.SelectedFrame.Amount.Amount.PlaceholderText)
 		local ITEM_BOUGHT = RepStorage.Events.BuyItem:InvokeServer(ITEM_INFO.ItemId, math.floor(AMOUNT))
 		if ITEM_BOUGHT then
@@ -85,15 +103,16 @@ function module.LOAD(MODULE_INFO)
 			DB = true
 		end
 	end)
-	
+
 	local function LOAD_SHOP()
+		INV = RepStorage.Events.GetInventoryType:InvokeServer("Items")
+
 		if LAST_TAB ~= CURRENT_TAB then
 			LAST_TAB = CURRENT_TAB
 			SELECTED_ITEM = nil
 			script.Parent.Contents.SelectedFrame.Visible = false
 		end
-		
-		
+
 		for I, ITEM in pairs(RepStorage.Items:GetChildren()) do
 			local ITEM_INFO = require(ITEM.ItemStats)
 			local ITEM_BUTTON = script.Parent.Contents.Items:FindFirstChild("Item"..ITEM_INFO.ItemId)
@@ -102,11 +121,38 @@ function module.LOAD(MODULE_INFO)
 				ITEM_BUTTON.LayoutOrder = -ITEM_INFO.ItemId
 				ITEM_BUTTON.Name = "Item"..ITEM_INFO.ItemId
 				ITEM_BUTTON.Parent = script.Parent.Contents.Items
+
+				-- Create lock icon overlay
+				local lockIcon = Instance.new("ImageLabel")
+				lockIcon.Name = "LockIcon"
+				lockIcon.Size = UDim2.new(0.4, 0, 0.4, 0)
+				lockIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+				lockIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+				lockIcon.BackgroundTransparency = 1
+				lockIcon.Image = "rbxasset://textures/ui/LuaApp/icons/ic-lock.png" -- Roblox lock icon
+				lockIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
+				lockIcon.ScaleType = Enum.ScaleType.Fit
+				lockIcon.ZIndex = 10
+				lockIcon.Visible = false
+				lockIcon.Parent = ITEM_BUTTON
 			end
+
+			-- Update lock icon visibility
+			local isUnlocked = IS_ITEM_UNLOCKED(ITEM_INFO.ItemId)
+			local lockIcon = ITEM_BUTTON:FindFirstChild("LockIcon")
+			if lockIcon then
+				lockIcon.Visible = not isUnlocked
+			end
+
+			-- Dim locked items
+			ITEM_BUTTON.ImageTransparency = isUnlocked and 0 or 0.5
+
 			ITEM_BUTTON.CashNum.Text = "$"..CASH_LIB.SUFFIX_NUM(ITEM_INFO.Cost)
 			ITEM_BUTTON.LayoutOrder = ITEM_INFO.Cost
 			ITEM_BUTTON.Image = ITEM_INFO.ThumbnailId
 			ITEM_BUTTON:SetAttribute("ITEM_NAME", ITEM.Name)
+			ITEM_BUTTON:SetAttribute("ITEM_ID", ITEM_INFO.ItemId)
+			ITEM_BUTTON:SetAttribute("IS_UNLOCKED", isUnlocked)
 			ITEM_BUTTON.Visible = SEARCH_ITEM(ITEM_BUTTON, ITEM_INFO)
 			ITEM_BUTTON.MouseButton1Click:Connect(function()
 				if DB then
@@ -117,7 +163,16 @@ function module.LOAD(MODULE_INFO)
 					script.Parent.Contents.SelectedFrame.ItemIcon.Image = ITEM_BUTTON.Image
 					script.Parent.Contents.SelectedFrame.ItemDesc.Text = ITEM_INFO.Description
 					script.Parent.Contents.SelectedFrame.ItemName.Text = ITEM_BUTTON:GetAttribute("ITEM_NAME")
-					script.Parent.Contents.SelectedFrame.Buy.Text = "$"..CASH_LIB.SUFFIX_NUM(ITEM_INFO.Cost*math.floor(AMOUNT))
+
+					-- Update buy button based on lock status
+					if isUnlocked then
+						script.Parent.Contents.SelectedFrame.Buy.Text = "$"..CASH_LIB.SUFFIX_NUM(ITEM_INFO.Cost*math.floor(AMOUNT))
+						script.Parent.Contents.SelectedFrame.Buy.BackgroundColor3 = Color3.fromRGB(100, 150, 100)
+					else
+						script.Parent.Contents.SelectedFrame.Buy.Text = "🔒 LOCKED"
+						script.Parent.Contents.SelectedFrame.Buy.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+					end
+
 					script.Parent.Contents.SelectedFrame.Visible = true
 					wait(.1)
 					DB = true
@@ -127,7 +182,7 @@ function module.LOAD(MODULE_INFO)
 				script.Parent.Parent.ItemHover.ButtonHovering.Value = ITEM_BUTTON
 			end)
 			ITEM_BUTTON.MouseLeave:Connect(function()
-				if script.Parent.Parent.ItemHover.ButtonHovering.Value == ITEM_BUTTON then		-- So the hover doesn't hide if the mouse is already on a different button.
+				if script.Parent.Parent.ItemHover.ButtonHovering.Value == ITEM_BUTTON then
 					script.Parent.Parent.ItemHover.ButtonHovering.Value = nil
 				end
 			end)
