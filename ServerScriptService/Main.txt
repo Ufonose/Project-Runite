@@ -102,8 +102,15 @@ function SELL_ITEM(Plr, ITEMS)
 			ITEM_ID = {ITEM_ID}
 		end
 		for I, REAL_ID in pairs(ITEM_ID) do
+			-- CHECK IF IT'S A HOTSPOT MINER
+			if REAL_ID:GetAttribute("HotspotMiner") == true then
+				warn("Cannot sell hotspot miner!")
+				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "Hotspot miners cannot be sold!"})
+				return false
+			end
+
 			local ITEM_INFO = require(REAL_ID.ItemStats)
-			if table.find(CANT_SELL_TYPES, ITEM_INFO.ItemType) == nil then	-- string.lower(ITEM_INFO.ItemType) == "special" or string.lower(ITEM_INFO.CostType) == "cantbuy" then
+			if table.find(CANT_SELL_TYPES, ITEM_INFO.ItemType) == nil then
 				if CASH.Value >= math.floor(ITEM_INFO.Cost) then
 					CASH.Value += ITEM_INFO.Cost
 					REAL_ID:Destroy()
@@ -127,6 +134,13 @@ function WITHDRAW_ITEMS(Plr, ITEMS)
 	end
 	if Plr then
 		for I, ITEM in pairs(ITEMS) do
+			-- CHECK IF IT'S A HOTSPOT MINER
+			if ITEM:GetAttribute("HotspotMiner") == true then
+				warn("Cannot withdraw hotspot miner!")
+				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "Hotspot miners cannot be moved!"})
+				return false
+			end
+
 			local ITEM_INFO = require(ITEM.ItemStats)
 			_G["global_data"][Plr.Name]["Items"][ITEM_INFO.ItemId]["Amount"] += 1
 			ITEM:Destroy()
