@@ -44,6 +44,8 @@ local function SAVE_DATA(Plr)
 	-- Save the Player's Plot Items!
 	local base_data = game.HttpService:JSONEncode(DATA_FUNCTION_HANDLING.UNLOAD_PLOT(Plr))
 	plr_data["PlotItemPlaced"] = base_data
+	-- Save Miner Hotspots
+	plr_data["MinerHotspots"] = _G["global_data"][Plr.Name]["MinerHotspots"]
 	-- Saved stuff now and return it's done!
 	DATA_HANDLING(data_code, Plr):Set(plr_data)
 	return true
@@ -132,6 +134,10 @@ local function LOAD_DATA(Plr)
 		plot_data = game.HttpService:JSONDecode(plot_data)
 	end
 	DATA_FUNCTION_HANDLING.LOAD_PLOT(Plr, plot_data)
+	-- Load Miner Hotspots
+	_G["global_data"][Plr.Name]["MinerHotspots"] = plr_data["MinerHotspots"] or {
+		UnlockedHotspots = {},
+	}
 	-- Leaderstats
 	Instance.new("Folder",Plr).Name = "leaderstats"
 	local CashLeaderStat = Instance.new("StringValue",Plr.leaderstats)
