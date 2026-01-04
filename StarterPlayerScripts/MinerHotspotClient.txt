@@ -1,0 +1,250 @@
+print("=== MINER HOTSPOT CLIENT STARTING ===")
+
+local Players = game:GetService("Players")
+local RepStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+
+print("Player found:", player.Name)
+
+-- WAIT FOR DATA TO LOAD FIRST
+print("Waiting for DataLoaded...")
+local dataLoaded = player:WaitForChild("DataLoaded", 30)
+
+if not dataLoaded then
+	warn("DataLoaded tag not found - player data didn't load!")
+	return
+end
+
+print("Data loaded! Now setting up hotspots...")
+
+-- Wait for SetPlot
+player:WaitForChild("SetPlot", 10)
+local plot = player.SetPlot.Value
+
+if not plot then
+	warn("SetPlot.Value is nil!")
+	return
+end
+
+print("Plot assigned:", plot.Name)
+
+local hotspotFolder = plot:WaitForChild("MinerHotspots", 10)
+
+if not hotspotFolder then
+	warn("No MinerHotspots folder found in plot!")
+	return
+end
+
+print("MinerHotspots folder found!")
+
+-- Function to setup a hotspot
+local function setupHotspot(hotspot)
+	print("=== Setting up hotspot:", hotspot.Name, "===")
+
+	-- Wait for HotspotId to replicate
+	local hotspotId = hotspot:WaitForChild("HotspotId", 5)
+	if not hotspotId then 
+		warn("No HotspotId in", hotspot.Name, "after timeout")
+		return 
+	end
+
+	print("HotspotId:", hotspotId.Value)
+
+	-- Wait for BuyButton to replicate
+	print("Waiting for BuyButton to replicate...")
+	local buyButton = hotspot:WaitForChild("BuyButton", 10)
+
+	if not buyButton then 
+		warn("No BuyButton in", hotspot.Name, "after timeout")
+		return 
+	end
+
+	print("BuyButton found! Type:", buyButton.ClassName)
+
+	-- Make sure ClickDetector exists or wait for it
+	local clickDetector = buyButton:WaitForChild("ClickDetector", 5)
+	if not clickDetector then
+		warn("No ClickDetector found, creating one")
+		clickDetector = Instance.new("ClickDetector", buyButton)
+	end
+
+	print("ClickDetector ready")
+
+	if not RepStorage.Events:FindFirstChild("GetHotspotInfo") then
+		warn("GetHotspotInfo RemoteFunction not found!")
+		return
+	end
+
+	print("Calling GetHotspotInfo...")
+
+	local success, info = pcall(function()
+		return RepStorage.Events.GetHotspotInfo:InvokeServer(hotspotId.Value)
+	end)
+
+	if not success then
+		warn("Error calling GetHotspotInfo:", info)
+		return
+	end
+
+	if not info or not info.Config then
+		warn("No config returned for hotspot", hotspotId.Value)
+		warn("Server may not have loaded player data yet")
+		return
+	end
+
+	print("Got hotspot info - Miner:", info.Config.MinerName, "Cost:", info.Config.Cost, "Unlocked:", info.IsUnlocked)
+
+	if not info.IsUnlocked then
+		print("Creating ghost miner...")
+
+		local minerModel = RepStorage.Items:FindFirstChild(info.Config.MinerName)
+
+		if not minerModel then
+			warn("Miner model not found:", info.Config.MinerName)
+		else
+			local ghostMiner = minerModel:Clone()
+			ghostMiner.Name = "GhostMiner"
+
+			for _, descendant in pairs(ghostMiner:GetDescendants()) do
+				if descendant:IsA("BasePart") then
+					descendant.Transparency = 0.7
+					descendant.CanCollide = false
+					descendant.Anchored = true
+					descendant.Material = Enum.Material.ForceField
+				end
+			end
+
+			local positionPart = hotspot:WaitForChild("Position", 5)
+			if positionPart then
+				ghostMiner:SetPrimaryPartCFrame(positionPart.CFrame)
+				print("Ghost miner positioned")
+			else
+				warn("No Position part in", hotspot.Name)
+			end
+
+			ghostMiner.Parent = hotspot
+			print("Ghost miner created!")
+		end
+
+		print("Creating BillboardGui...")
+
+		local billboardGui = Instance.new("BillboardGui")
+		billboardGui.Name = "BuyPrompt"
+		billboardGui.Size = UDim2.new(0, 200, 0, 100)
+		billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+		billboardGui.AlwaysOnTop = true
+		billboardGui.Adornee = buyButton
+		billboardGui.Parent = buyButton
+
+		local frame = Instance.new("Frame")
+		frame.Size = UDim2.new(1, 0, 1, 0)
+		frame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		frame.BorderSizePixel = 0
+		frame.Parent = billboardGui
+
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 10)
+		corner.Parent = frame
+
+		local titleLabel = Instance.new("TextLabel")
+		titleLabel.Size = UDim2.new(1, -10, 0, 30)
+		titleLabel.Position = UDim2.new(0, 5, 0, 5)
+		titleLabel.BackgroundTransparency = 1
+		titleLabel.Text = info.Config.MinerName
+		titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		titleLabel.TextSize = 16
+		titleLabel.Font = Enum.Font.GothamBold
+		titleLabel.Parent = frame
+
+		local costLabel = Instance.new("TextLabel")
+		costLabel.Size = UDim2.new(1, -10, 0, 25)
+		costLabel.Position = UDim2.new(0, 5, 0, 35)
+		costLabel.BackgroundTransparency = 1
+
+		if info.Config.Cost == 0 then
+			costLabel.Text = "FREE!"
+			costLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+		else
+			costLabel.Text = "🔬 " .. info.Config.Cost .. " Tokens"
+			costLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
+		end
+
+		costLabel.TextSize = 14
+		costLabel.Font = Enum.Font.Gotham
+		costLabel.Parent = frame
+
+		local statusLabel = Instance.new("TextLabel")
+		statusLabel.Size = UDim2.new(1, -10, 0, 20)
+		statusLabel.Position = UDim2.new(0, 5, 0, 60)
+		statusLabel.BackgroundTransparency = 1
+		statusLabel.Text = "Click to unlock!"
+		statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+		statusLabel.TextSize = 12
+		statusLabel.Font = Enum.Font.Gotham
+		statusLabel.Parent = frame
+
+		print("BillboardGui created!")
+
+		clickDetector.MouseClick:Connect(function(playerWhoClicked)
+			print("=== CLICK DETECTED ===")
+			print("Clicked by:", playerWhoClicked.Name)
+
+			if playerWhoClicked ~= player then 
+				print("Not the local player, ignoring")
+				return 
+			end
+
+			print("Processing unlock for hotspot", hotspotId.Value)
+			statusLabel.Text = "Unlocking..."
+
+			local success, result = pcall(function()
+				return RepStorage.Events.UnlockMinerHotspot:InvokeServer(hotspotId.Value)
+			end)
+
+			if not success then
+				warn("Error calling UnlockMinerHotspot:", result)
+				statusLabel.Text = "Error!"
+				statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+				return
+			end
+
+			print("Server response:", result)
+
+			if result == true then
+				print("Hotspot unlocked successfully!")
+				statusLabel.Text = "Unlocked! ✓"
+				statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+				wait(0.5)
+				billboardGui:Destroy()
+			else
+				warn("Failed to unlock:", result)
+				statusLabel.Text = tostring(result) or "Failed!"
+				statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+				wait(2)
+				statusLabel.Text = "Click to unlock!"
+				statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+			end
+		end)
+
+		print("Click handler connected!")
+		print("Setup complete for", hotspot.Name)
+	else
+		print("Hotspot already unlocked")
+	end
+end
+
+print("Setting up hotspots...")
+
+for _, hotspot in pairs(hotspotFolder:GetChildren()) do
+	task.spawn(function()
+		local success, err = pcall(function()
+			setupHotspot(hotspot)
+		end)
+
+		if not success then
+			warn("Error setting up", hotspot.Name, ":", err)
+		end
+	end)
+end
+
+print("=== MINER HOTSPOT CLIENT LOADED ===")
