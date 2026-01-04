@@ -11,17 +11,43 @@ for I, PLOT in pairs(workspace.Plots:GetChildren()) do
 		local FOLDER = Instance.new("Folder", PLOT.MiscInfo)
 		FOLDER.Name = MISC_FOLDER_NAME
 	end
-
-	-- Updated to handle both Parts and Models
+	
+	-- Updated to handle both Parts and Models with HEIGHT CHECK
 	PLOT.BasePlot.Touched:Connect(function(HIT)
+		-- Get the ore (either a part or model)
+		local ORE = nil
+		
 		-- Check if the hit part has a Cash value (old system - single part)
 		if HIT:FindFirstChild("Cash") then
-			HIT:Destroy()
+			ORE = HIT
 		else
 			-- Check if the hit part's parent is a model with Cash value (new system - model)
 			local parent = HIT.Parent
 			if parent and parent:IsA("Model") and parent:FindFirstChild("Cash") then
-				parent:Destroy()
+				ORE = parent
+			end
+		end
+		
+		-- If we found an ore, check if it's actually at ground level
+		if ORE then
+			local orePosition
+			
+			-- Get the ore's Y position
+			if ORE:IsA("Model") and ORE.PrimaryPart then
+				orePosition = ORE.PrimaryPart.Position
+			elseif ORE:IsA("BasePart") then
+				orePosition = ORE.Position
+			end
+			
+			if orePosition then
+				-- Calculate the top of the BasePlot
+				local basePlotTop = PLOT.BasePlot.Position.Y + (PLOT.BasePlot.Size.Y / 2)
+				
+				-- Only destroy if the ore is close to ground level (within 2 studs above BasePlot)
+				-- This allows conveyors to be placed on the plot without ores being destroyed
+				if orePosition.Y <= basePlotTop + 3 then
+					ORE:Destroy()
+				end
 			end
 		end
 	end)
