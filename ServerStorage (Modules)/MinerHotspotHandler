@@ -8,7 +8,7 @@ local MinerHotspotHandler = {}
 MinerHotspotHandler.HotspotConfigs = {
 	[1] = {
 		Id = 1,
-		MinerName = "Stone Mine",
+		MinerName = "Iron Mine",
 		Cost = 0, -- Free starter mine
 		Description = "Your first mine - free to start!",
 	},
@@ -130,6 +130,10 @@ function MinerHotspotHandler.ActivateHotspot(player, hotspotId)
 
 	-- Clone the miner and place it at the hotspot
 	local activeMiner = minerModel:Clone()
+
+	-- MARK AS HOTSPOT MINER (permanent, can't be moved/sold)
+	activeMiner:SetAttribute("HotspotMiner", true)
+	activeMiner:SetAttribute("HotspotId", hotspotId)
 
 	-- IMPORTANT: Set PrimaryPart to Hitbox
 	if activeMiner:FindFirstChild("Hitbox") then
