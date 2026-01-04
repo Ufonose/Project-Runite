@@ -45,7 +45,10 @@ function module.LOAD(MODULE_INFO)
 	local function SEARCH_ITEM(ITEM_BUTTON, ITEM_INFO)
 		local CAN_SHOW = true
 
-		-- No longer hide locked items - just show them all
+		-- Hide hotspot-only items from shop
+		if ITEM_INFO.SpecialTags and ITEM_INFO.SpecialTags.HotspotOnly then
+			return false
+		end
 
 		if string.len(script.Parent.Contents.Top.SearchBar.Text) > 0 then
 			script.Parent.Contents.Top.SearchBar.Clear.Visible = true
