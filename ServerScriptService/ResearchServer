@@ -30,7 +30,7 @@ end
 
 -- Start an objective
 RepStorage.Events.StartObjective.OnServerInvoke = function(player, objectiveId)
-	ensureResearchMode(player) -- Make sure it exists
+	ensureResearchMode(player)
 	return ResearchHandler.StartObjective(player, objectiveId)
 end
 
@@ -40,4 +40,9 @@ RepStorage.Events.ToggleResearchMode.OnServerInvoke = function(player)
 	researchMode.Value = not researchMode.Value
 	print(player.Name, "toggled research mode to:", researchMode.Value)
 	return researchMode.Value
+end
+
+-- NEW: Get which research unlocks a specific item
+RepStorage.Events.GetItemUnlockRequirement.OnServerInvoke = function(player, itemId)
+	return ResearchData.GetUnlockingResearch(itemId)
 end
