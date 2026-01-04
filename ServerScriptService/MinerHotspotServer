@@ -1,0 +1,101 @@
+local RepStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local Players = game:GetService("Players")
+local MinerHotspotHandler = require(ServerStorage.Modules.MinerHotspotHandler)
+
+-- Create remote events if they don't exist
+if not RepStorage.Events:FindFirstChild("UnlockMinerHotspot") then
+	local remoteFunc = Instance.new("RemoteFunction")
+	remoteFunc.Name = "UnlockMinerHotspot"
+	remoteFunc.Parent = RepStorage.Events
+end
+
+if not RepStorage.Events:FindFirstChild("GetHotspotInfo") then
+	local remoteFunc = Instance.new("RemoteFunction")
+	remoteFunc.Name = "GetHotspotInfo"
+	remoteFunc.Parent = RepStorage.Events
+end
+
+-- Unlock a hotspot
+RepStorage.Events.UnlockMinerHotspot.OnServerInvoke = function(player, hotspotId)
+	-- Make sure data is loaded
+	if not _G["global_data"] or not _G["global_data"][player.Name] then
+		warn("Player data not loaded for", player.Name)
+		return false, "Data not loaded"
+	end
+
+	return MinerHotspotHandler.UnlockHotspot(player, hotspotId)
+end
+
+-- Get hotspot info
+RepStorage.Events.GetHotspotInfo.OnServerInvoke = function(player, hotspotId)
+	-- Make sure data is loaded
+	if not _G["global_data"] or not _G["global_data"][player.Name] then
+		warn("Player data not loaded for", player.Name)
+		return nil
+	end
+
+	local config = MinerHotspotHandler.HotspotConfigs[hotspotId]
+	local isUnlocked = MinerHotspotHandler.IsHotspotUnlocked(player, hotspotId)
+
+	return {
+		Config = config,
+		IsUnlocked = isUnlocked,
+		PlayerTokens = player.ResearchTokens.Value,
+	}
+end
+
+-- Initialize hotspots when player data loads
+local function InitializePlayerHotspots(player)
+	-- Wait for DataLoaded tag
+	local dataLoaded = player:WaitForChild("DataLoaded", 30)
+
+	if not dataLoaded then
+		warn("DataLoaded not found for", player.Name, "- timeout!")
+		return
+	end
+
+	print("Player data loaded for", player.Name, "- initializing hotspots")
+
+	-- Wait for SetPlot
+	local setPlot = player:WaitForChild("SetPlot", 10)
+	if not setPlot or not setPlot.Value then
+		warn("SetPlot not found for", player.Name)
+		return
+	end
+
+	local plot = setPlot.Value
+	local hotspotFolder = plot:FindFirstChild("MinerHotspots")
+
+	if not hotspotFolder then
+		warn("No MinerHotspots folder in plot for", player.Name)
+		return
+	end
+
+	print("Found", #hotspotFolder:GetChildren(), "hotspots for", player.Name)
+
+	-- Check each hotspot and activate if already unlocked
+	for _, hotspot in pairs(hotspotFolder:GetChildren()) do
+		if hotspot:FindFirstChild("HotspotId") then
+			local hotspotId = hotspot.HotspotId.Value
+
+			if MinerHotspotHandler.IsHotspotUnlocked(player, hotspotId) then
+				print("Activating pre-unlocked hotspot", hotspotId, "for", player.Name)
+				MinerHotspotHandler.ActivateHotspot(player, hotspotId)
+			end
+		end
+	end
+end
+
+-- Initialize hotspots for players when they join
+Players.PlayerAdded:Connect(function(player)
+	-- Wait for character
+	player.CharacterAdded:Connect(function()
+		-- Initialize hotspots (waits for data internally)
+		task.spawn(function()
+			InitializePlayerHotspots(player)
+		end)
+	end)
+end)
+
+print("MinerHotspotServer loaded!")
