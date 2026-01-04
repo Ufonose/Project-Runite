@@ -55,6 +55,12 @@ function module.LOAD(MODULE_INFO)
 		-- Now check if the player has the item.
 		if INV[ITEM_BUTTON:GetAttribute("ITEM_ID")].Amount > 0 then
 			local CAN_SHOW = true
+
+			-- Hide hotspot-only items from inventory too
+			if ITEM_INFO.SpecialTags and ITEM_INFO.SpecialTags.HotspotOnly then
+				CAN_SHOW = false
+			end
+
 			-- The player does, now can it show?
 			if string.len(script.Parent.Contents.Top.SearchBar.Text) > 0 then
 				if not string.find(string.lower(ITEM_BUTTON:GetAttribute("ITEM_NAME")), string.lower(script.Parent.Contents.Top.SearchBar.Text)) then
