@@ -18,10 +18,11 @@ module.DropSpeed = 1.15
 module.DropColor = Color3.fromRGB(116, 116, 116)
 module.DropMaterial = Enum.Material.Slate
 module.OreModelName = "StoneOreModel"
+module.PlacementLayer = {1,2} -- Higher level
 
 module.Creators = {"Zonix_Official"}
 module.SpecialTags = {
-
+	["HotspotOnly"] = false,  -- Show/Hide from shop
 }
 
 return module
