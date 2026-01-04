@@ -94,6 +94,9 @@ local function setupHotspot(hotspot)
 
 	print("Got hotspot info - Miner:", info.Config.MinerName, "Cost:", info.Config.Cost, "Unlocked:", info.IsUnlocked)
 
+	-- Store reference to ghost miner for cleanup
+	local ghostMiner = nil
+
 	if not info.IsUnlocked then
 		print("Creating ghost miner...")
 
@@ -102,15 +105,21 @@ local function setupHotspot(hotspot)
 		if not minerModel then
 			warn("Miner model not found:", info.Config.MinerName)
 		else
-			local ghostMiner = minerModel:Clone()
+			ghostMiner = minerModel:Clone()
 			ghostMiner.Name = "GhostMiner"
 
+			-- Make all parts transparent and non-collidable
 			for _, descendant in pairs(ghostMiner:GetDescendants()) do
 				if descendant:IsA("BasePart") then
-					descendant.Transparency = 0.7
+					-- Make Hitbox completely invisible
+					if descendant.Name == "Hitbox" then
+						descendant.Transparency = 1
+					else
+						descendant.Transparency = 0.7
+					end
 					descendant.CanCollide = false
 					descendant.Anchored = true
-					descendant.Material = Enum.Material.ForceField
+					--descendant.Material = Enum.Material.ForceField
 				end
 			end
 
@@ -215,7 +224,16 @@ local function setupHotspot(hotspot)
 				statusLabel.Text = "Unlocked! ✓"
 				statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 				wait(0.5)
+
+				-- Destroy both the billboard AND the ghost miner
 				billboardGui:Destroy()
+
+				if ghostMiner and ghostMiner.Parent then
+					print("Destroying ghost miner...")
+					ghostMiner:Destroy()
+				end
+
+				print("Cleanup complete!")
 			else
 				warn("Failed to unlock:", result)
 				statusLabel.Text = tostring(result) or "Failed!"
