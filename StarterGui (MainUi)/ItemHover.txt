@@ -15,7 +15,7 @@ function module.LOAD(MODULE_INFO)
 	local Plr = Plrs.LocalPlayer
 	local Mouse = Plr:GetMouse()
 	-- Variables
-		-- Booleans
+	-- Booleans
 	local DB = true
 
 	script.Parent.Visible = false
@@ -30,6 +30,19 @@ function module.LOAD(MODULE_INFO)
 			script.Parent.ItemTier.Text = TIER_NAME
 			script.Parent.ItemName.Text = REAL_ITEM.Name
 			script.Parent.ItemDesc.Text = ITEM_INFO.Description
+
+			-- Check if item is locked and show unlock requirement
+			local isUnlocked = BUTTON:GetAttribute("IS_UNLOCKED")
+			if isUnlocked == false then
+				-- Get unlock requirement from server
+				local unlockResearch = RepStorage.Events.GetItemUnlockRequirement:InvokeServer(ITEM_INFO.ItemId)
+				if unlockResearch then
+					script.Parent.ItemDesc.Text = "🔒 LOCKED\nComplete: " .. unlockResearch.Name .. "\n\n" .. ITEM_INFO.Description
+				else
+					script.Parent.ItemDesc.Text = "🔒 LOCKED\n\n" .. ITEM_INFO.Description
+				end
+			end
+
 			script.Parent.ItemCreators.Text = "Creators: "
 			for I, CREATOR in pairs(ITEM_INFO.Creators) do
 				script.Parent.ItemCreators.Text = script.Parent.ItemCreators.Text..CREATOR
@@ -65,7 +78,7 @@ function module.LOAD(MODULE_INFO)
 				script.Parent.ItemName.Size = UDim2.new(0.667, 0, 0.202, 0)
 				script.Parent.ItemTier.Size = UDim2.new(0.667, 0, 0.14, 0)
 				script.Parent.ItemTier.Position = UDim2.new(0.027, 0, 0.248, 0)
-				script.Parent.UISizeConstraint.MaxSize = Vector2.new(300, 150)
+				script.Parent.UISizeConstraint.MaxSize = Vector2.new(300, 200) -- Increased for unlock text
 			end
 			local MOUSE_X = Mouse.X + 25
 			local MOUSE_Y = Mouse.Y + 15
