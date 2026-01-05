@@ -14,7 +14,7 @@ ResearchData.Objectives = {
 		},
 		Rewards = {
 			ResearchTokens = 5,
-			UnlockMachines = {4}, -- Unlocks Standard Refiner (ID 4)
+			UnlockMachines = {4,8}, -- Unlocks Standard Refiner (ID 4)
 		},
 		Icon = "rbxassetid://7435467441",
 	},
