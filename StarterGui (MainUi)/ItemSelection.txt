@@ -118,7 +118,6 @@ function module.LOAD(MODULE_INFO)
 				CURRENT_HOVER = ITEM
 				if ITEM:FindFirstChild("Hitbox") then
 					ITEM.Hitbox.Transparency = .85
-					ITEM.Hitbox.Color = Color3.fromRGB(0, 0, 0)
 				end
 			end
 			ITEM_HOVER.UPDATE_HOVER()
