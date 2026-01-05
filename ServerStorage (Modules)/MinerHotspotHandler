@@ -8,7 +8,7 @@ local MinerHotspotHandler = {}
 MinerHotspotHandler.HotspotConfigs = {
 	[1] = {
 		Id = 1,
-		MinerName = "Iron Mine",
+		MinerName = "Stone Mine",
 		Cost = 0, -- Free starter mine
 		Description = "Your first mine - free to start!",
 	},
