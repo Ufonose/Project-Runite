@@ -21,7 +21,7 @@ for I, ITEM in pairs(RepStorage.Items:GetChildren()) do
 	end
 	ITEM.PrimaryPart = ITEM.Hitbox
 	ITEM.PrimaryPart.Transparency = 1
-	ITEM.PrimaryPart.Color = Color3.fromRGB(107, 173, 176)
+	ITEM.PrimaryPart.Color = Color3.fromRGB(0, 0, 0)
 	ITEM.PrimaryPart.Material = Enum.Material.Neon
 	if I%175 == 0 then
 		wait()
