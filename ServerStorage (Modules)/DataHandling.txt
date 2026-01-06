@@ -49,6 +49,28 @@ function DataHandling.LOAD_PLOT(Plr, PLOT_DATA)
 			ITEM_MODEL = ITEM_MODEL:Clone()
 			local item_pos = PLR_PLOT.BasePlot.CFrame * CFrame.new(unpack(item_data["item_pos"]))
 			ITEM_MODEL:SetPrimaryPartCFrame(item_pos)
+
+			-- NEW: Apply conveyor reversal if saved
+			if item_data["CONVEYOR_REVERSED"] then
+				ITEM_MODEL:SetAttribute("ConveyorReversed", true)
+
+				-- Reverse ConvVelo values BEFORE parenting/enabling scripts
+				for _, descendant in pairs(ITEM_MODEL:GetDescendants()) do
+					if descendant:IsA("BasePart") and descendant.Name == "Conv" then
+						local convVelo = descendant:FindFirstChild("ConvVelo")
+						if convVelo then
+							convVelo.Value = -convVelo.Value
+						end
+
+						-- NEW: Reverse beam texture
+						local beam = descendant:FindFirstChildOfClass("Beam")
+						if beam then
+							beam.TextureSpeed = -beam.TextureSpeed
+						end
+					end
+				end
+			end
+
 			ITEM_MODEL.Parent = PLR_PLOT.PlacedItems
 			LOAD_ITEM_BASICS(ITEM_MODEL)
 		else
@@ -63,13 +85,20 @@ function DataHandling.UNLOAD_PLOT(Plr)
 		local PLOT_DATA = {}
 		for I, ITEM in pairs(PLR_PLOT.PlacedItems:GetChildren()) do
 			if ITEM:FindFirstChild("Hitbox") and ITEM:FindFirstChild("ItemStats") then
-				-- SKIP HOTSPOT MINERS - they are managed by the hotspot system
+				-- SKIP HOTSPOT MINERS
 				if ITEM:GetAttribute("HotspotMiner") ~= true then
 					local ITEM_INFO = require(ITEM.ItemStats)
-					PLOT_DATA[#PLOT_DATA+1] = {
+					local itemData = {
 						["ITEM_ID"] = ITEM_INFO.ItemId,
 						["item_pos"] = {(PLR_PLOT.BasePlot.CFrame:Inverse() * ITEM.PrimaryPart.CFrame):components()}
 					}
+
+					-- NEW: Save conveyor reversal state
+					if ITEM:GetAttribute("ConveyorReversed") then
+						itemData["CONVEYOR_REVERSED"] = true
+					end
+
+					PLOT_DATA[#PLOT_DATA+1] = itemData
 				end
 			end
 		end
