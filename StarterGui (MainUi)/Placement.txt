@@ -15,14 +15,15 @@ function module.LOAD(MODULE_INFO)
 	local Plr = Plrs.LocalPlayer
 	local PLR_PLOT = Plr.SetPlot.Value
 	-- Variables
-		-- Arrays
+	-- Arrays
 	local CURRENT_PLACING = {}
-		-- Booleans
+	-- Booleans
 	local DB = true
 	module.PLACING_ITEMS = false
-		-- Functions
+	-- Functions
 	local PLACING = nil
-	
+	local CONVEYOR_REVERSED = false  -- NEW: Track if conveyor is reversed
+
 	function module.DESTROY_PLACING()
 		if PLACING == nil then
 			return
@@ -32,10 +33,44 @@ function module.LOAD(MODULE_INFO)
 		end
 		PLACING:DISABLE_PLACING()
 		module.PLACING_ITEMS = false
+		CONVEYOR_REVERSED = false  -- Reset reversal state
 		PLACING = nil
 		PlacementMenu.UNLOAD_MENU()
 	end
 
+	-- Function to flip conveyor direction
+	function module.FLIP_CONVEYOR_DIRECTION()
+		print("=== FLIP_CONVEYOR_DIRECTION CALLED ===")
+		if not module.PLACING_ITEMS then 
+			print("Not placing items, returning")
+			return 
+		end
+
+		CONVEYOR_REVERSED = not CONVEYOR_REVERSED
+		print("Conveyor reversed:", CONVEYOR_REVERSED)
+
+		-- Apply reversal to all items being placed
+		for i, ITEM in pairs(CURRENT_PLACING) do
+			print("Processing item", i, ITEM.Name)
+			-- Mark the item as reversed
+			ITEM:SetAttribute("ConveyorReversed", CONVEYOR_REVERSED)
+
+			-- Find Conv parts and reverse beam texture
+			for _, descendant in pairs(ITEM:GetDescendants()) do
+				if descendant:IsA("BasePart") and descendant.Name == "Conv" then
+					-- Flip beam texture direction
+					local beam = descendant:FindFirstChildOfClass("Beam")
+					if beam then
+						local originalSpeed = math.abs(beam.TextureSpeed)
+						beam.TextureSpeed = CONVEYOR_REVERSED and -originalSpeed or originalSpeed
+						print("Beam TextureSpeed set to:", beam.TextureSpeed)
+					end
+				end
+			end
+		end
+
+		print("=== FLIP COMPLETE ===")
+	end
 	function module.BEGIN_PLACING(ITEMS_PLACING, MOVING_ITEMS)
 		local MOVING_ITEMS = MOVING_ITEMS or false
 		module.DESTROY_PLACING()
@@ -53,7 +88,6 @@ function module.LOAD(MODULE_INFO)
 					if THING.Transparency < .1 then
 						THING.Transparency = .1
 					end
-					--THING.Color = Color3.fromRGB(181, 226, 255) --Color when of item when placing
 					THING.Anchored = true
 					THING.CanCollide = false
 				end
@@ -61,11 +95,12 @@ function module.LOAD(MODULE_INFO)
 					wait()
 				end
 			end
-			ITEM.Hitbox.Color = Color3.fromRGB(0, 0, 0) -- Color of hitbox when placing stuff
+			ITEM.Hitbox.Color = Color3.fromRGB(0, 0, 0)
 			ITEM.Hitbox.Transparency = .7
 			ITEM.Parent = PLR_PLOT.PlacingItems
 		end
 		CURRENT_PLACING = ITEMS_PLACING
+		CONVEYOR_REVERSED = false  -- Reset on new placement
 		module.PLACING_ITEMS = true
 		PlacementMenu.LOAD_MENU()
 		return true
@@ -84,6 +119,7 @@ function module.LOAD(MODULE_INFO)
 				PLACING_ITEMS_INFO[#PLACING_ITEMS_INFO+1] = {
 					["ITEM_LOCATION"] = ITEM_POS,
 					["ITEM_NAME"] = ITEM_PLACED.Name,
+					["CONVEYOR_REVERSED"] = ITEM_PLACED:GetAttribute("ConveyorReversed") or false,  -- NEW
 				}
 			end
 			-- Place the items!
