@@ -19,14 +19,12 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 			if _G["global_data"][Plr.Name]["Items"][ITEM_INFO.ItemId]["Amount"] > 0 then
 				local REAL_ITEM = ITEM_REP:Clone()
 				REAL_ITEM:SetPrimaryPartCFrame(ITEM["ITEM_LOCATION"])
-				REAL_ITEM.Parent = PLACED_ITEMS
 
-				-- ADD THIS: Store the placement layer on the item
+				-- Store the placement layer on the item
 				local layerValue = Instance.new("IntValue", REAL_ITEM)
 				layerValue.Name = "PlacementLayer"
 				if type(ITEM_INFO.PlacementLayer) == "table" then
-					-- If multiple layers, store as a string (e.g., "1,2")
-					layerValue.Value = ITEM_INFO.PlacementLayer[1] -- Store first layer as reference
+					layerValue.Value = ITEM_INFO.PlacementLayer[1]
 					local layersString = Instance.new("StringValue", REAL_ITEM)
 					layersString.Name = "PlacementLayers"
 					layersString.Value = table.concat(ITEM_INFO.PlacementLayer, ",")
@@ -34,7 +32,41 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 					layerValue.Value = ITEM_INFO.PlacementLayer or 1
 				end
 
+				-- IMPORTANT: Reverse ConvVelo BEFORE enabling scripts!
+				if ITEM["CONVEYOR_REVERSED"] then
+					REAL_ITEM:SetAttribute("ConveyorReversed", true)
+					print("=== REVERSING CONVEYOR ===")
+					print("Item:", REAL_ITEM.Name)
+
+					for _, descendant in pairs(REAL_ITEM:GetDescendants()) do
+						if descendant:IsA("BasePart") and descendant.Name == "Conv" then
+							local convVelo = descendant:FindFirstChild("ConvVelo")
+							if convVelo then
+								print("Found ConvVelo:", convVelo.Value)
+								convVelo.Value = -convVelo.Value
+								print("Reversed to:", convVelo.Value)
+							else
+								warn("ConvVelo not found on Conv part!")
+							end
+
+							-- NEW: Reverse beam texture
+							local beam = descendant:FindFirstChildOfClass("Beam")
+							if beam then
+								print("Found Beam, TextureSpeed:", beam.TextureSpeed)
+								beam.TextureSpeed = -beam.TextureSpeed
+								print("Reversed Beam TextureSpeed to:", beam.TextureSpeed)
+							end
+						end
+					end
+					print("=== REVERSAL COMPLETE ===")
+				end
+
+				-- Parent AFTER reversing (before scripts run)
+				REAL_ITEM.Parent = PLACED_ITEMS
+
 				_G["global_data"][Plr.Name]["Items"][ITEM_INFO.ItemId]["Amount"] -= 1
+
+				-- NOW enable scripts (they'll read the reversed ConvVelo)
 				spawn(function()
 					for E, DESCENDANT in pairs(REAL_ITEM:GetDescendants()) do
 						if DESCENDANT:IsA("Script") then
@@ -54,6 +86,7 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 	end
 	return false
 end
+
 
 function GET_INVENTORY(Plr, INVENTORY_TYPE)
 	local INV_GETTING = Plr		-- Make this be the Plot Owner if possible but if not be the Plr
