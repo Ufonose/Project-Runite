@@ -11,7 +11,7 @@ local PLAYER_DATA_INFO = require(ServerStorage.Modules.PlayerDataInfo)
 local CASH_LIB = require(RepStorage.Modules.CashLib)
 local MainLib = require(RepStorage.Modules.MainLib)
 -- Constants
-local data_code = "plr_data_39"		-- Change this string to reset data
+local data_code = "plr_data_48"		-- Change this string to reset data
 
 if workspace:FindFirstChild("Items") then
 	workspace.Items.Parent = RepStorage
@@ -100,6 +100,10 @@ local function LOAD_DATA(Plr)
 		},
 		[3] = { -- Item ID
 			["Amount"] = 1,
+			["Unlocked"] = true,
+		},
+		[7] = { -- Item ID
+			["Amount"] = 10,
 			["Unlocked"] = true,
 		},
 	}
