@@ -131,7 +131,7 @@ ResearchData.Objectives = {
 		},
 		Rewards = {
 			ResearchTokens = 100,
-			UnlockMachines = {10, 11},
+			UnlockMachines = {},
 		},
 		Icon = "rbxassetid://7435467441",
 		TreePosition = {X = 3, Y = 1},
