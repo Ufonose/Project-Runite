@@ -16,9 +16,11 @@ function module.LOAD(MODULE_INFO)
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
 	local Mouse = Plr:GetMouse()
+	local PlayerGui = Plr:WaitForChild("PlayerGui")  -- ADD THIS
+	local ResearchGui = PlayerGui:WaitForChild("ResearchGui", 10)  -- ADD THIS
 	local PLR_PLOT = Plr.SetPlot.Value
 	-- Variables
-		-- Booleans
+	-- Booleans
 	local DB = true
 	module.MOUSE_DOWN = false
 
@@ -41,11 +43,13 @@ function module.LOAD(MODULE_INFO)
 			module.MOUSE_DOWN = false
 		end
 		-- Regular Input
-		if KEY_INPUT.KeyCode == Enum.KeyCode.R then
-			if PLACEMENT.PLACING_ITEMS then
-				PlacementLib.rotate()
-			elseif not module.SELECTING_ITEMS and ItemSelection.SELECTED_COUNT > 0 then
-				ItemSelection.MOVE_ITEMS()
+		if KEY_INPUT.KeyCode == Enum.KeyCode.T then  -- CHANGED FROM R TO T
+			if not PLACEMENT.PLACING_ITEMS and not module.SELECTING_ITEMS then
+				if ResearchGui then
+					Main.OPEN_MENU(ResearchGui)
+				else
+					warn("ResearchGui not found!")
+				end
 			end
 		elseif KEY_INPUT.KeyCode == Enum.KeyCode.Q then
 			if PLACEMENT.PLACING_ITEMS then
