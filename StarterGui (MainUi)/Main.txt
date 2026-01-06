@@ -34,43 +34,53 @@ function module.LOAD(MODULE_INFO)
 
 	-- Menu Opening/Closing Handling
 	function module.CLOSE_MENU(MENU_OBJ)
-		if script.Parent.Parent.ItemHover.ButtonHovering.Value ~= nil and script.Parent.Parent.ItemHover.ButtonHovering.Value:IsDescendantOf(MENU_OBJ) then
-			script.Parent.Parent.ItemHover.Visible = false
+		local mainUi = script.Parent.Parent
+
+		if mainUi.ItemHover.ButtonHovering.Value ~= nil and mainUi.ItemHover.ButtonHovering.Value:IsDescendantOf(MENU_OBJ) then
+			mainUi.ItemHover.Visible = false
 		end
-		local MENU_OPENED = script.Parent.Parent.Values.OpenedMenus:FindFirstChild(MENU_OBJ.Name)
+
+		local MENU_OPENED = mainUi.Values.OpenedMenus:FindFirstChild(MENU_OBJ.Name)
 		if MENU_OPENED then
 			MENU_OPENED:Destroy()
+			if MENU_OBJ:FindFirstChild("MenuObject") then
+				MENU_OBJ.MenuObject.Value = false
+			end
 			MENU_OBJ.Visible = false
-			MENU_OBJ.MenuObject.Value = false
-		end
-	end
-
-	for I, CLOSE_MENU in pairs(script.Parent.Parent:GetDescendants()) do	-- Close all open menus
-		if CLOSE_MENU:FindFirstChild("MenuObject") then
-			CLOSE_MENU.MenuObject.Value = false
-			CLOSE_MENU.Visible = false
 		end
 	end
 
 	function module.OPEN_MENU(MENU_OBJ)
+		local mainUi = script.Parent.Parent
+
 		ITEM_SELECTION.UNSELECT_ITEMS()		-- Wipe the selected items before anything.
-		local MENU_OPENED = script.Parent.Parent.Values.OpenedMenus:FindFirstChild(MENU_OBJ.Name)
+		local MENU_OPENED = mainUi.Values.OpenedMenus:FindFirstChild(MENU_OBJ.Name)
 		if MENU_OPENED then
 			module.CLOSE_MENU(MENU_OBJ)
 		else
-			for I, OPENED in pairs(script.Parent.Parent.Values.OpenedMenus:GetChildren()) do
+			for I, OPENED in pairs(mainUi.Values.OpenedMenus:GetChildren()) do
 				if OPENED.Name == "Inv" and MENU_OBJ.Name == "Shop" then
 					-- Do Nothing
 				elseif OPENED.Name == "Shop" and MENU_OBJ.Name == "Inv" then
+					-- Do Nothing
+				elseif OPENED.Name == "Inv" and MENU_OBJ.Name == "ResearchGui" then
+					-- Do Nothing
+				elseif OPENED.Name == "Shop" and MENU_OBJ.Name == "ResearchGui" then
+					-- Do Nothing
+				elseif OPENED.Name == "ResearchGui" and MENU_OBJ.Name == "Inv" then
+					-- Do Nothing
+				elseif OPENED.Name == "ResearchGui" and MENU_OBJ.Name == "Shop" then
 					-- Do Nothing
 				else
 					module.CLOSE_MENU(OPENED.Value)
 				end
 			end
-			local OPENED_TAG = Instance.new("ObjectValue", script.Parent.Parent.Values.OpenedMenus)
+			local OPENED_TAG = Instance.new("ObjectValue", mainUi.Values.OpenedMenus)
 			OPENED_TAG.Name = MENU_OBJ.Name
 			OPENED_TAG.Value = MENU_OBJ
-			MENU_OBJ.MenuObject.Value = true
+			if MENU_OBJ:FindFirstChild("MenuObject") then
+				MENU_OBJ.MenuObject.Value = true
+			end
 			MENU_OBJ.Visible = true
 		end
 	end
