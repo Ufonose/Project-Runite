@@ -13,26 +13,303 @@ function module.LOAD(MODULE_INFO)
 	local Main = MODULES["Main"]
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
-	local Mouse = Plr:GetMouse()
 	-- Variables
-		-- Booleans
 	local DB = true
-	-- Strings
-	local CURRENT_ITEM_FILTER = "All"	
-		-- Misc
+	local CURRENT_ITEM_FILTER = "All"
 	local INV
+	local LOAD_INV -- Forward declaration
 
-	script.Parent.Contents.Items.TemplateItem.Visible = false
-	script.Parent.Contents.Top.Sorts.ExtraSorts.Visible = false
+	-- Create main inventory frame
+	local invFrame = Instance.new("Frame")
+	invFrame.Name = "InvFrame"
+	invFrame.Size = UDim2.new(0, 560, 0, 900)
+	invFrame.Position = UDim2.new(0, -5, 1, -890)
+	invFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	invFrame.BorderSizePixel = 0
+	invFrame.Visible = false
+	invFrame.ZIndex = 5
+	invFrame.Parent = script.Parent
 
-	script.Parent.Top.Close.MouseButton1Click:Connect(function()
+	local invCorner = Instance.new("UICorner")
+	invCorner.CornerRadius = UDim.new(0, 15)
+	invCorner.Parent = invFrame
+
+	-- Title bar
+	local titleBar = Instance.new("Frame")
+	titleBar.Name = "TitleBar"
+	titleBar.Size = UDim2.new(1, 0, 0, 70)
+	titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+	titleBar.BorderSizePixel = 0
+	titleBar.ZIndex = 5
+	titleBar.Parent = invFrame
+
+	local titleCorner = Instance.new("UICorner")
+	titleCorner.CornerRadius = UDim.new(0, 15)
+	titleCorner.Parent = titleBar
+
+	-- Title text
+	local titleText = Instance.new("TextLabel")
+	titleText.Size = UDim2.new(0, 200, 1, 0)
+	titleText.Position = UDim2.new(0, 20, 0, 0)
+	titleText.BackgroundTransparency = 1
+	titleText.Text = "🎒 Inventory"
+	titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+	titleText.TextSize = 28
+	titleText.Font = Enum.Font.GothamBold
+	titleText.TextXAlignment = Enum.TextXAlignment.Left
+	titleText.ZIndex = 5
+	titleText.Parent = titleBar
+
+	-- Cash display
+	local cashDisplay = Instance.new("TextLabel")
+	cashDisplay.Size = UDim2.new(0, 200, 0, 40)
+	cashDisplay.Position = UDim2.new(0.5, -100, 0, 15)
+	cashDisplay.BackgroundTransparency = 1
+	cashDisplay.Text = "💰 $0"
+	cashDisplay.TextColor3 = Color3.fromRGB(134, 207, 101)
+	cashDisplay.TextSize = 24
+	cashDisplay.Font = Enum.Font.GothamBold
+	cashDisplay.ZIndex = 5
+	cashDisplay.Parent = titleBar
+
+	-- Update cash display
+	local function updateCash()
+		if Plr.leaderstats and Plr.leaderstats:FindFirstChild("Cash") then
+			cashDisplay.Text = "💰 " .. Plr.leaderstats.Cash.Value
+		end
+	end
+	updateCash()
+	if Plr.leaderstats and Plr.leaderstats:FindFirstChild("Cash") then
+		Plr.leaderstats.Cash.Changed:Connect(updateCash)
+	end
+
+	-- Close button
+	local closeButton = Instance.new("TextButton")
+	closeButton.Size = UDim2.new(0, 50, 0, 50)
+	closeButton.Position = UDim2.new(1, -60, 0, 10)
+	closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+	closeButton.Text = "✕"
+	closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	closeButton.TextSize = 26
+	closeButton.Font = Enum.Font.GothamBold
+	closeButton.ZIndex = 5
+	closeButton.Parent = titleBar
+
+	local closeCorner = Instance.new("UICorner")
+	closeCorner.CornerRadius = UDim.new(0, 10)
+	closeCorner.Parent = closeButton
+
+	closeButton.MouseButton1Click:Connect(function()
 		Main.CLOSE_MENU(script.Parent)
+		invFrame.Visible = false
 	end)
 
-	script.Parent.Contents.Top.Sorts.More.MouseButton1Click:Connect(function()
-		script.Parent.Contents.Top.Sorts.ExtraSorts.Sorts.CanvasSize = UDim2.new(0, 0, 0, script.Parent.Contents.Top.Sorts.ExtraSorts.Sorts.UIListLayout.AbsoluteContentSize.Y+25)
-		script.Parent.Contents.Top.Sorts.ExtraSorts.Visible = true
+	-- Search and filter frame
+	local topFrame = Instance.new("Frame")
+	topFrame.Size = UDim2.new(1, -40, 0, 100)
+	topFrame.Position = UDim2.new(0, 20, 0, 85)
+	topFrame.BackgroundTransparency = 1
+	topFrame.ZIndex = 5
+	topFrame.Parent = invFrame
+
+	-- "All" button
+	local allButton = Instance.new("TextButton")
+	allButton.Name = "AllTab"
+	allButton.Size = UDim2.new(0, 120, 0, 40)
+	allButton.Position = UDim2.new(0, 0, 0, 0)
+	allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
+	allButton.Text = "📦 All"
+	allButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	allButton.TextSize = 16
+	allButton.Font = Enum.Font.GothamBold
+	allButton.ZIndex = 5
+	allButton.Parent = topFrame
+
+	local allCorner = Instance.new("UICorner")
+	allCorner.CornerRadius = UDim.new(0, 10)
+	allCorner.Parent = allButton
+
+	-- Search bar
+	local searchFrame = Instance.new("Frame")
+	searchFrame.Size = UDim2.new(1, -130, 0, 40)
+	searchFrame.Position = UDim2.new(0, 130, 0, 0)
+	searchFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+	searchFrame.BorderSizePixel = 0
+	searchFrame.ZIndex = 5
+	searchFrame.Parent = topFrame
+
+	local searchCorner = Instance.new("UICorner")
+	searchCorner.CornerRadius = UDim.new(0, 10)
+	searchCorner.Parent = searchFrame
+
+	local searchIcon = Instance.new("TextLabel")
+	searchIcon.Size = UDim2.new(0, 30, 1, 0)
+	searchIcon.Position = UDim2.new(0, 10, 0, 0)
+	searchIcon.BackgroundTransparency = 1
+	searchIcon.Text = "🔍"
+	searchIcon.TextSize = 18
+	searchIcon.ZIndex = 5
+	searchIcon.Parent = searchFrame
+
+	local searchBox = Instance.new("TextBox")
+	searchBox.Size = UDim2.new(1, -80, 1, 0)
+	searchBox.Position = UDim2.new(0, 40, 0, 0)
+	searchBox.BackgroundTransparency = 1
+	searchBox.Text = ""
+	searchBox.PlaceholderText = "Search..."
+	searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+	searchBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
+	searchBox.TextSize = 14
+	searchBox.Font = Enum.Font.Gotham
+	searchBox.TextXAlignment = Enum.TextXAlignment.Left
+	searchBox.ClearTextOnFocus = false
+	searchBox.ZIndex = 5
+	searchBox.Parent = searchFrame
+
+	local clearButton = Instance.new("TextButton")
+	clearButton.Size = UDim2.new(0, 30, 0, 30)
+	clearButton.Position = UDim2.new(1, -35, 0.5, -15)
+	clearButton.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+	clearButton.Text = "✕"
+	clearButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+	clearButton.TextSize = 16
+	clearButton.Font = Enum.Font.GothamBold
+	clearButton.Visible = false
+	clearButton.ZIndex = 5
+	clearButton.Parent = searchFrame
+
+	local clearCorner = Instance.new("UICorner")
+	clearCorner.CornerRadius = UDim.new(1, 0)
+	clearCorner.Parent = clearButton
+
+	clearButton.MouseButton1Click:Connect(function()
+		searchBox.Text = ""
 	end)
+
+	-- Category buttons container
+	local categoryFrame = Instance.new("Frame")
+	categoryFrame.Size = UDim2.new(1, 0, 0, 40)
+	categoryFrame.Position = UDim2.new(0, 0, 0, 50)
+	categoryFrame.BackgroundTransparency = 1
+	categoryFrame.ZIndex = 5
+	categoryFrame.Parent = topFrame
+
+	local categoryLayout = Instance.new("UIListLayout")
+	categoryLayout.FillDirection = Enum.FillDirection.Horizontal
+	categoryLayout.Padding = UDim.new(0, 8)
+	categoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	categoryLayout.Parent = categoryFrame
+
+	-- Items scroll frame
+	local itemsScroll = Instance.new("ScrollingFrame")
+	itemsScroll.Name = "ItemsScroll"
+	itemsScroll.Size = UDim2.new(1, -40, 1, -220)
+	itemsScroll.Position = UDim2.new(0, 20, 0, 200)
+	itemsScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	itemsScroll.BorderSizePixel = 0
+	itemsScroll.ScrollBarThickness = 10
+	itemsScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 105)
+	itemsScroll.ZIndex = 5
+	itemsScroll.Parent = invFrame
+
+	local itemsCorner = Instance.new("UICorner")
+	itemsCorner.CornerRadius = UDim.new(0, 12)
+	itemsCorner.Parent = itemsScroll
+
+	local itemsGrid = Instance.new("UIGridLayout")
+	itemsGrid.CellSize = UDim2.new(0, 155, 0, 190)
+	itemsGrid.CellPadding = UDim2.new(0, 10, 0, 10)
+	itemsGrid.SortOrder = Enum.SortOrder.LayoutOrder
+	itemsGrid.Parent = itemsScroll
+
+	local itemsPadding = Instance.new("UIPadding")
+	itemsPadding.PaddingTop = UDim.new(0, 15)
+	itemsPadding.PaddingBottom = UDim.new(0, 15)
+	itemsPadding.PaddingLeft = UDim.new(0, 15)
+	itemsPadding.PaddingRight = UDim.new(0, 15)
+	itemsPadding.Parent = itemsScroll
+
+	-- Category buttons data
+	local categories = {
+		{Name = "Mine", Display = "Mines", Icon = "⛏️"},
+		{Name = "Machine", Display = "Machines", Icon = "⚙️"},
+		{Name = "Processor", Display = "Processors", Icon = "🔥"},
+		{Name = "Decor", Display = "Decor", Icon = "🎨"},
+	}
+
+	local categoryButtons = {}
+
+	-- Create category buttons
+	for i, category in pairs(categories) do
+		local tabButton = Instance.new("TextButton")
+		tabButton.Name = category.Name .. "Tab"
+		tabButton.Size = UDim2.new(0, 115, 1, 0)
+		tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		tabButton.Text = category.Icon .. " " .. category.Display
+		tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		tabButton.TextSize = 14
+		tabButton.Font = Enum.Font.GothamBold
+		tabButton.LayoutOrder = i
+		tabButton.ZIndex = 5
+		tabButton.Parent = categoryFrame
+
+		local tabCorner = Instance.new("UICorner")
+		tabCorner.CornerRadius = UDim.new(0, 10)
+		tabCorner.Parent = tabButton
+
+		table.insert(categoryButtons, tabButton)
+
+		tabButton.MouseButton1Click:Connect(function()
+			CURRENT_ITEM_FILTER = category.Name
+			allButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+			for _, btn in pairs(categoryButtons) do
+				btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+			end
+			tabButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+			LOAD_INV()
+		end)
+	end
+
+	-- All button click handler
+	allButton.MouseButton1Click:Connect(function()
+		CURRENT_ITEM_FILTER = "All"
+		allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
+		for _, btn in pairs(categoryButtons) do
+			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		end
+		LOAD_INV()
+	end)
+
+	-- Function to check if item matches search and category
+	local function SEARCH_ITEM(ITEM_BUTTON, ITEM_INFO)
+		-- Check if player owns the item
+		if not INV[ITEM_BUTTON:GetAttribute("ITEM_ID")] or INV[ITEM_BUTTON:GetAttribute("ITEM_ID")].Amount <= 0 then
+			return false
+		end
+
+		local CAN_SHOW = true
+
+		-- Hide hotspot-only items
+		if ITEM_INFO.SpecialTags and ITEM_INFO.SpecialTags.HotspotOnly then
+			return false
+		end
+
+		-- Search filter
+		if string.len(searchBox.Text) > 0 then
+			if not string.find(string.lower(ITEM_BUTTON:GetAttribute("ITEM_NAME")), string.lower(searchBox.Text)) then
+				CAN_SHOW = false
+			end
+		end
+
+		-- Category filter
+		if CAN_SHOW and CURRENT_ITEM_FILTER ~= "All" then
+			if not string.find(ITEM_INFO.TabItem, CURRENT_ITEM_FILTER) then
+				CAN_SHOW = false
+			end
+		end
+
+		return CAN_SHOW
+	end
 
 	local function GET_ORDER(ITEM, ITEM_INFO)
 		local TIER_NAME, TIER_INFO = MainLib.GET_ITEM_TIER_INFO(ITEM.Name)
@@ -45,108 +322,140 @@ function module.LOAD(MODULE_INFO)
 		end
 	end
 
-	local function SEARCH_ITEM(ITEM_BUTTON, ITEM_INFO)
-		-- Do the clear button checks for if it should show or not
-		if string.len(script.Parent.Contents.Top.SearchBar.Text) > 0 then
-			script.Parent.Contents.Top.SearchBar.Clear.Visible = true
-		else
-			script.Parent.Contents.Top.SearchBar.Clear.Visible = false
-		end
-		-- Now check if the player has the item.
-		if INV[ITEM_BUTTON:GetAttribute("ITEM_ID")].Amount > 0 then
-			local CAN_SHOW = true
-
-			-- Hide hotspot-only items from inventory too
-			if ITEM_INFO.SpecialTags and ITEM_INFO.SpecialTags.HotspotOnly then
-				CAN_SHOW = false
-			end
-
-			-- The player does, now can it show?
-			if string.len(script.Parent.Contents.Top.SearchBar.Text) > 0 then
-				if not string.find(string.lower(ITEM_BUTTON:GetAttribute("ITEM_NAME")), string.lower(script.Parent.Contents.Top.SearchBar.Text)) then
-					CAN_SHOW = false
-				end
-			end
-			if CURRENT_ITEM_FILTER ~= "All" and CAN_SHOW == true then
-				CAN_SHOW = ITEM_INFO.TabItem == CURRENT_ITEM_FILTER
-			end
-			return CAN_SHOW
-		end
-		return false
-	end
-
-	local function LOAD_INV()
+	LOAD_INV = function()
 		INV = RepStorage.Events.GetInventoryType:InvokeServer("Items")
-		for I, ITEM in pairs(RepStorage.Items:GetChildren()) do
-			local ITEM_INFO = require(ITEM.ItemStats)
-			local ITEM_BUTTON = script.Parent.Contents.Items:FindFirstChild("Item"..ITEM_INFO.ItemId)
-			if ITEM_BUTTON == nil then
-				ITEM_BUTTON = script.Parent.Contents.Items.TemplateItem:Clone()
-				ITEM_BUTTON.Name = "Item"..ITEM_INFO.ItemId
-				ITEM_BUTTON.Parent = script.Parent.Contents.Items
-				-- Button Handling.
-				ITEM_BUTTON.MouseButton1Click:Connect(function()
-					if DB then
-						DB = false
-						local ITEMS_PLACING = {ITEM:Clone()}
-						PLACEMENT.BEGIN_PLACING(ITEMS_PLACING)
-						wait(.1)
-						DB = true
-					end
-				end)
-				ITEM_BUTTON.MouseEnter:Connect(function()
-					script.Parent.Parent.ItemHover.ButtonHovering.Value = ITEM_BUTTON
-				end)
-				ITEM_BUTTON.MouseLeave:Connect(function()
-					if script.Parent.Parent.ItemHover.ButtonHovering.Value == ITEM_BUTTON then		-- So the hover doesn't hide if the mouse is already on a different button.
-						script.Parent.Parent.ItemHover.ButtonHovering.Value = nil
-					end
-				end)
+
+		-- Clear existing items
+		for _, child in pairs(itemsScroll:GetChildren()) do
+			if child:IsA("Frame") then
+				child:Destroy()
 			end
-			ITEM_BUTTON.LayoutOrder = GET_ORDER(ITEM, ITEM_INFO)
-			ITEM_BUTTON.Image = ITEM_INFO.ThumbnailId
-			ITEM_BUTTON:SetAttribute("ITEM_NAME", ITEM.Name)
-			ITEM_BUTTON:SetAttribute("ITEM_ID", ITEM_INFO.ItemId)
-			ITEM_BUTTON.ItemAmount.Text = "x"..INV[ITEM_BUTTON:GetAttribute("ITEM_ID")].Amount
-			ITEM_BUTTON.Visible = SEARCH_ITEM(ITEM_BUTTON, ITEM_INFO)
 		end
-		script.Parent.Contents.Items.CanvasSize = UDim2.new(0, 0, 0, script.Parent.Contents.Items.UIGridLayout.AbsoluteContentSize.Y + 25)
+
+		for _, ITEM in pairs(RepStorage.Items:GetChildren()) do
+			local ITEM_INFO = require(ITEM.ItemStats)
+			local itemAmount = INV[ITEM_INFO.ItemId] and INV[ITEM_INFO.ItemId].Amount or 0
+
+			-- Create item card
+			local itemCard = Instance.new("Frame")
+			itemCard.Name = "Item" .. ITEM_INFO.ItemId
+			itemCard.Size = UDim2.new(0, 155, 0, 190)
+			itemCard.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+			itemCard.BorderSizePixel = 0
+			itemCard.LayoutOrder = GET_ORDER(ITEM, ITEM_INFO)
+			itemCard.ZIndex = 5
+			itemCard:SetAttribute("ITEM_NAME", ITEM.Name)
+			itemCard:SetAttribute("ITEM_ID", ITEM_INFO.ItemId)
+
+			local cardCorner = Instance.new("UICorner")
+			cardCorner.CornerRadius = UDim.new(0, 12)
+			cardCorner.Parent = itemCard
+
+			-- Item image
+			local itemImage = Instance.new("ImageLabel")
+			itemImage.Size = UDim2.new(1, -10, 0, 120)
+			itemImage.Position = UDim2.new(0, 5, 0, 5)
+			itemImage.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+			itemImage.BorderSizePixel = 0
+			itemImage.Image = ITEM_INFO.ThumbnailId
+			itemImage.ZIndex = 6
+			itemImage.Parent = itemCard
+
+			local imageCorner = Instance.new("UICorner")
+			imageCorner.CornerRadius = UDim.new(0, 10)
+			imageCorner.Parent = itemImage
+
+			-- Item name
+			local itemName = Instance.new("TextLabel")
+			itemName.Size = UDim2.new(1, -10, 0, 25)
+			itemName.Position = UDim2.new(0, 5, 0, 130)
+			itemName.BackgroundTransparency = 1
+			itemName.Text = ITEM.Name
+			itemName.TextColor3 = Color3.fromRGB(255, 255, 255)
+			itemName.TextSize = 13
+			itemName.Font = Enum.Font.GothamBold
+			itemName.TextXAlignment = Enum.TextXAlignment.Center
+			itemName.TextTruncate = Enum.TextTruncate.AtEnd
+			itemName.ZIndex = 6
+			itemName.Parent = itemCard
+
+			-- Amount label
+			local amountLabel = Instance.new("TextLabel")
+			amountLabel.Size = UDim2.new(1, -10, 0, 30)
+			amountLabel.Position = UDim2.new(0, 5, 1, -35)
+			amountLabel.BackgroundColor3 = itemAmount > 0 and Color3.fromRGB(70, 130, 70) or Color3.fromRGB(70, 70, 75)
+			amountLabel.BorderSizePixel = 0
+			amountLabel.Text = "x" .. itemAmount
+			amountLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+			amountLabel.TextSize = 16
+			amountLabel.Font = Enum.Font.GothamBold
+			amountLabel.ZIndex = 6
+			amountLabel.Parent = itemCard
+
+			local amountCorner = Instance.new("UICorner")
+			amountCorner.CornerRadius = UDim.new(0, 8)
+			amountCorner.Parent = amountLabel
+
+			itemCard.Visible = SEARCH_ITEM(itemCard, ITEM_INFO)
+
+			-- Click button
+			local clickButton = Instance.new("TextButton")
+			clickButton.Size = UDim2.new(1, 0, 1, 0)
+			clickButton.BackgroundTransparency = 1
+			clickButton.Text = ""
+			clickButton.ZIndex = 7
+			clickButton.Parent = itemCard
+
+			clickButton.MouseButton1Click:Connect(function()
+				if DB and itemAmount > 0 then
+					DB = false
+					local ITEMS_PLACING = {ITEM:Clone()}
+					PLACEMENT.BEGIN_PLACING(ITEMS_PLACING)
+					wait(0.1)
+					DB = true
+				end
+			end)
+
+			-- Hover handlers
+			clickButton.MouseEnter:Connect(function()
+				script.Parent.Parent.ItemHover.ButtonHovering.Value = itemCard
+			end)
+
+			clickButton.MouseLeave:Connect(function()
+				if script.Parent.Parent.ItemHover.ButtonHovering.Value == itemCard then
+					script.Parent.Parent.ItemHover.ButtonHovering.Value = nil
+				end
+			end)
+
+			itemCard.Parent = itemsScroll
+		end
+
+		-- Update canvas size
+		itemsScroll.CanvasSize = UDim2.new(0, 0, 0, itemsGrid.AbsoluteContentSize.Y + 20)
 	end
-	script.Parent.MenuObject.Changed:Connect(LOAD_INV)
-	RepStorage.Events.InventoryUpdate.OnClientEvent:Connect(LOAD_INV)
-	script.Parent.Contents.Top.SearchBar:GetPropertyChangedSignal("Text"):Connect(LOAD_INV)
-	script.Parent.Contents.Top.SearchBar.Clear.MouseButton1Click:Connect(function()
-		script.Parent.Contents.Top.SearchBar.Text = ""
+
+	-- Search handlers
+	searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+		clearButton.Visible = string.len(searchBox.Text) > 0
+		LOAD_INV()
 	end)
-	for I, SORT_SIMPLE in pairs(script.Parent.Contents.Top.Sorts.Main:GetChildren()) do
-		if SORT_SIMPLE:IsA("TextButton") then
-			SORT_SIMPLE.MouseButton1Click:Connect(function()
-				if DB then
-					DB = false
-					local SORT_UPDATED = RepStorage.Events.UpdateStorting:InvokeServer("InvSort", SORT_SIMPLE.Name)
-					if SORT_UPDATED then
-						LOAD_INV()
-					end
-					wait(.1)
-					DB = true
-				end
-			end)
+
+	-- Menu toggle handler
+	script.Parent.MenuObject.Changed:Connect(function()
+		if script.Parent.MenuObject.Value then
+			invFrame.Visible = true
+			LOAD_INV()
+		else
+			invFrame.Visible = false
 		end
-	end
-	for I, SORT_ADV in pairs(script.Parent.Contents.Top.Sorts.ExtraSorts.Sorts:GetChildren()) do
-		if SORT_ADV:IsA("TextButton") then
-			SORT_ADV.MouseButton1Click:Connect(function()
-				if DB then
-					DB = false
-					script.Parent.Contents.Top.Sorts.ExtraSorts.Visible = false
-					CURRENT_ITEM_FILTER = SORT_ADV.Name
-					LOAD_INV()
-					wait(.1)
-					DB = true
-				end
-			end)
+	end)
+
+	-- Update inventory when it changes
+	RepStorage.Events.InventoryUpdate.OnClientEvent:Connect(function()
+		if invFrame.Visible then
+			LOAD_INV()
 		end
-	end
+	end)
 end
 
 return module
