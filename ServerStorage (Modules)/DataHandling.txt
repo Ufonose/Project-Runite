@@ -63,11 +63,14 @@ function DataHandling.UNLOAD_PLOT(Plr)
 		local PLOT_DATA = {}
 		for I, ITEM in pairs(PLR_PLOT.PlacedItems:GetChildren()) do
 			if ITEM:FindFirstChild("Hitbox") and ITEM:FindFirstChild("ItemStats") then
-				local ITEM_INFO = require(ITEM.ItemStats)
-				PLOT_DATA[#PLOT_DATA+1] = {
-					["ITEM_ID"] = ITEM_INFO.ItemId,
-					["item_pos"] = {(PLR_PLOT.BasePlot.CFrame:Inverse() * ITEM.PrimaryPart.CFrame):components()}
-				}
+				-- SKIP HOTSPOT MINERS - they are managed by the hotspot system
+				if ITEM:GetAttribute("HotspotMiner") ~= true then
+					local ITEM_INFO = require(ITEM.ItemStats)
+					PLOT_DATA[#PLOT_DATA+1] = {
+						["ITEM_ID"] = ITEM_INFO.ItemId,
+						["item_pos"] = {(PLR_PLOT.BasePlot.CFrame:Inverse() * ITEM.PrimaryPart.CFrame):components()}
+					}
+				end
 			end
 		end
 		return PLOT_DATA
