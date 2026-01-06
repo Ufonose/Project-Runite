@@ -43,7 +43,27 @@ function module.LOAD(MODULE_INFO)
 			module.MOUSE_DOWN = false
 		end
 		-- Regular Input
-		if KEY_INPUT.KeyCode == Enum.KeyCode.T then  -- CHANGED FROM R TO T
+		if KEY_INPUT.KeyCode == Enum.KeyCode.R then
+			if PLACEMENT.PLACING_ITEMS then
+				PlacementLib.rotate()
+			elseif not module.SELECTING_ITEMS and ItemSelection.SELECTED_COUNT > 0 then
+				ItemSelection.MOVE_ITEMS()
+			end
+		elseif KEY_INPUT.KeyCode == Enum.KeyCode.F then
+			print("F key pressed! PLACING_ITEMS:", PLACEMENT.PLACING_ITEMS)
+			if PLACEMENT.PLACING_ITEMS then
+				print("Attempting to flip conveyor...")
+				if PLACEMENT.FLIP_CONVEYOR_DIRECTION then
+					PLACEMENT.FLIP_CONVEYOR_DIRECTION()
+					print("Flip function called!")
+				else
+					warn("FLIP_CONVEYOR_DIRECTION function not found!")
+				end
+			elseif not PLACEMENT.PLACING_ITEMS then
+				print("Opening shop instead...")
+				Main.OPEN_MENU(script.Parent.Parent.Shop)
+			end
+		elseif KEY_INPUT.KeyCode == Enum.KeyCode.T then
 			if not PLACEMENT.PLACING_ITEMS and not module.SELECTING_ITEMS then
 				if ResearchGui then
 					Main.OPEN_MENU(ResearchGui)
@@ -66,10 +86,6 @@ function module.LOAD(MODULE_INFO)
 		elseif KEY_INPUT.KeyCode == Enum.KeyCode.E then
 			if not PLACEMENT.PLACING_ITEMS then
 				Main.OPEN_MENU(script.Parent.Parent.Inv)
-			end
-		elseif KEY_INPUT.KeyCode == Enum.KeyCode.F then
-			if not PLACEMENT.PLACING_ITEMS then
-				Main.OPEN_MENU(script.Parent.Parent.Shop)
 			end
 		elseif KEY_INPUT.KeyCode == Enum.KeyCode.C then
 			if not module.SELECTING_ITEMS and ItemSelection.SELECTED_COUNT > 0 then
