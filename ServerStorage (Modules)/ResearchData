@@ -1,56 +1,179 @@
 local ResearchData = {}
 
--- Define all research objectives
+-- Define age categories
+ResearchData.Ages = {
+	{
+		Id = 1,
+		Name = "First Age",
+		Description = "Master the basics of stone processing",
+		Icon = "🏔️",
+		Color = Color3.fromRGB(120, 100, 80),
+	},
+	{
+		Id = 2,
+		Name = "Second Age",
+		Description = "Advance your production capabilities",
+		Icon = "⚙️",
+		Color = Color3.fromRGB(100, 120, 140),
+	},
+	{
+		Id = 3,
+		Name = "Third Age",
+		Description = "Unlock powerful automation",
+		Icon = "⚡",
+		Color = Color3.fromRGB(140, 100, 140),
+	},
+}
+
+-- Define all research objectives with Age assignments
 ResearchData.Objectives = {
-	-- Tier 1 - Starting objectives
+	-- ============================================
+	-- FIRST AGE - Stone Processing Basics
+	-- ============================================
 	{
 		Id = 1,
 		Name = "Stone Collector",
 		Description = "Collect raw stone ore",
-		Tier = 1,
+		Age = 1,
 		RequiredObjectives = {},
 		Requirements = {
 			{ItemName = "StoneOreModel", Amount = 10},
 		},
 		Rewards = {
 			ResearchTokens = 5,
-			UnlockMachines = {4,8}, -- Unlocks Standard Refiner (ID 4)
+			UnlockMachines = {4}, -- Standard Refiner
 		},
-		Icon = "rbxassetid://7435467441",
+		Icon = "rbxassetid://7448167682",
+		TreePosition = {X = 1, Y = 1}, -- Starting position (column 1, row 1)
 	},
 
 	{
 		Id = 2,
 		Name = "Stone Refiner",
 		Description = "Refine stone into processed ore",
-		Tier = 1,
-		RequiredObjectives = {},
+		Age = 1,
+		RequiredObjectives = {1}, -- Requires Stone Collector
 		Requirements = {
 			{ItemName = "StoneOreModel_Refined", Amount = 10},
 		},
 		Rewards = {
 			ResearchTokens = 8,
-			UnlockMachines = {5}, -- Unlocks another machine
+			UnlockMachines = {5}, -- Advanced machines
 		},
 		Icon = "rbxassetid://7435467441",
+		TreePosition = {X = 2, Y = 1}, -- Column 2, row 1
 	},
 
-	-- Tier 2
 	{
 		Id = 3,
 		Name = "Master Stone Processor",
 		Description = "Process large quantities of stone",
-		Tier = 2,
-		RequiredObjectives = {1, 2},
+		Age = 1,
+		RequiredObjectives = {2}, -- Requires Stone Refiner
 		Requirements = {
 			{ItemName = "StoneOreModel", Amount = 200},
 			{ItemName = "StoneOreModel_Refined", Amount = 100},
 		},
 		Rewards = {
 			ResearchTokens = 25,
-			UnlockMachines = {6, 7},
+			UnlockMachines = {6, 7}, -- Unlock multiple machines
 		},
 		Icon = "rbxassetid://7435467441",
+		TreePosition = {X = 3, Y = 1}, -- Column 3, row 1
+	},
+
+	-- ============================================
+	-- SECOND AGE - Advanced Production
+	-- ============================================
+	{
+		Id = 4,
+		Name = "Advanced Mining",
+		Description = "Unlock better mining techniques",
+		Age = 2,
+		RequiredObjectives = {3}, -- Requires completing First Age final objective
+		Requirements = {
+			{ItemName = "StoneOreModel", Amount = 500},
+		},
+		Rewards = {
+			ResearchTokens = 50,
+			UnlockMachines = {8}, -- Better miners
+		},
+		Icon = "rbxassetid://7435467441",
+		TreePosition = {X = 1, Y = 1}, -- Start of Second Age tree
+	},
+
+	{
+		Id = 5,
+		Name = "Efficiency Studies",
+		Description = "Improve production efficiency",
+		Age = 2,
+		RequiredObjectives = {4}, -- Requires Advanced Mining
+		Requirements = {
+			{ItemName = "StoneOreModel_Refined", Amount = 300},
+		},
+		Rewards = {
+			ResearchTokens = 60,
+			UnlockMachines = {9},
+		},
+		Icon = "rbxassetid://7435467441",
+		TreePosition = {X = 2, Y = 1},
+	},
+
+	{
+		Id = 6,
+		Name = "Automated Systems",
+		Description = "Begin automation research",
+		Age = 2,
+		RequiredObjectives = {5}, -- Requires Efficiency Studies
+		Requirements = {
+			{ItemName = "StoneOreModel", Amount = 1000},
+			{ItemName = "StoneOreModel_Refined", Amount = 500},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {10, 11},
+		},
+		Icon = "rbxassetid://7435467441",
+		TreePosition = {X = 3, Y = 1},
+	},
+
+	-- ============================================
+	-- THIRD AGE - Powerful Automation
+	-- ============================================
+	{
+		Id = 7,
+		Name = "Industrial Revolution",
+		Description = "Unlock industrial-scale production",
+		Age = 3,
+		RequiredObjectives = {6}, -- Requires completing Second Age final objective
+		Requirements = {
+			{ItemName = "StoneOreModel", Amount = 2000},
+			{ItemName = "StoneOreModel_Refined", Amount = 1000},
+		},
+		Rewards = {
+			ResearchTokens = 150,
+			UnlockMachines = {12},
+		},
+		Icon = "rbxassetid://7435467441",
+		TreePosition = {X = 1, Y = 1}, -- Start of Third Age tree
+	},
+
+	{
+		Id = 8,
+		Name = "Mega Automation",
+		Description = "Ultimate automation capabilities",
+		Age = 3,
+		RequiredObjectives = {7}, -- Requires Industrial Revolution
+		Requirements = {
+			{ItemName = "StoneOreModel", Amount = 5000},
+			{ItemName = "StoneOreModel_Refined", Amount = 2500},
+		},
+		Rewards = {
+			ResearchTokens = 250,
+			UnlockMachines = {13, 14, 15},
+		},
+		Icon = "rbxassetid://7435467441",
+		TreePosition = {X = 2, Y = 1},
 	},
 }
 
@@ -64,32 +187,68 @@ function ResearchData.GetObjective(objectiveId)
 	return nil
 end
 
--- Get all objectives for a tier
-function ResearchData.GetObjectivesByTier(tier)
+-- Get all objectives for an age
+function ResearchData.GetObjectivesByAge(ageId)
 	local objectives = {}
 	for _, objective in pairs(ResearchData.Objectives) do
-		if objective.Tier == tier then
+		if objective.Age == ageId then
 			table.insert(objectives, objective)
 		end
 	end
 	return objectives
 end
 
--- Get highest tier available
-function ResearchData.GetMaxTier()
-	local maxTier = 1
-	for _, objective in pairs(ResearchData.Objectives) do
-		if objective.Tier > maxTier then
-			maxTier = objective.Tier
+-- Get age by ID
+function ResearchData.GetAge(ageId)
+	for _, age in pairs(ResearchData.Ages) do
+		if age.Id == ageId then
+			return age
 		end
 	end
-	return maxTier
+	return nil
+end
+
+-- Check if an age is unlocked (all previous ages completed)
+function ResearchData.IsAgeUnlocked(ageId, completedObjectives)
+	if ageId == 1 then return true end
+
+	-- Check if all objectives from previous age are completed
+	local previousAge = ageId - 1
+	local previousObjectives = ResearchData.GetObjectivesByAge(previousAge)
+
+	for _, obj in pairs(previousObjectives) do
+		if not table.find(completedObjectives, obj.Id) then
+			return false
+		end
+	end
+
+	return true
+end
+
+-- Get completion percentage for an age
+function ResearchData.GetAgeProgress(ageId, completedObjectives)
+	local ageObjectives = ResearchData.GetObjectivesByAge(ageId)
+	if #ageObjectives == 0 then return 0 end
+
+	local completedCount = 0
+	for _, obj in pairs(ageObjectives) do
+		if table.find(completedObjectives, obj.Id) then
+			completedCount = completedCount + 1
+		end
+	end
+
+	return math.floor((completedCount / #ageObjectives) * 100)
 end
 
 -- Check if player can start an objective (prerequisites met)
 function ResearchData.CanStartObjective(objectiveId, completedObjectives)
 	local objective = ResearchData.GetObjective(objectiveId)
 	if not objective then return false end
+
+	-- Check if the age is unlocked
+	if not ResearchData.IsAgeUnlocked(objective.Age, completedObjectives) then
+		return false
+	end
 
 	-- Check if all required objectives are completed
 	for _, requiredId in pairs(objective.RequiredObjectives) do
@@ -101,7 +260,27 @@ function ResearchData.CanStartObjective(objectiveId, completedObjectives)
 	return true
 end
 
--- NEW: Find which research objective unlocks a specific machine ID
+-- Get all objectives that are currently available to start
+function ResearchData.GetAvailableObjectives(completedObjectives, activeObjectives)
+	local available = {}
+
+	for _, objective in pairs(ResearchData.Objectives) do
+		-- Check if not already completed or active
+		local isCompleted = table.find(completedObjectives, objective.Id) ~= nil
+		local isActive = table.find(activeObjectives, objective.Id) ~= nil
+
+		if not isCompleted and not isActive then
+			-- Check if prerequisites are met
+			if ResearchData.CanStartObjective(objective.Id, completedObjectives) then
+				table.insert(available, objective)
+			end
+		end
+	end
+
+	return available
+end
+
+-- Find which research objective unlocks a specific machine ID
 function ResearchData.GetUnlockingResearch(machineId)
 	for _, objective in pairs(ResearchData.Objectives) do
 		if objective.Rewards.UnlockMachines then
@@ -113,6 +292,27 @@ function ResearchData.GetUnlockingResearch(machineId)
 		end
 	end
 	return nil -- No research unlocks this (default unlocked)
+end
+
+-- Get total research tokens available from all objectives
+function ResearchData.GetTotalPossibleTokens()
+	local total = 0
+	for _, objective in pairs(ResearchData.Objectives) do
+		total = total + (objective.Rewards.ResearchTokens or 0)
+	end
+	return total
+end
+
+-- Get total tokens earned by player
+function ResearchData.GetEarnedTokens(completedObjectives)
+	local earned = 0
+	for _, objectiveId in pairs(completedObjectives) do
+		local objective = ResearchData.GetObjective(objectiveId)
+		if objective then
+			earned = earned + (objective.Rewards.ResearchTokens or 0)
+		end
+	end
+	return earned
 end
 
 return ResearchData
