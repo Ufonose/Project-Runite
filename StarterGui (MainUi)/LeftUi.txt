@@ -13,21 +13,32 @@ function module.LOAD(MODULE_INFO)
 	local Main = MODULES["Main"]
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
+	local PlayerGui = Plr:WaitForChild("PlayerGui")
 	local PLR_PLOT = Plr.SetPlot.Value
 	-- Variables
-		-- Booleans
+	-- Booleans
 	local DB = true
-		-- Functions
+	-- Functions
 	local PLACING = nil
+
+	-- Map button names to actual GUI names (for special cases)
+	local buttonToGuiMap = {
+		["Research"] = "ResearchGui",  -- Button is "Research", GUI is "ResearchGui"
+	}
 
 	for I, BUTTON in pairs(script.Parent.PlotButtons:GetChildren()) do
 		if BUTTON:IsA("TextButton") then
 			BUTTON.MouseButton1Click:Connect(function()
-				local MENU = script.Parent.Parent:FindFirstChild(BUTTON.Name)
+				-- Get the actual GUI name (check map first, then use button name)
+				local guiName = buttonToGuiMap[BUTTON.Name] or BUTTON.Name
+
+				-- Look in both MainUi and PlayerGui
+				local MENU = script.Parent.Parent:FindFirstChild(guiName) or PlayerGui:FindFirstChild(guiName)
+
 				if MENU then
 					Main.OPEN_MENU(MENU)
 				else
-					warn(BUTTON.Name.." HASN'T BEEN CREATED YET/DOESN'T EXIST!")
+					warn(BUTTON.Name.." -> "..guiName.." HASN'T BEEN CREATED YET/DOESN'T EXIST!")
 				end
 			end)
 			if BUTTON:FindFirstChild("Hover") then
