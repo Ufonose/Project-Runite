@@ -39,18 +39,49 @@ function module.LOAD(MODULE_INFO)
 	local Plr = Plrs.LocalPlayer
 	local Mouse = Plr:GetMouse()
 	-- Variables
-		-- Booleans
+	-- Booleans
 	local DB = true
-	
+
+	-- Create instruction label if it doesn't exist
+	local instructionLabel = script.Parent:FindFirstChild("Instructions")
+	if not instructionLabel then
+		instructionLabel = Instance.new("TextLabel")
+		instructionLabel.Name = "Instructions"
+		instructionLabel.Size = UDim2.new(1, 0, 0, 40)
+		instructionLabel.Position = UDim2.new(0, 0, 0, -45)
+		instructionLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+		instructionLabel.BackgroundTransparency = 1
+		instructionLabel.Text = "R: Rotate | F: Flip Direction | Q: Cancel"
+		instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		instructionLabel.TextSize = 16
+		instructionLabel.Font = Enum.Font.GothamBold
+		instructionLabel.TextStrokeTransparency = 0.5
+		instructionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+		instructionLabel.Visible = false
+		instructionLabel.ZIndex = 10
+		instructionLabel.Parent = script.Parent
+	end
+
 	function module.LOAD_MENU()
 		if not script.Parent.Visible then
 			script.Parent.Position = UDim2.new(.5, 0, 1.207, 0)
 		end
+
+		-- Show instructions
+		if instructionLabel then
+			instructionLabel.Visible = true
+		end
+
 		script.Parent.Visible = true
 		PosAnim(script.Parent, UDim2.new(.5, 0, .983, 0), .3)
 	end
 
 	function module.UNLOAD_MENU()
+		-- Hide instructions
+		if instructionLabel then
+			instructionLabel.Visible = false
+		end
+
 		if script.Parent.Visible then
 			script.Parent.Position = UDim2.new(.5, 0, .983, 0)
 		end
