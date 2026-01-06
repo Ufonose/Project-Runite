@@ -661,32 +661,25 @@ function refreshAgeTabsAndTree()
 	refreshTree()
 end
 
--- Create open button
-local openButton = Instance.new("TextButton")
-openButton.Size = UDim2.new(0, 70, 0, 70)
-openButton.Position = UDim2.new(1, -90, 0.5, -35)
-openButton.BackgroundColor3 = Color3.fromRGB(100, 60, 150)
-openButton.Text = "🔬"
-openButton.TextSize = 35
-openButton.Font = Enum.Font.GothamBold
-openButton.Parent = researchGui
+-- Remove the standalone button creation code and replace with:
 
-local openCorner = Instance.new("UICorner")
-openCorner.CornerRadius = UDim.new(1, 0)
-openCorner.Parent = openButton
+-- Make the GUI compatible with the menu system
+local menuObject = Instance.new("BoolValue")
+menuObject.Name = "MenuObject"
+menuObject.Value = false
+menuObject.Parent = researchGui
 
--- Add glow effect
-local openStroke = Instance.new("UIStroke")
-openStroke.Color = Color3.fromRGB(150, 100, 200)
-openStroke.Thickness = 3
-openStroke.Parent = openButton
-
-openButton.MouseButton1Click:Connect(function()
-	mainFrame.Visible = not mainFrame.Visible
+-- Handle menu visibility
+menuObject.Changed:Connect(function()
+	print("ResearchGui MenuObject changed to:", menuObject.Value)  -- DEBUG
+	mainFrame.Visible = menuObject.Value
 	if mainFrame.Visible then
 		refreshAgeTabsAndTree()
 	end
 end)
+
+-- Initially hide
+mainFrame.Visible = false
 
 -- Auto-refresh progress only (no flicker)
 spawn(function()
