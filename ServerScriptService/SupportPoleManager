@@ -1,0 +1,121 @@
+local RepStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+
+print("=== SUPPORT POLE MANAGER LOADED ===")
+
+-- Cache of checked poles to avoid rechecking
+local checkedPoles = {}
+
+-- Debounce to prevent spam checking
+local checkCooldown = {}
+
+-- Function to check if a support pole should be hidden
+local function checkSupportPole(supportPole, plot)
+	-- Skip if already checked recently
+	if checkedPoles[supportPole] then
+		return
+	end
+
+	local placedItems = plot:FindFirstChild("PlacedItems")
+	if not placedItems then return end
+
+	-- Check against all SupportCollision parts in the plot
+	for _, item in pairs(placedItems:GetChildren()) do
+		for _, collision in pairs(item:GetDescendants()) do
+			if collision:IsA("BasePart") and collision.Name == "SupportCollision" then
+
+				-- Transform to local space (accounts for rotation)
+				local localPos = collision.CFrame:PointToObjectSpace(supportPole.Position)
+				local halfSize = collision.Size / 2
+
+				-- Check collision with small tolerance
+				if math.abs(localPos.X) <= halfSize.X + 0.5 and 
+					math.abs(localPos.Y) <= halfSize.Y + 1 and 
+					math.abs(localPos.Z) <= halfSize.Z + 0.5 then
+					-- Hide the pole
+					supportPole.Transparency = 1
+					checkedPoles[supportPole] = true
+					return
+				end
+			end
+		end
+	end
+
+	-- Mark as checked even if not hidden
+	checkedPoles[supportPole] = true
+end
+
+-- Function to check all support poles in a plot (with debounce)
+local function checkPlotSupports(plot)
+	if not plot then return end
+
+	-- Debounce - don't check same plot too frequently
+	if checkCooldown[plot] then
+		return
+	end
+	checkCooldown[plot] = true
+
+	task.delay(0.5, function()
+		checkCooldown[plot] = nil
+	end)
+
+	local placedItems = plot:FindFirstChild("PlacedItems")
+	if not placedItems then return end
+
+	-- Find all support poles in the plot
+	for _, item in pairs(placedItems:GetChildren()) do
+		for _, descendant in pairs(item:GetDescendants()) do
+			if descendant:IsA("BasePart") and descendant.Name == "SupportPole" then
+				checkSupportPole(descendant, plot)
+			end
+		end
+	end
+end
+
+-- Monitor when new items are placed
+local function monitorPlot(plot)
+	local placedItems = plot:FindFirstChild("PlacedItems")
+	if not placedItems then return end
+
+	-- Check existing items when player joins
+	task.wait(2) -- Wait for everything to load
+	checkPlotSupports(plot)
+
+	-- Monitor for new items being added
+	placedItems.ChildAdded:Connect(function(child)
+		task.wait(1) -- Wait for item to fully load
+		checkPlotSupports(plot)
+	end)
+end
+
+-- Setup for each player's plot
+Players.PlayerAdded:Connect(function(player)
+	-- Wait for plot to be assigned
+	local setPlot = player:WaitForChild("SetPlot", 30)
+	if not setPlot then return end
+
+	local plot = setPlot.Value
+	if plot then
+		print("Monitoring plot for:", player.Name)
+		monitorPlot(plot)
+	end
+
+	-- Monitor if plot changes
+	setPlot.Changed:Connect(function()
+		if setPlot.Value then
+			monitorPlot(setPlot.Value)
+		end
+	end)
+end)
+
+-- Setup for players already in game
+for _, player in pairs(Players:GetPlayers()) do
+	task.spawn(function()
+		local setPlot = player:WaitForChild("SetPlot", 30)
+		if setPlot and setPlot.Value then
+			monitorPlot(setPlot.Value)
+		end
+	end)
+end
+
+print("=== SUPPORT POLE MANAGER READY ===")
