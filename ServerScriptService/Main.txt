@@ -32,7 +32,7 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 					layerValue.Value = ITEM_INFO.PlacementLayer or 1
 				end
 
-				-- IMPORTANT: Reverse ConvVelo BEFORE enabling scripts!
+				-- IMPORTANT: Reverse ConvVelo and Beam BEFORE enabling scripts!
 				if ITEM["CONVEYOR_REVERSED"] then
 					REAL_ITEM:SetAttribute("ConveyorReversed", true)
 					print("=== REVERSING CONVEYOR ===")
@@ -40,6 +40,12 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 
 					for _, descendant in pairs(REAL_ITEM:GetDescendants()) do
 						if descendant:IsA("BasePart") and descendant.Name == "Conv" then
+							-- Skip if NoFlip attribute is set (for merge conveyors)
+							if descendant:GetAttribute("NoFlip") then
+								print("Skipping", descendant:GetFullName(), "- NoFlip attribute set")
+								continue
+							end
+
 							local convVelo = descendant:FindFirstChild("ConvVelo")
 							if convVelo then
 								print("Found ConvVelo:", convVelo.Value)
@@ -49,7 +55,7 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 								warn("ConvVelo not found on Conv part!")
 							end
 
-							-- NEW: Reverse beam texture
+							-- Reverse beam texture
 							local beam = descendant:FindFirstChildOfClass("Beam")
 							if beam then
 								print("Found Beam, TextureSpeed:", beam.TextureSpeed)
@@ -76,6 +82,13 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 							wait()
 						end
 					end
+
+					-- NEW: Hide support poles if needed (for elevated conveyors)
+					local hideSupportScript = REAL_ITEM:FindFirstChild("HideSupportPoles", true)
+					if hideSupportScript and hideSupportScript:IsA("Script") then
+						hideSupportScript.Disabled = false
+					end
+
 					RepStorage.Events.InventoryUpdate:FireClient(Plr)
 				end)
 			else
