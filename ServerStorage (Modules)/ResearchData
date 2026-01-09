@@ -76,7 +76,7 @@ ResearchData.Objectives = {
 		},
 		Rewards = {
 			ResearchTokens = 25,
-			UnlockMachines = {6, 7}, -- Unlock multiple machines
+			UnlockMachines = {}, -- Unlock multiple machines
 		},
 		Icon = "rbxassetid://7435467441",
 		TreePosition = {X = 3, Y = 1}, -- Column 3, row 1
@@ -152,7 +152,7 @@ ResearchData.Objectives = {
 		},
 		Rewards = {
 			ResearchTokens = 150,
-			UnlockMachines = {12},
+			UnlockMachines = {},
 		},
 		Icon = "rbxassetid://7435467441",
 		TreePosition = {X = 1, Y = 1}, -- Start of Third Age tree
@@ -170,7 +170,7 @@ ResearchData.Objectives = {
 		},
 		Rewards = {
 			ResearchTokens = 250,
-			UnlockMachines = {13, 14, 15},
+			UnlockMachines = {},
 		},
 		Icon = "rbxassetid://7435467441",
 		TreePosition = {X = 2, Y = 1},
