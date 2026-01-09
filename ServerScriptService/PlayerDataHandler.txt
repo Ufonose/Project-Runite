@@ -11,7 +11,7 @@ local PLAYER_DATA_INFO = require(ServerStorage.Modules.PlayerDataInfo)
 local CASH_LIB = require(RepStorage.Modules.CashLib)
 local MainLib = require(RepStorage.Modules.MainLib)
 -- Constants
-local data_code = "plr_data_48"		-- Change this string to reset data
+local data_code = "plr_7"		-- Change this string to reset data
 
 if workspace:FindFirstChild("Items") then
 	workspace.Items.Parent = RepStorage
@@ -95,7 +95,7 @@ local function LOAD_DATA(Plr)
 	-- Load the Player's Inventory!
 	local default_inv = {
 		[2] = { -- Item ID
-			["Amount"] = 5,
+			["Amount"] = 20,
 			["Unlocked"] = true,  
 		},
 		[3] = { -- Item ID
@@ -103,7 +103,43 @@ local function LOAD_DATA(Plr)
 			["Unlocked"] = true,
 		},
 		[7] = { -- Item ID
-			["Amount"] = 10,
+			["Amount"] = 20,
+			["Unlocked"] = true,
+		},
+		[8] = { -- Item ID
+			["Amount"] = 20,
+			["Unlocked"] = true,
+		},
+		[9] = { -- Item ID
+			["Amount"] = 20,
+			["Unlocked"] = true,
+		},
+		[10] = { -- Item ID
+			["Amount"] = 20,
+			["Unlocked"] = true,
+		},
+		[6] = { -- Item ID
+			["Amount"] = 20,
+			["Unlocked"] = true,
+		},
+		[11] = { -- Item ID
+			["Amount"] = 20,
+			["Unlocked"] = true,
+		},
+		[12] = { -- Item ID
+			["Amount"] = 20,
+			["Unlocked"] = true,
+		},
+		[13] = { -- Item ID
+			["Amount"] = 20,
+			["Unlocked"] = true,
+		},
+		[14] = { -- Item ID
+			["Amount"] = 20,
+			["Unlocked"] = true,
+		},
+		[15] = { -- Item ID
+			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
 	}
