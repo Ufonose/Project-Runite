@@ -3,21 +3,18 @@ local Players = game:GetService("Players")
 
 print("=== SUPPORT POLE MANAGER LOADED ===")
 
--- Cache of checked poles to avoid rechecking
-local checkedPoles = {}
+-- Cache of checked poles (now stores visibility state)
+local poleStates = {} -- {[pole] = {hidden = true/false, lastCheck = tick()}}
 
 -- Debounce to prevent spam checking
 local checkCooldown = {}
 
 -- Function to check if a support pole should be hidden
 local function checkSupportPole(supportPole, plot)
-	-- Skip if already checked recently
-	if checkedPoles[supportPole] then
-		return
-	end
-
 	local placedItems = plot:FindFirstChild("PlacedItems")
 	if not placedItems then return end
+
+	local shouldHide = false
 
 	-- Check against all SupportCollision parts in the plot
 	for _, item in pairs(placedItems:GetChildren()) do
@@ -32,25 +29,32 @@ local function checkSupportPole(supportPole, plot)
 				if math.abs(localPos.X) <= halfSize.X + 0.5 and 
 					math.abs(localPos.Y) <= halfSize.Y + 1 and 
 					math.abs(localPos.Z) <= halfSize.Z + 0.5 then
-					-- Hide the pole
-					supportPole.Transparency = 1
-					checkedPoles[supportPole] = true
-					return
+					-- Should hide this pole
+					shouldHide = true
+					break
 				end
 			end
 		end
+
+		if shouldHide then break end
 	end
 
-	-- Mark as checked even if not hidden
-	checkedPoles[supportPole] = true
+	-- Update pole visibility
+	if shouldHide then
+		supportPole.Transparency = 1
+		poleStates[supportPole] = {hidden = true, lastCheck = tick()}
+	else
+		supportPole.Transparency = 0  -- Show the pole if no collision
+		poleStates[supportPole] = {hidden = false, lastCheck = tick()}
+	end
 end
 
 -- Function to check all support poles in a plot (with debounce)
-local function checkPlotSupports(plot)
+local function checkPlotSupports(plot, forceRecheck)
 	if not plot then return end
 
-	-- Debounce - don't check same plot too frequently
-	if checkCooldown[plot] then
+	-- Debounce - don't check same plot too frequently (unless forced)
+	if not forceRecheck and checkCooldown[plot] then
 		return
 	end
 	checkCooldown[plot] = true
@@ -62,29 +66,80 @@ local function checkPlotSupports(plot)
 	local placedItems = plot:FindFirstChild("PlacedItems")
 	if not placedItems then return end
 
+	print("Checking support poles in plot...")
+
 	-- Find all support poles in the plot
+	local poleCount = 0
 	for _, item in pairs(placedItems:GetChildren()) do
 		for _, descendant in pairs(item:GetDescendants()) do
 			if descendant:IsA("BasePart") and descendant.Name == "SupportPole" then
+				poleCount = poleCount + 1
 				checkSupportPole(descendant, plot)
 			end
 		end
 	end
+
+	print("Checked", poleCount, "support poles")
 end
 
--- Monitor when new items are placed
+-- Function to clean up removed poles from cache
+local function cleanupPoleCache(item)
+	-- Remove all poles from this item from cache
+	for _, descendant in pairs(item:GetDescendants()) do
+		if descendant:IsA("BasePart") and descendant.Name == "SupportPole" then
+			poleStates[descendant] = nil
+		end
+	end
+end
+
+-- Monitor when new items are placed OR removed
 local function monitorPlot(plot)
 	local placedItems = plot:FindFirstChild("PlacedItems")
 	if not placedItems then return end
 
 	-- Check existing items when player joins
 	task.wait(2) -- Wait for everything to load
-	checkPlotSupports(plot)
+	checkPlotSupports(plot, true)
 
 	-- Monitor for new items being added
 	placedItems.ChildAdded:Connect(function(child)
+		print("Item added:", child.Name)
 		task.wait(1) -- Wait for item to fully load
-		checkPlotSupports(plot)
+
+		-- Check if this new item has SupportCollision (ground conveyor)
+		-- If so, we need to recheck ALL poles, not just in this item
+		local hasSupportCollision = child:FindFirstChild("SupportCollision", true) ~= nil
+
+		if hasSupportCollision then
+			print("Ground conveyor placed - rechecking all poles")
+			checkPlotSupports(plot, true) -- Force recheck
+		else
+			-- Just check poles in the newly placed item
+			task.wait(0.5)
+			for _, descendant in pairs(child:GetDescendants()) do
+				if descendant:IsA("BasePart") and descendant.Name == "SupportPole" then
+					checkSupportPole(descendant, plot)
+				end
+			end
+		end
+	end)
+
+	-- Monitor for items being removed (NEW!)
+	placedItems.ChildRemoved:Connect(function(child)
+		print("Item removed:", child.Name)
+
+		-- Clean up cache for this item's poles
+		cleanupPoleCache(child)
+
+		-- Check if removed item had SupportCollision
+		local hadSupportCollision = child:FindFirstChild("SupportCollision", true) ~= nil
+
+		if hadSupportCollision then
+			print("Ground conveyor removed - rechecking all poles")
+			-- A ground conveyor was removed, so poles might need to reappear
+			task.wait(0.1)
+			checkPlotSupports(plot, true) -- Force recheck all poles
+		end
 	end)
 end
 
