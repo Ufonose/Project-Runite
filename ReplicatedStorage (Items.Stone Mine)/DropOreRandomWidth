@@ -16,14 +16,24 @@ while wait(ITEM_INFO.DropSpeed) do
 				-- NEW: Add random left/right offset only
 				local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
 
-				local currentCFrame = ORE:GetPrimaryPartCFrame()
-				local newCFrame = currentCFrame * CFrame.new(randomX, 0, 0)  -- Only X offset, Z = 0
-				ORE:SetPrimaryPartCFrame(newCFrame)
+				-- Handle both Models and single BaseParts
+				local currentCFrame
+				if ORE:IsA("Model") then
+					currentCFrame = ORE:GetPivot()  -- Modern way to get Model position
+					local newCFrame = currentCFrame * CFrame.new(randomX, 0, 0)
+					ORE:PivotTo(newCFrame)
+				elseif ORE:IsA("BasePart") then
+					currentCFrame = ORE.CFrame
+					ORE.CFrame = currentCFrame * CFrame.new(randomX, 0, 0)
+				end
 
 				ORE.Parent = PLOT.MiscInfo.OresDropped
+
 				-- Set network ownership properly for models vs parts
-				if ORE:IsA("Model") and ORE.PrimaryPart then
-					ORE.PrimaryPart:SetNetworkOwner(plot_owner)
+				if ORE:IsA("Model") then
+					if ORE.PrimaryPart then
+						ORE.PrimaryPart:SetNetworkOwner(plot_owner)
+					end
 				elseif ORE:IsA("BasePart") then
 					ORE:SetNetworkOwner(plot_owner)
 				end
