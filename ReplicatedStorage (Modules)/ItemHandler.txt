@@ -42,37 +42,63 @@ function module.DROP_ORE(PLOT, MINE, DROP_PART, ORE_SIZE, ORE_COLOR, ORE_MATERIA
 			return nil, nil
 		end
 
-		local ORE_MODEL = oreFolder:FindFirstChild(modelName)
+		local ORE_TEMPLATE = oreFolder:FindFirstChild(modelName)
+		if not ORE_TEMPLATE then
+			warn("Ore model '" .. modelName .. "' not found in OreModels folder!")
+			return nil, nil
+		end
 
-		if ORE_MODEL then
-			-- Make sure it has a PrimaryPart
-			if not ORE_MODEL.PrimaryPart then
+		local ORE
+		local CASH_VALUE
+
+		-- Check if it's a Model or a single Part
+		if ORE_TEMPLATE:IsA("Model") then
+			-- EXISTING MODEL LOGIC
+			if not ORE_TEMPLATE.PrimaryPart then
 				warn(modelName .. " does not have a PrimaryPart set!")
 				return nil, nil
 			end
 
 			-- Clone the model
-			local ORE = ORE_MODEL:Clone()
+			ORE = ORE_TEMPLATE:Clone()
 			ORE.Name = MINE.Name
 
-			-- ADD THIS: Store the original ore model name for refinement
+			-- Store the original ore model name for refinement
 			local oreModelTag = Instance.new("StringValue", ORE)
 			oreModelTag.Name = "OreModelName"
 			oreModelTag.Value = modelName
 
 			-- Add the cash value to the model
-			local CASH_VALUE = Instance.new("NumberValue", ORE)
+			CASH_VALUE = Instance.new("NumberValue", ORE)
+			CASH_VALUE.Name = "Cash"
+			CASH_VALUE.Value = ORE_WORTH
+
+			-- Position the ore at the drop point (UPDATED)
+			ORE:PivotTo(DROP_PART.CFrame)
+
+		elseif ORE_TEMPLATE:IsA("BasePart") then
+			-- NEW SINGLE PART LOGIC
+			ORE = ORE_TEMPLATE:Clone()
+			ORE.Name = MINE.Name
+
+			-- Store the original ore model name for refinement
+			local oreModelTag = Instance.new("StringValue", ORE)
+			oreModelTag.Name = "OreModelName"
+			oreModelTag.Value = modelName
+
+			-- Add the cash value to the part
+			CASH_VALUE = Instance.new("NumberValue", ORE)
 			CASH_VALUE.Name = "Cash"
 			CASH_VALUE.Value = ORE_WORTH
 
 			-- Position the ore at the drop point
-			ORE:SetPrimaryPartCFrame(DROP_PART.CFrame)
-
-			return ORE, CASH_VALUE
+			ORE.CFrame = DROP_PART.CFrame
 		else
-			warn("Ore model '" .. modelName .. "' not found in OreModels folder!")
+			warn("Ore template '" .. modelName .. "' is neither a Model nor a BasePart!")
 			return nil, nil
 		end
+
+		return ORE, CASH_VALUE
 	end
 	return nil, nil
 end
