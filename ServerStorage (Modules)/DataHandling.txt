@@ -71,6 +71,28 @@ function DataHandling.LOAD_PLOT(Plr, PLOT_DATA)
 				end
 			end
 
+			-- NEW: Restore sorter configuration if saved
+			if item_data["SORT_CONFIG"] then
+				print("Loading sorter config for", ITEM_MODEL.Name)
+
+				-- Get or create SortConfig folder
+				local sortConfig = ITEM_MODEL:FindFirstChild("SortConfig")
+				if not sortConfig then
+					sortConfig = Instance.new("Folder")
+					sortConfig.Name = "SortConfig"
+					sortConfig.Parent = ITEM_MODEL
+				end
+
+				-- Restore each ore's sort direction
+				for oreName, direction in pairs(item_data["SORT_CONFIG"]) do
+					local config = Instance.new("StringValue")
+					config.Name = oreName
+					config.Value = direction
+					config.Parent = sortConfig
+					print("Restored:", oreName, "->", direction)
+				end
+			end
+
 			ITEM_MODEL.Parent = PLR_PLOT.PlacedItems
 			LOAD_ITEM_BASICS(ITEM_MODEL)
 		else
@@ -96,6 +118,25 @@ function DataHandling.UNLOAD_PLOT(Plr)
 					-- NEW: Save conveyor reversal state
 					if ITEM:GetAttribute("ConveyorReversed") then
 						itemData["CONVEYOR_REVERSED"] = true
+					end
+
+					-- NEW: Save sorter configuration
+					local sortConfig = ITEM:FindFirstChild("SortConfig")
+					if sortConfig then
+						print("Saving sorter config for", ITEM.Name)
+
+						local configData = {}
+						for _, config in pairs(sortConfig:GetChildren()) do
+							if config:IsA("StringValue") then
+								configData[config.Name] = config.Value
+								print("Saved:", config.Name, "->", config.Value)
+							end
+						end
+
+						-- Only save if there's actual config data
+						if next(configData) then
+							itemData["SORT_CONFIG"] = configData
+						end
 					end
 
 					PLOT_DATA[#PLOT_DATA+1] = itemData
