@@ -1,0 +1,70 @@
+-- ServerScriptService/Sorting.txt
+
+local RepStorage = game:GetService("ReplicatedStorage")
+
+-- Make sure Events folder exists
+if not RepStorage:FindFirstChild("Events") then
+	Instance.new("Folder", RepStorage).Name = "Events"
+end
+
+-- Create or get RemoteFunction
+local configureRemote = RepStorage.Events:FindFirstChild("ConfigureSorter")
+if not configureRemote then
+	configureRemote = Instance.new("RemoteFunction")
+	configureRemote.Name = "ConfigureSorter"
+	configureRemote.Parent = RepStorage.Events
+end
+
+configureRemote.OnServerInvoke = function(player, sorter, changes)
+	print("=== CONFIGURE SORTER CALLED ===")
+	print("Player:", player.Name)
+	print("Sorter:", sorter)
+	print("Changes:", changes)
+
+	-- Verify sorter exists
+	if not sorter or not sorter.Parent then
+		warn("Sorter is nil or destroyed!")
+		return false
+	end
+
+	-- Verify player owns this plot
+	local plot = sorter.Parent.Parent
+
+	if not plot or not plot:FindFirstChild("Owner") then
+		warn("Could not find plot or Owner!")
+		return false
+	end
+
+	if plot.Owner.Value ~= player.Name then
+		warn("Player doesn't own this plot!")
+		return false
+	end
+
+	print("Ownership verified, applying changes...")
+
+	-- Get or create SortConfig folder
+	local sortConfig = sorter:FindFirstChild("SortConfig")
+	if not sortConfig then
+		sortConfig = Instance.new("Folder")
+		sortConfig.Name = "SortConfig"
+		sortConfig.Parent = sorter
+		print("Created SortConfig folder")
+	end
+
+	-- Apply changes
+	for oreName, direction in pairs(changes) do
+		local config = sortConfig:FindFirstChild(oreName)
+		if not config then
+			config = Instance.new("StringValue")
+			config.Name = oreName
+			config.Parent = sortConfig
+		end
+		config.Value = direction
+		print("Configured:", oreName, "->", direction)
+	end
+
+	print("=== CONFIGURATION COMPLETE ===")
+	return true
+end
+
+print("Sorter configuration handler loaded!")
