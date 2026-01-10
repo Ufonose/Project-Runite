@@ -1,0 +1,265 @@
+local Players = game:GetService("Players")
+local RepStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Create main config GUI
+local configGui = Instance.new("ScreenGui")
+configGui.Name = "SorterConfigGui"
+configGui.ResetOnSpawn = false
+configGui.Enabled = false
+configGui.Parent = playerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 500, 0, 600)
+mainFrame.Position = UDim2.new(0.5, -250, 0.5, -300)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = configGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 15)
+corner.Parent = mainFrame
+
+-- Title bar
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 60)
+titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 15)
+titleCorner.Parent = titleBar
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -60, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "⚙️ Configure Sorter"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextSize = 24
+title.Font = Enum.Font.GothamBold
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = titleBar
+
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 45, 0, 45)
+closeButton.Position = UDim2.new(1, -52, 0, 7.5)
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeButton.Text = "✕"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextSize = 24
+closeButton.Font = Enum.Font.GothamBold
+closeButton.Parent = titleBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 10)
+closeCorner.Parent = closeButton
+
+-- Scroll frame for ore list
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Size = UDim2.new(1, -40, 1, -140)
+scrollFrame.Position = UDim2.new(0, 20, 0, 80)
+scrollFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+scrollFrame.BorderSizePixel = 0
+scrollFrame.ScrollBarThickness = 10
+scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 105)
+scrollFrame.Parent = mainFrame
+
+local scrollCorner = Instance.new("UICorner")
+scrollCorner.CornerRadius = UDim.new(0, 12)
+scrollCorner.Parent = scrollFrame
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 10)
+listLayout.SortOrder = Enum.SortOrder.Name
+listLayout.Parent = scrollFrame
+
+local listPadding = Instance.new("UIPadding")
+listPadding.PaddingTop = UDim.new(0, 15)
+listPadding.PaddingBottom = UDim.new(0, 15)
+listPadding.PaddingLeft = UDim.new(0, 15)
+listPadding.PaddingRight = UDim.new(0, 15)
+listPadding.Parent = scrollFrame
+
+-- Apply button
+local applyButton = Instance.new("TextButton")
+applyButton.Size = UDim2.new(1, -40, 0, 45)
+applyButton.Position = UDim2.new(0, 20, 1, -60)
+applyButton.BackgroundColor3 = Color3.fromRGB(70, 130, 70)
+applyButton.Text = "✓ Apply Settings"
+applyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+applyButton.TextSize = 18
+applyButton.Font = Enum.Font.GothamBold
+applyButton.Parent = mainFrame
+
+local applyCorner = Instance.new("UICorner")
+applyCorner.CornerRadius = UDim.new(0, 10)
+applyCorner.Parent = applyButton
+
+-- Current sorter reference
+local currentSorter = nil
+local pendingChanges = {}
+
+-- Function to create ore config row
+local function createOreRow(oreName, currentDirection)
+	local row = Instance.new("Frame")
+	row.Name = oreName
+	row.Size = UDim2.new(1, -30, 0, 70)
+	row.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+	row.BorderSizePixel = 0
+	row.Parent = scrollFrame
+
+	local rowCorner = Instance.new("UICorner")
+	rowCorner.CornerRadius = UDim.new(0, 10)
+	rowCorner.Parent = row
+
+	-- Ore name label
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(0.4, -10, 1, -10)
+	nameLabel.Position = UDim2.new(0, 10, 0, 5)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = oreName:gsub("OreModel", ""):gsub("_", " ")
+	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	nameLabel.TextSize = 16
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+	nameLabel.Parent = row
+
+	-- Direction buttons
+	local directions = {"Left", "Straight", "Right"}
+	local buttonWidth = 0.18
+	local startX = 0.42
+
+	for i, direction in ipairs(directions) do
+		local button = Instance.new("TextButton")
+		button.Name = direction .. "Button"
+		button.Size = UDim2.new(buttonWidth, -5, 0, 50)
+		button.Position = UDim2.new(startX + (i-1) * (buttonWidth + 0.02), 0, 0, 10)
+		button.BackgroundColor3 = currentDirection == direction and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(50, 50, 55)
+		button.Text = direction == "Left" and "←" or (direction == "Right" and "→" or "↑")
+		button.TextColor3 = Color3.fromRGB(255, 255, 255)
+		button.TextSize = 24
+		button.Font = Enum.Font.GothamBold
+		button.Parent = row
+
+		local btnCorner = Instance.new("UICorner")
+		btnCorner.CornerRadius = UDim.new(0, 8)
+		btnCorner.Parent = button
+
+		button.MouseButton1Click:Connect(function()
+			-- Update all buttons in this row
+			for _, dir in ipairs(directions) do
+				local btn = row:FindFirstChild(dir .. "Button")
+				if btn then
+					btn.BackgroundColor3 = dir == direction and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(50, 50, 55)
+				end
+			end
+
+			-- Store pending change
+			pendingChanges[oreName] = direction
+		end)
+	end
+
+	return row
+end
+
+-- Function to load sorter config
+local function loadSorterConfig(sorter)
+	currentSorter = sorter
+	pendingChanges = {}
+
+	-- Clear existing rows
+	for _, child in pairs(scrollFrame:GetChildren()) do
+		if child:IsA("Frame") then
+			child:Destroy()
+		end
+	end
+
+	-- Get all available ore models
+	local oreFolder = RepStorage:FindFirstChild("OreModels")
+	if not oreFolder then return end
+
+	-- Create rows for each ore type
+	for _, oreModel in pairs(oreFolder:GetChildren()) do
+		local oreName = oreModel.Name
+
+		-- Get current direction from sorter config
+		local currentDirection = "Straight"
+		if sorter:FindFirstChild("SortConfig") then
+			local config = sorter.SortConfig:FindFirstChild(oreName)
+			if config and config:IsA("StringValue") then
+				currentDirection = config.Value
+			end
+		end
+
+		createOreRow(oreName, currentDirection)
+	end
+
+	-- Update canvas size
+	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 30)
+
+	-- Show GUI
+	configGui.Enabled = true
+end
+
+-- Create RemoteFunction for config
+if not RepStorage:FindFirstChild("Events") then
+	Instance.new("Folder", RepStorage).Name = "Events"
+end
+
+if not RepStorage.Events:FindFirstChild("ConfigureSorter") then
+	local remoteFunc = Instance.new("RemoteFunction")
+	remoteFunc.Name = "ConfigureSorter"
+	remoteFunc.Parent = RepStorage.Events
+end
+
+-- Close button
+closeButton.MouseButton1Click:Connect(function()
+	configGui.Enabled = false
+	currentSorter = nil
+	pendingChanges = {}
+end)
+
+-- Apply button
+applyButton.MouseButton1Click:Connect(function()
+	if currentSorter and next(pendingChanges) then
+		-- Send changes to server
+		RepStorage.Events.ConfigureSorter:InvokeServer(currentSorter, pendingChanges)
+
+		configGui.Enabled = false
+		currentSorter = nil
+		pendingChanges = {}
+	end
+end)
+
+-- Listen for proximity prompt triggers
+workspace.DescendantAdded:Connect(function(descendant)
+	if descendant.Name == "ConfigPrompt" and descendant:IsA("ProximityPrompt") then
+		descendant.Triggered:Connect(function(playerWhoTriggered)
+			if playerWhoTriggered == player then
+				local sorter = descendant.Parent
+				if sorter and sorter:FindFirstChild("ItemStats") then
+					loadSorterConfig(sorter)
+				end
+			end
+		end)
+	end
+end)
+
+-- Setup existing prompts
+for _, descendant in pairs(workspace:GetDescendants()) do
+	if descendant.Name == "ConfigPrompt" and descendant:IsA("ProximityPrompt") then
+		descendant.Triggered:Connect(function(playerWhoTriggered)
+			if playerWhoTriggered == player then
+				local sorter = descendant.Parent
+				if sorter and sorter:FindFirstChild("ItemStats") then
+					loadSorterConfig(sorter)
+				end
+			end
+		end)
+	end
+end
