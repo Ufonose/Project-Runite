@@ -164,4 +164,97 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
+-- Display current configuration on BillboardGui
+local function updateDisplay()
+	local displayGui = SORTER:FindFirstChild("DisplayGui")
+	if not displayGui then return end
+
+	local textLabel = displayGui:FindFirstChild("TextLabel")
+	if not textLabel then
+		-- Create TextLabel if it doesn't exist
+		textLabel = Instance.new("TextLabel")
+		textLabel.Size = UDim2.new(1, 0, 1, 0)
+		textLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+		textLabel.BackgroundTransparency = 0.3
+		textLabel.BorderSizePixel = 0
+		textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		textLabel.TextSize = 24 -- Fixed size instead of TextScaled
+		textLabel.TextWrapped = true
+		textLabel.Font = Enum.Font.GothamBold
+		textLabel.TextXAlignment = Enum.TextXAlignment.Left
+		textLabel.TextYAlignment = Enum.TextYAlignment.Top
+		textLabel.Parent = displayGui
+
+		-- Add padding
+		local padding = Instance.new("UIPadding")
+		padding.PaddingTop = UDim.new(0, 10)
+		padding.PaddingBottom = UDim.new(0, 10)
+		padding.PaddingLeft = UDim.new(0, 15)
+		padding.PaddingRight = UDim.new(0, 15)
+		padding.Parent = textLabel
+
+		-- Add corner
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 8)
+		corner.Parent = textLabel
+	end
+
+	-- Build display text
+	local displayLines = {"📦 Sorter Config:"}
+	local hasConfig = false
+	local configCount = 0
+
+	-- Collect all configs into a sorted table
+	local configs = {}
+	for _, config in pairs(SORT_CONFIG:GetChildren()) do
+		if config:IsA("StringValue") then
+			table.insert(configs, {name = config.Name, value = config.Value})
+		end
+	end
+
+	-- Sort alphabetically
+	table.sort(configs, function(a, b)
+		return a.name < b.name
+	end)
+
+	-- Build display lines
+	for _, config in ipairs(configs) do
+		hasConfig = true
+		configCount = configCount + 1
+
+		local oreName = config.name:gsub("OreModel", ""):gsub("_", " ")
+		local arrow = config.value == "Left" and "←" or (config.value == "Right" and "→" or "↑")
+		table.insert(displayLines, oreName .. " " .. arrow)
+
+		-- Limit to 6 items to prevent overflow
+		if configCount >= 6 then
+			table.insert(displayLines, "...")
+			break
+		end
+	end
+
+	if not hasConfig then
+		displayLines = {"📦 Sorter", "", "(Not Configured)", "", "Press E to config"}
+	end
+
+	-- Join with newlines
+	textLabel.Text = table.concat(displayLines, "\n")
+
+	print("=== DISPLAY UPDATE ===")
+	print(textLabel.Text)
+	print("===================")
+end
+
+-- Update display when config changes
+SORT_CONFIG.ChildAdded:Connect(updateDisplay)
+SORT_CONFIG.ChildRemoved:Connect(updateDisplay)
+for _, config in pairs(SORT_CONFIG:GetChildren()) do
+	if config:IsA("StringValue") then
+		config.Changed:Connect(updateDisplay)
+	end
+end
+
+-- Initial update
+updateDisplay()
+
 print("Sorter logic loaded!")
