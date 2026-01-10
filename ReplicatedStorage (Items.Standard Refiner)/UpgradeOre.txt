@@ -9,12 +9,6 @@ local function refineOre(ORE)
 	print("Ore Name:", ORE.Name)
 	print("Ore Type:", ORE.ClassName)
 
-	-- Only refine if it's a model (not a single part)
-	if not ORE:IsA("Model") then
-		print("Ore is not a Model, skipping refinement")
-		return ORE
-	end
-
 	-- Get the original ore model name
 	local oreModelTag = ORE:FindFirstChild("OreModelName")
 	if not oreModelTag then
@@ -52,8 +46,9 @@ local function refineOre(ORE)
 		return ORE
 	end
 
-	if not refinedModel.PrimaryPart then
-		warn(refinedModelName .. " does not have a PrimaryPart set!")
+	-- Check if refined version is a Model (requires PrimaryPart) or single BasePart
+	if refinedModel:IsA("Model") and not refinedModel.PrimaryPart then
+		warn(refinedModelName .. " is a Model but does not have a PrimaryPart set!")
 		return ORE
 	end
 
@@ -90,8 +85,32 @@ local function refineOre(ORE)
 	local upgradePartCFrame = script.Parent.Upgrade.CFrame
 	local offset = upgradePartCFrame.LookVector * (script.Parent.Upgrade.Size.Z + 3) -- Move it past the upgrade part
 
-	-- Position it at the old ore's position plus the offset
-	newOre:SetPrimaryPartCFrame(ORE.PrimaryPart.CFrame + offset)
+	-- Position based on whether it's a Model or single BasePart
+	if ORE:IsA("Model") then
+		-- Old ore is a Model
+		local oldPosition = ORE:GetPivot()
+		local newPosition = oldPosition + offset
+
+		if newOre:IsA("Model") then
+			-- Both Model -> Model
+			newOre:PivotTo(newPosition)
+		else
+			-- Model -> BasePart
+			newOre.CFrame = newPosition
+		end
+	else
+		-- Old ore is a BasePart
+		local oldPosition = ORE.CFrame
+		local newPosition = oldPosition + offset
+
+		if newOre:IsA("Model") then
+			-- BasePart -> Model
+			newOre:PivotTo(newPosition)
+		else
+			-- Both BasePart -> BasePart
+			newOre.CFrame = newPosition
+		end
+	end
 
 	-- Parent it to the same location
 	newOre.Parent = ORE.Parent
