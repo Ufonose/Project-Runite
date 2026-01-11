@@ -164,85 +164,207 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
--- Display current configuration on BillboardGui
+-- Display current configuration on SurfaceGui screen with two columns
 local function updateDisplay()
-	local displayGui = SORTER:FindFirstChild("DisplayGui")
-	if not displayGui then return end
-
-	local textLabel = displayGui:FindFirstChild("TextLabel")
-	if not textLabel then
-		-- Create TextLabel if it doesn't exist
-		textLabel = Instance.new("TextLabel")
-		textLabel.Size = UDim2.new(1, 0, 1, 0)
-		textLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-		textLabel.BackgroundTransparency = 0.3
-		textLabel.BorderSizePixel = 0
-		textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-		textLabel.TextSize = 24 -- Fixed size instead of TextScaled
-		textLabel.TextWrapped = true
-		textLabel.Font = Enum.Font.GothamBold
-		textLabel.TextXAlignment = Enum.TextXAlignment.Left
-		textLabel.TextYAlignment = Enum.TextYAlignment.Top
-		textLabel.Parent = displayGui
-
-		-- Add padding
-		local padding = Instance.new("UIPadding")
-		padding.PaddingTop = UDim.new(0, 10)
-		padding.PaddingBottom = UDim.new(0, 10)
-		padding.PaddingLeft = UDim.new(0, 15)
-		padding.PaddingRight = UDim.new(0, 15)
-		padding.Parent = textLabel
-
-		-- Add corner
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 8)
-		corner.Parent = textLabel
+	-- Find the screen part and its SurfaceGui
+	local screen = SORTER:FindFirstChild("Screen")
+	if not screen then 
+		warn("No Screen part found in sorter!")
+		return 
 	end
 
-	-- Build display text
-	local displayLines = {"📦 Sorter Config:"}
-	local hasConfig = false
-	local configCount = 0
+	local displayGui = screen:FindFirstChild("DisplayGui")
+	if not displayGui then 
+		warn("No DisplayGui found on Screen!")
+		return 
+	end
 
-	-- Collect all configs into a sorted table
-	local configs = {}
+	-- Clear existing content
+	displayGui:ClearAllChildren()
+
+	-- Main container
+	local mainFrame = Instance.new("Frame")
+	mainFrame.Name = "MainFrame"
+	mainFrame.Size = UDim2.new(1, 0, 1, 0)
+	mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+	mainFrame.BorderSizePixel = 0
+	mainFrame.Parent = displayGui
+
+	-- Title bar (smaller)
+	local titleBar = Instance.new("Frame")
+	titleBar.Size = UDim2.new(1, 0, 0, 22) -- Even smaller
+	titleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	titleBar.BorderSizePixel = 0
+	titleBar.Parent = mainFrame
+
+	local titleLabel = Instance.new("TextLabel")
+	titleLabel.Size = UDim2.new(1, 0, 1, 0)
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Text = "📦 SORTER CONFIG"
+	titleLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+	titleLabel.TextSize = 8
+	titleLabel.Font = Enum.Font.GothamBold
+	titleLabel.Parent = titleBar
+
+	-- Left column header (closer to title)
+	local leftHeader = Instance.new("Frame")
+	leftHeader.Size = UDim2.new(0.48, 0, 0, 18) -- Smaller
+	leftHeader.Position = UDim2.new(0, 5, 0, 24) -- Much closer to title
+	leftHeader.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	leftHeader.BorderSizePixel = 0
+	leftHeader.Parent = mainFrame
+
+	local leftHeaderText = Instance.new("TextLabel")
+	leftHeaderText.Size = UDim2.new(1, 0, 1, 0)
+	leftHeaderText.BackgroundTransparency = 1
+	leftHeaderText.Text = "← LEFT"
+	leftHeaderText.TextColor3 = Color3.fromRGB(255, 150, 150)
+	leftHeaderText.TextSize = 8
+	leftHeaderText.Font = Enum.Font.GothamBold
+	leftHeaderText.Parent = leftHeader
+
+	-- Right column header (closer to title)
+	local rightHeader = Instance.new("Frame")
+	rightHeader.Size = UDim2.new(0.48, 0, 0, 18) -- Smaller
+	rightHeader.Position = UDim2.new(0.52, 0, 0, 24) -- Much closer to title
+	rightHeader.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	rightHeader.BorderSizePixel = 0
+	rightHeader.Parent = mainFrame
+
+	local rightHeaderText = Instance.new("TextLabel")
+	rightHeaderText.Size = UDim2.new(1, 0, 1, 0)
+	rightHeaderText.BackgroundTransparency = 1
+	rightHeaderText.Text = "RIGHT →"
+	rightHeaderText.TextColor3 = Color3.fromRGB(150, 150, 255)
+	rightHeaderText.TextSize = 8
+	rightHeaderText.Font = Enum.Font.GothamBold
+	rightHeaderText.Parent = rightHeader
+
+	-- Center divider line
+	local divider = Instance.new("Frame")
+	divider.Size = UDim2.new(0, 1, 1, -10) -- Adjusted
+	divider.Position = UDim2.new(0.5, -1, 0, 24) -- Adjusted
+	divider.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+	divider.BorderSizePixel = 0
+	divider.Parent = mainFrame
+
+	-- Left scroll frame (closer to headers)
+	local leftScroll = Instance.new("ScrollingFrame")
+	leftScroll.Size = UDim2.new(0.48, -5, 1, -48) -- Takes up more space now
+	leftScroll.Position = UDim2.new(0, 5, 0, 44) -- Closer to header
+	leftScroll.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	leftScroll.BorderSizePixel = 0
+	leftScroll.ScrollBarThickness = 3
+	leftScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 200, 255)
+	leftScroll.Parent = mainFrame
+
+	local leftLayout = Instance.new("UIListLayout")
+	leftLayout.Padding = UDim.new(0, 2)
+	leftLayout.SortOrder = Enum.SortOrder.Name
+	leftLayout.Parent = leftScroll
+
+	-- Right scroll frame (closer to headers)
+	local rightScroll = Instance.new("ScrollingFrame")
+	rightScroll.Size = UDim2.new(0.48, -5, 1, -48) -- Takes up more space now
+	rightScroll.Position = UDim2.new(0.52, 5, 0, 44) -- Closer to header
+	rightScroll.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	rightScroll.BorderSizePixel = 0
+	rightScroll.ScrollBarThickness = 3
+	rightScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 200, 255)
+	rightScroll.Parent = mainFrame
+
+	local rightLayout = Instance.new("UIListLayout")
+	rightLayout.Padding = UDim.new(0, 2)
+	rightLayout.SortOrder = Enum.SortOrder.Name
+	rightLayout.Parent = rightScroll
+
+	-- Collect configs
+	local leftItems = {}
+	local rightItems = {}
+
 	for _, config in pairs(SORT_CONFIG:GetChildren()) do
 		if config:IsA("StringValue") then
-			table.insert(configs, {name = config.Name, value = config.Value})
+			local oreName = config.Name:gsub("OreModel", ""):gsub("_", " ")
+
+			if config.Value == "Left" then
+				table.insert(leftItems, oreName)
+			elseif config.Value == "Right" then
+				table.insert(rightItems, oreName)
+			end
+			-- Straight items are ignored now
 		end
 	end
 
 	-- Sort alphabetically
-	table.sort(configs, function(a, b)
-		return a.name < b.name
-	end)
+	table.sort(leftItems)
+	table.sort(rightItems)
 
-	-- Build display lines
-	for _, config in ipairs(configs) do
-		hasConfig = true
-		configCount = configCount + 1
+	-- Create left items
+	if #leftItems == 0 then
+		local emptyLabel = Instance.new("TextLabel")
+		emptyLabel.Size = UDim2.new(1, 0, 0, 15)
+		emptyLabel.BackgroundTransparency = 1
+		emptyLabel.Text = "(None)"
+		emptyLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
+		emptyLabel.TextSize = 7
+		emptyLabel.Font = Enum.Font.Code
+		emptyLabel.Parent = leftScroll
+	else
+		for _, oreName in ipairs(leftItems) do
+			local oreLabel = Instance.new("TextLabel")
+			oreLabel.Size = UDim2.new(1, -10, 0, 15)
+			oreLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+			oreLabel.BorderSizePixel = 0
+			oreLabel.Text = "  " .. oreName
+			oreLabel.TextColor3 = Color3.fromRGB(255, 200, 200)
+			oreLabel.TextSize = 7
+			oreLabel.Font = Enum.Font.Code
+			oreLabel.TextXAlignment = Enum.TextXAlignment.Left
+			oreLabel.Parent = leftScroll
 
-		local oreName = config.name:gsub("OreModel", ""):gsub("_", " ")
-		local arrow = config.value == "Left" and "←" or (config.value == "Right" and "→" or "↑")
-		table.insert(displayLines, oreName .. " " .. arrow)
-
-		-- Limit to 6 items to prevent overflow
-		if configCount >= 6 then
-			table.insert(displayLines, "...")
-			break
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius = UDim.new(0, 3)
+			corner.Parent = oreLabel
 		end
 	end
 
-	if not hasConfig then
-		displayLines = {"📦 Sorter", "", "(Not Configured)", "", "Press E to config"}
+	-- Create right items
+	if #rightItems == 0 then
+		local emptyLabel = Instance.new("TextLabel")
+		emptyLabel.Size = UDim2.new(1, 0, 0, 15)
+		emptyLabel.BackgroundTransparency = 1
+		emptyLabel.Text = "(None)"
+		emptyLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
+		emptyLabel.TextSize = 7
+		emptyLabel.Font = Enum.Font.Code
+		emptyLabel.Parent = rightScroll
+	else
+		for _, oreName in ipairs(rightItems) do
+			local oreLabel = Instance.new("TextLabel")
+			oreLabel.Size = UDim2.new(1, -10, 0, 15)
+			oreLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+			oreLabel.BorderSizePixel = 0
+			oreLabel.Text = "  " .. oreName
+			oreLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
+			oreLabel.TextSize = 7
+			oreLabel.Font = Enum.Font.Code
+			oreLabel.TextXAlignment = Enum.TextXAlignment.Left
+			oreLabel.Parent = rightScroll
+
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius = UDim.new(0, 3)
+			corner.Parent = oreLabel
+		end
 	end
 
-	-- Join with newlines
-	textLabel.Text = table.concat(displayLines, "\n")
+	-- Update canvas sizes
+	leftScroll.CanvasSize = UDim2.new(0, 0, 0, leftLayout.AbsoluteContentSize.Y + 10)
+	rightScroll.CanvasSize = UDim2.new(0, 0, 0, rightLayout.AbsoluteContentSize.Y + 10)
 
-	print("=== DISPLAY UPDATE ===")
-	print(textLabel.Text)
-	print("===================")
+	-- No straight items display anymore - removed!
+
+	print("=== SCREEN UPDATE (TWO COLUMN) ===")
+	print("Left items:", #leftItems, "| Right items:", #rightItems)
 end
 
 -- Update display when config changes
