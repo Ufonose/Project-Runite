@@ -1,0 +1,158 @@
+-- ServerScriptService/SlopedConveyorManager.txt (FIXED)
+
+local RunService = game:GetService("RunService")
+
+local DETECTION_HEIGHT = 3
+local slopedConveyors = {} -- Track all sloped conveyors
+
+-- Check if part is an ore
+local function isOre(part)
+	if part:FindFirstChild("Cash") then
+		return true, part
+	end
+
+	if part.Parent and part.Parent:IsA("Model") and part.Parent:FindFirstChild("Cash") then
+		return true, part.Parent.PrimaryPart or part
+	end
+
+	return false, nil
+end
+
+-- Check if ore is on this specific conveyor
+local function isOreOnConveyor(orePart, conveyorPart)
+	local localPos = conveyorPart.CFrame:PointToObjectSpace(orePart.Position)
+	local halfSize = conveyorPart.Size / 2
+
+	local marginX = 0.5
+	local marginY = 2.5
+	local marginZ = 0.5
+
+	local withinX = math.abs(localPos.X) <= (halfSize.X + marginX)
+	local withinY = math.abs(localPos.Y) <= (halfSize.Y + marginY)
+	local withinZ = math.abs(localPos.Z) <= (halfSize.Z + marginZ)
+
+	return withinX and withinY and withinZ
+end
+
+-- Register a sloped conveyor
+local function registerSlopedConveyor(conveyorPart)
+	-- Find ItemStats to get speed
+	local function findItemStats(startPart)
+		local current = startPart
+		while current and current ~= game do
+			local itemStats = current:FindFirstChild("ItemStats")
+			if itemStats then
+				return itemStats
+			end
+			current = current.Parent
+		end
+		return nil
+	end
+
+	local itemStatsModule = findItemStats(conveyorPart)
+	local speed = 12 -- Default
+	local canFlip = false
+
+	if itemStatsModule then
+		local itemInfo = require(itemStatsModule)
+		speed = itemInfo.ConveyorSpeed
+	end
+
+	-- Check if this conveyor can flip (has ConvVelo)
+	local convVelo = conveyorPart:FindFirstChild("ConvVelo")
+	if convVelo then
+		canFlip = true
+		speed = convVelo -- Use the value object instead
+	end
+
+	table.insert(slopedConveyors, {
+		part = conveyorPart,
+		speed = speed,
+		canFlip = canFlip
+	})
+
+	print("Registered sloped conveyor:", conveyorPart:GetFullName(), "Speed:", canFlip and "Variable" or speed)
+end
+
+-- Unregister when destroyed
+local function unregisterSlopedConveyor(conveyorPart)
+	for i, data in ipairs(slopedConveyors) do
+		if data.part == conveyorPart then
+			table.remove(conveyorParts, i)
+			break
+		end
+	end
+end
+
+-- Find all existing sloped conveyors (ONLY ConvSlope parts)
+for _, plot in pairs(workspace.Plots:GetChildren()) do
+	for _, item in pairs(plot.PlacedItems:GetChildren()) do
+		for _, descendant in pairs(item:GetDescendants()) do
+			if descendant:IsA("BasePart") and descendant.Name == "ConvSlope" then
+				registerSlopedConveyor(descendant)
+			end
+		end
+	end
+end
+
+-- Monitor for new sloped conveyors
+workspace.DescendantAdded:Connect(function(descendant)
+	if descendant:IsA("BasePart") and descendant.Name == "ConvSlope" then
+		task.wait(0.1)
+		registerSlopedConveyor(descendant)
+	end
+end)
+
+workspace.DescendantRemoving:Connect(function(descendant)
+	if descendant:IsA("BasePart") and descendant.Name == "ConvSlope" then
+		unregisterSlopedConveyor(descendant)
+	end
+end)
+
+-- SINGLE update loop for ALL sloped conveyors
+local updateCounter = 0
+RunService.Heartbeat:Connect(function()
+	updateCounter = updateCounter + 1
+
+	-- Update every 2 frames
+	if updateCounter >= 2 then
+		updateCounter = 0
+
+		for _, conveyorData in ipairs(slopedConveyors) do
+			local conveyorPart = conveyorData.part
+
+			if conveyorPart.Parent then
+				-- Get speed (from ConvVelo if flippable, otherwise static)
+				local speed = conveyorData.canFlip and conveyorData.speed.Value or conveyorData.speed
+
+				-- Calculate detection region
+				local conveyorCFrame = conveyorPart.CFrame
+				local conveyorSize = conveyorPart.Size
+
+				local detectionSize = Vector3.new(
+					conveyorSize.X,
+					DETECTION_HEIGHT,
+					conveyorSize.Z
+				)
+
+				local detectionCFrame = conveyorCFrame * CFrame.new(0, DETECTION_HEIGHT/2, 0)
+
+				-- Get all parts in region
+				local partsInRegion = workspace:GetPartBoundsInBox(detectionCFrame, detectionSize)
+
+				-- Move ores on this conveyor
+				for _, part in pairs(partsInRegion) do
+					local isAnOre, orePart = isOre(part)
+
+					if isAnOre and orePart and isOreOnConveyor(orePart, conveyorPart) then
+						-- Apply velocity with downward force
+						local downwardForce = -conveyorPart.CFrame.UpVector * 5
+						orePart.AssemblyLinearVelocity = (conveyorPart.CFrame.LookVector * speed) + downwardForce
+					end
+				end
+			end
+		end
+	end
+end)
+
+print("Sloped Conveyor Manager loaded! Managing", #slopedConveyors, "sloped conveyors")
