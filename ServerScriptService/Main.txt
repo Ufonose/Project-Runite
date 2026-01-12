@@ -10,6 +10,8 @@ local DEBOUNCE = {}
 
 warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] loading...")
 
+-- ServerScriptService/Main.txt (UPDATE PLACE_ITEM)
+
 function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 	if Plr and PLACED_ITEMS and ITEMS then
 		local ITEM_FAILED = false
@@ -39,10 +41,17 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 					print("Item:", REAL_ITEM.Name)
 
 					for _, descendant in pairs(REAL_ITEM:GetDescendants()) do
-						if descendant:IsA("BasePart") and descendant.Name == "Conv" then
+						-- Handle Conv and ConvSlope only (NOT ConvMerge)
+						if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope") then
 							-- Skip if NoFlip attribute is set (for merge conveyors)
 							if descendant:GetAttribute("NoFlip") then
 								print("Skipping", descendant:GetFullName(), "- NoFlip attribute set")
+								continue
+							end
+
+							-- EXTRA SAFETY: Skip ConvMerge by name
+							if descendant.Name == "ConvMerge" then
+								print("Skipping ConvMerge - cannot flip direction")
 								continue
 							end
 
@@ -72,7 +81,7 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 
 				_G["global_data"][Plr.Name]["Items"][ITEM_INFO.ItemId]["Amount"] -= 1
 
-				-- NOW enable scripts (they'll read the reversed ConvVelo)
+				-- NOW enable scripts
 				spawn(function()
 					for E, DESCENDANT in pairs(REAL_ITEM:GetDescendants()) do
 						if DESCENDANT:IsA("Script") then
@@ -83,7 +92,7 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 						end
 					end
 
-					-- NEW: Hide support poles if needed (for elevated conveyors)
+					-- NEW: Hide support poles if needed
 					local hideSupportScript = REAL_ITEM:FindFirstChild("HideSupportPoles", true)
 					if hideSupportScript and hideSupportScript:IsA("Script") then
 						hideSupportScript.Disabled = false
