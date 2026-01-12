@@ -1,3 +1,5 @@
+-- ServerScriptService/ItemHandler.txt (UPDATED)
+
 -- Services
 local RepStorage = game:GetService("ReplicatedStorage")
 
@@ -8,7 +10,8 @@ end
 for I, ITEM in pairs(RepStorage.Items:GetChildren()) do
 	local ITEM_INFO = require(ITEM.ItemStats)
 	for E, ITEM_PART in pairs(ITEM:GetDescendants()) do
-		if ITEM_PART.Name == "Conv" and ITEM_PART:IsA("BasePart") then
+		-- ADD ConvMerge and ConvSlope to the check!
+		if (ITEM_PART.Name == "Conv" or ITEM_PART.Name == "ConvMerge" or ITEM_PART.Name == "ConvSlope") and ITEM_PART:IsA("BasePart") then
 			local CONV_SPEED = Instance.new("NumberValue", ITEM_PART)
 			CONV_SPEED.Name = "ConvVelo"
 			CONV_SPEED.Value = ITEM_INFO.ConveyorSpeed
