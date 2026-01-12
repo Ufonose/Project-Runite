@@ -1,9 +1,23 @@
+-- ReplicatedStorage (Modules)/ItemHandler.txt (FIXED - NO COLLISIONFIDELITY)
+
 -- Services
 local RepStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local Plrs = game:GetService("Players")
+local PhysicsService = game:GetService("PhysicsService")
+
 -- Item Handling
 local module = {}
+
+-- CREATE COLLISION GROUP ON MODULE LOAD
+local success = pcall(function()
+	PhysicsService:RegisterCollisionGroup("Ores")
+	PhysicsService:CollisionGroupSetCollidable("Ores", "Ores", false)
+end)
+
+if success then
+	print("✓ Ore collision group created successfully!")
+end
 
 function module.GET_REAL_TIER(ITEM_INFO)
 	local SHOP_TYPES = {"MineTab", "MachineTab", "ProcessorTab", "DecorTab"}
@@ -73,7 +87,14 @@ function module.DROP_ORE(PLOT, MINE, DROP_PART, ORE_SIZE, ORE_COLOR, ORE_MATERIA
 			CASH_VALUE.Name = "Cash"
 			CASH_VALUE.Value = ORE_WORTH
 
-			-- Position the ore at the drop point (UPDATED)
+			-- Set collision group for all parts (NO COLLISIONFIDELITY!)
+			for _, part in pairs(ORE:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.CollisionGroup = "Ores"
+				end
+			end
+
+			-- Position the ore at the drop point
 			ORE:PivotTo(DROP_PART.CFrame)
 
 		elseif ORE_TEMPLATE:IsA("BasePart") then
@@ -90,6 +111,9 @@ function module.DROP_ORE(PLOT, MINE, DROP_PART, ORE_SIZE, ORE_COLOR, ORE_MATERIA
 			CASH_VALUE = Instance.new("NumberValue", ORE)
 			CASH_VALUE.Name = "Cash"
 			CASH_VALUE.Value = ORE_WORTH
+
+			-- Set collision group (NO COLLISIONFIDELITY!)
+			ORE.CollisionGroup = "Ores"
 
 			-- Position the ore at the drop point
 			ORE.CFrame = DROP_PART.CFrame
@@ -135,7 +159,7 @@ function module.UPGRADE_ORE(PLOT, UPGRADER, ORE, ORE_ADD, ORE_MULTI, TAG_NAME, L
 			TAG.Name = TAG_NAME
 			TAG.Value = 0
 		end
-		TAG.Value += 1		-- Do this here cause it's best place, don't move it >:C
+		TAG.Value += 1
 		if ORE_MULTI > 0 then
 			ORE.Cash.Value *= ORE_MULTI
 		end
