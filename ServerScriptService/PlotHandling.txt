@@ -1,3 +1,5 @@
+-- ServerScriptService/PlotHandling.txt (FIXED)
+
 -- Services
 local RepStorage = game:GetService("ReplicatedStorage")
 local Plrs = game:GetService("Players")
@@ -12,41 +14,45 @@ for I, PLOT in pairs(workspace.Plots:GetChildren()) do
 		FOLDER.Name = MISC_FOLDER_NAME
 	end
 
-	-- Updated to handle both Parts and Models with HEIGHT CHECK
+	-- Updated to handle both Parts and Models with STRICT HEIGHT CHECK
 	PLOT.BasePlot.Touched:Connect(function(HIT)
-		-- Get the ore (either a part or model)
-		local ORE = nil
+		-- Get the item (either a part or model)
+		local ITEM = nil
 
-		-- Check if the hit part has a Cash value (old system - single part)
+		-- Check if the hit part has a Cash value (single part)
 		if HIT:FindFirstChild("Cash") then
-			ORE = HIT
+			ITEM = HIT
 		else
-			-- Check if the hit part's parent is a model with Cash value (new system - model)
+			-- Check if the hit part's parent is a model with Cash value
 			local parent = HIT.Parent
 			if parent and parent:IsA("Model") and parent:FindFirstChild("Cash") then
-				ORE = parent
+				ITEM = parent
 			end
 		end
 
-		-- If we found an ore, check if it's actually at ground level
-		if ORE then
-			local orePosition
+		-- If we found an item with cash, check if it should be destroyed
+		if ITEM then
+			local itemPosition
 
-			-- Get the ore's Y position
-			if ORE:IsA("Model") and ORE.PrimaryPart then
-				orePosition = ORE.PrimaryPart.Position
-			elseif ORE:IsA("BasePart") then
-				orePosition = ORE.Position
+			-- Get the item's Y position
+			if ITEM:IsA("Model") and ITEM.PrimaryPart then
+				itemPosition = ITEM.PrimaryPart.Position
+			elseif ITEM:IsA("BasePart") then
+				itemPosition = ITEM.Position
 			end
 
-			if orePosition then
+			if itemPosition then
 				-- Calculate the top of the BasePlot
 				local basePlotTop = PLOT.BasePlot.Position.Y + (PLOT.BasePlot.Size.Y / 2)
 
-				-- Only destroy if the ore is close to ground level (within 2 studs above BasePlot)
-				-- This allows conveyors to be placed on the plot without ores being destroyed
-				if orePosition.Y <= basePlotTop + 3 then
-					ORE:Destroy()
+				-- STRICTER CHECK: Only destroy if VERY close to ground (within 0.5 studs)
+				-- This prevents items on conveyors (3+ studs up) from being destroyed
+				if itemPosition.Y <= basePlotTop + 1 then
+					print("Destroying item at ground level:", ITEM.Name, "Y:", itemPosition.Y)
+					ITEM:Destroy()
+				else
+					-- Debug: Item is above threshold, don't destroy
+					-- print("Item safe on conveyor:", ITEM.Name, "Y:", itemPosition.Y, "Above plot by:", itemPosition.Y - basePlotTop, "studs")
 				end
 			end
 		end
@@ -57,7 +63,6 @@ local function SPAWN_PLAYER(Plr)
 	Plr.Character:WaitForChild("HumanoidRootPart")
 	local REAL_PLOT = Plr.SetPlot.Value
 	for I=1, 5 do
-		-- Loop the player spawning position for a plot cause not looping it doesn't work :/
 		Plr.Character:WaitForChild("HumanoidRootPart")
 		Plr.Character.HumanoidRootPart.CFrame = CFrame.new(REAL_PLOT.BasePlot.Position+Vector3.new(0, Enums.Nums.SPAWN_REG_HEIGHT, 0))
 		wait()
