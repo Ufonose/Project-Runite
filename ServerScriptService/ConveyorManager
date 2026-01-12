@@ -1,0 +1,75 @@
+-- ServerScriptService/ConveyorManager.txt (FIXED)
+
+local RunService = game:GetService("RunService")
+
+local conveyorParts = {} -- Track all conveyor parts
+
+-- Register a conveyor
+local function registerConveyor(conveyorPart)
+	if conveyorPart:FindFirstChild("ConvVelo") then
+		-- Set NoFlip attribute for merge conveyors
+		if conveyorPart.Name == "ConvMerge" then
+			conveyorPart:SetAttribute("NoFlip", true)
+		end
+
+		table.insert(conveyorParts, {
+			part = conveyorPart,
+			velocity = conveyorPart.ConvVelo
+		})
+		print("Registered conveyor:", conveyorPart:GetFullName())
+	end
+end
+
+-- Unregister when destroyed
+local function unregisterConveyor(conveyorPart)
+	for i, data in ipairs(conveyorParts) do
+		if data.part == conveyorPart then
+			table.remove(conveyorParts, i)
+			break
+		end
+	end
+end
+
+-- Find all existing conveyors (Conv AND ConvMerge)
+for _, plot in pairs(workspace.Plots:GetChildren()) do
+	for _, item in pairs(plot.PlacedItems:GetChildren()) do
+		for _, descendant in pairs(item:GetDescendants()) do
+			if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvMerge") then
+				registerConveyor(descendant)
+			end
+		end
+	end
+end
+
+-- Monitor for new conveyors
+workspace.DescendantAdded:Connect(function(descendant)
+	if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvMerge") then
+		task.wait(0.1) -- Wait for ConvVelo to be added
+		registerConveyor(descendant)
+	end
+end)
+
+workspace.DescendantRemoving:Connect(function(descendant)
+	if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvMerge") then
+		unregisterConveyor(descendant)
+	end
+end)
+
+-- SINGLE update loop for ALL conveyors
+local updateCounter = 0
+RunService.Heartbeat:Connect(function()
+	updateCounter = updateCounter + 1
+
+	-- Only update every 2 frames
+	if updateCounter >= 2 then
+		updateCounter = 0
+
+		for _, data in ipairs(conveyorParts) do
+			if data.part.Parent then
+				data.part.AssemblyLinearVelocity = data.part.CFrame.LookVector * data.velocity.Value
+			end
+		end
+	end
+end)
+
+print("Conveyor Manager loaded! Managing", #conveyorParts, "conveyors")
