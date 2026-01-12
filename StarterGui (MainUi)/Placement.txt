@@ -38,6 +38,8 @@ function module.LOAD(MODULE_INFO)
 		PlacementMenu.UNLOAD_MENU()
 	end
 
+	-- StarterGui (MainUi)/Placement.txt (FIX FLIP FUNCTION)
+
 	-- Function to flip conveyor direction
 	function module.FLIP_CONVEYOR_DIRECTION()
 		print("=== FLIP_CONVEYOR_DIRECTION CALLED ===")
@@ -55,9 +57,15 @@ function module.LOAD(MODULE_INFO)
 			-- Mark the item as reversed
 			ITEM:SetAttribute("ConveyorReversed", CONVEYOR_REVERSED)
 
-			-- Find Conv parts and reverse beam texture
+			-- Find Conv and ConvSlope parts (SKIP ConvMerge!)
 			for _, descendant in pairs(ITEM:GetDescendants()) do
-				if descendant:IsA("BasePart") and descendant.Name == "Conv" then
+				if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope") then
+					-- Skip ConvMerge parts (they should never flip)
+					if descendant.Name == "ConvMerge" then
+						print("Skipping ConvMerge - cannot flip direction")
+						continue
+					end
+
 					-- Flip beam texture direction
 					local beam = descendant:FindFirstChildOfClass("Beam")
 					if beam then
