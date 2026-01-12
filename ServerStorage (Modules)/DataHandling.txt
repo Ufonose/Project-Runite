@@ -37,6 +37,8 @@ local function LOAD_ITEM_BASICS(ITEM)
 	end
 end
 
+-- ServerStorage (Modules)/DataHandling.txt (UPDATE LOAD_PLOT)
+
 function DataHandling.LOAD_PLOT(Plr, PLOT_DATA)
 	Plr:WaitForChild("SetPlot")
 	local PLR_PLOT = Plr.SetPlot.Value
@@ -50,22 +52,30 @@ function DataHandling.LOAD_PLOT(Plr, PLOT_DATA)
 			local item_pos = PLR_PLOT.BasePlot.CFrame * CFrame.new(unpack(item_data["item_pos"]))
 			ITEM_MODEL:SetPrimaryPartCFrame(item_pos)
 
-			-- NEW: Apply conveyor reversal if saved
+			-- NEW: Apply conveyor reversal if saved (UPDATED TO INCLUDE ConvSlope)
 			if item_data["CONVEYOR_REVERSED"] then
 				ITEM_MODEL:SetAttribute("ConveyorReversed", true)
 
 				-- Reverse ConvVelo values BEFORE parenting/enabling scripts
 				for _, descendant in pairs(ITEM_MODEL:GetDescendants()) do
-					if descendant:IsA("BasePart") and descendant.Name == "Conv" then
+					-- UPDATE: Handle Conv AND ConvSlope (NOT ConvMerge)
+					if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope") then
+						-- Skip ConvMerge (it has NoFlip attribute)
+						if descendant:GetAttribute("NoFlip") then
+							continue
+						end
+
 						local convVelo = descendant:FindFirstChild("ConvVelo")
 						if convVelo then
 							convVelo.Value = -convVelo.Value
+							print("Loaded reversed ConvVelo for", descendant.Name, ":", convVelo.Value)
 						end
 
-						-- NEW: Reverse beam texture
+						-- Reverse beam texture
 						local beam = descendant:FindFirstChildOfClass("Beam")
 						if beam then
 							beam.TextureSpeed = -beam.TextureSpeed
+							print("Loaded reversed Beam for", descendant.Name, ":", beam.TextureSpeed)
 						end
 					end
 				end
