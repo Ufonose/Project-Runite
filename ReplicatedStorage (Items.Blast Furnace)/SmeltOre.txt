@@ -1,0 +1,391 @@
+-- ReplicatedStorage (Items.OreSmelter)/SmeltOre.txt (FIXED)
+
+local RepStorage = game:GetService("ReplicatedStorage")
+local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
+local ITEM_INFO = require(script.Parent.Parent.ItemStats)
+local PLOT = script.Parent.Parent.Parent.Parent
+
+local SMELT_INPUT = script.Parent:WaitForChild("SmeltInput")
+local SMELT_OUTPUT = script.Parent:WaitForChild("SmeltOutput")
+local DISPLAY_SCREEN = script.Parent:WaitForChild("DisplayScreen")
+
+-- Random spread settings
+local SPREAD_WIDTH = 3
+
+-- CONFIGURABLE: List of accepted ores
+local ACCEPTED_ORES = {
+	["Gold Ore_Clean"] = {Color = Color3.fromRGB(255, 215, 0), IngotName = "Gold Ingot"},
+	["Iron Ore_Clean"] = {Color = Color3.fromRGB(180, 180, 190), IngotName = "Iron Ingot"},
+	-- ADD MORE ORES HERE
+}
+
+local REQUIRED_ORES = 5
+local SMELT_DELAY = 1
+
+local oreQueue = {}
+local isCurrentlySmelting = false
+
+-- Create or get the SurfaceGui
+local displayGui = DISPLAY_SCREEN:FindFirstChild("DisplayGui")
+if not displayGui then
+	displayGui = Instance.new("SurfaceGui")
+	displayGui.Name = "DisplayGui"
+	displayGui.Face = Enum.NormalId.Front
+	displayGui.AlwaysOnTop = true
+	displayGui.Parent = DISPLAY_SCREEN
+end
+
+-- Main display frame
+local mainFrame = displayGui:FindFirstChild("MainFrame")
+if not mainFrame then
+	mainFrame = Instance.new("Frame")
+	mainFrame.Name = "MainFrame"
+	mainFrame.Size = UDim2.new(1, 0, 1, 0)
+	mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	mainFrame.BorderSizePixel = 0
+	mainFrame.Parent = displayGui
+end
+
+-- Title
+local titleLabel = mainFrame:FindFirstChild("Title")
+if not titleLabel then
+	titleLabel = Instance.new("TextLabel")
+	titleLabel.Name = "Title"
+	titleLabel.Size = UDim2.new(1, 0, 0, 60) -- Slightly taller
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Text = "BLAST FURNACE"
+	titleLabel.TextColor3 = Color3.fromRGB(255, 150, 50)
+	titleLabel.TextSize = 80
+	titleLabel.Font = Enum.Font.GothamBold
+	titleLabel.Parent = mainFrame
+end
+
+local infoLabel = mainFrame:FindFirstChild("InfoLabel")
+if not infoLabel then
+	infoLabel = Instance.new("TextLabel")
+	infoLabel.Name = "InfoLabel"
+	infoLabel.Size = UDim2.new(1, -20, 0, 90) -- Width with padding
+	infoLabel.Position = UDim2.new(0, 10, 0, 95) -- Just below title
+	infoLabel.BackgroundTransparency = 1
+	infoLabel.Text = "Only clean ores can be smelted\nMixing different ores produces Impure Ingots"
+	infoLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+	infoLabel.TextSize = 32
+	infoLabel.Font = Enum.Font.Gotham
+	infoLabel.TextWrapped = true
+	infoLabel.Parent = mainFrame
+end
+
+-- Dots container (FIXED POSITIONING)
+local dotsFrame = mainFrame:FindFirstChild("DotsFrame")
+if not dotsFrame then
+	dotsFrame = Instance.new("Frame")
+	dotsFrame.Name = "DotsFrame"
+	dotsFrame.Size = UDim2.new(0.9, 0, 0, 100) -- Taller frame
+	dotsFrame.Position = UDim2.new(0.5, 0, 0.5, 0) -- Centered
+	dotsFrame.AnchorPoint = Vector2.new(0.5, 0.5) -- Center anchor
+	dotsFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+	dotsFrame.BorderSizePixel = 0
+	dotsFrame.Parent = mainFrame
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 12)
+	corner.Parent = dotsFrame
+end
+
+-- Status label (BIGGER TEXT)
+local statusLabel = mainFrame:FindFirstChild("Status")
+if not statusLabel then
+	statusLabel = Instance.new("TextLabel")
+	statusLabel.Name = "Status"
+	statusLabel.Size = UDim2.new(1, 0, 0, 50) -- Taller
+	statusLabel.Position = UDim2.new(0, 0, 1, -140) -- Adjusted position
+	statusLabel.BackgroundTransparency = 1
+	statusLabel.Text = "0/5 Ores"
+	statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+	statusLabel.TextSize = 80 -- BIGGER!
+	statusLabel.Font = Enum.Font.GothamBold
+	statusLabel.Parent = mainFrame
+end
+
+-- Function to update display (FIXED DOT ALIGNMENT)
+local function updateDisplay()
+	-- Clear existing dots
+	for _, child in pairs(dotsFrame:GetChildren()) do
+		if child:IsA("Frame") and child.Name == "Dot" then
+			child:Destroy()
+		end
+	end
+
+	-- Calculate dot size and spacing
+	local dotSize = 70 -- Slightly bigger dots
+	local spacing = 12
+	local totalWidth = (dotSize * REQUIRED_ORES) + (spacing * (REQUIRED_ORES - 1))
+
+	-- FIXED: Start position centered in the frame
+	local startX = (dotsFrame.AbsoluteSize.X - totalWidth) / 2
+
+	-- Create dots for each ore in queue
+	for i = 1, REQUIRED_ORES do
+		local dot = Instance.new("Frame")
+		dot.Name = "Dot"
+		dot.Size = UDim2.new(0, dotSize, 0, dotSize)
+		-- FIXED: Proper centering with AnchorPoint
+		dot.Position = UDim2.new(0, startX + ((i - 1) * (dotSize + spacing)), 0.5, 0)
+		dot.AnchorPoint = Vector2.new(0, 0.5) -- Center vertically
+
+		if oreQueue[i] then
+			dot.BackgroundColor3 = oreQueue[i].Color
+			dot.BackgroundTransparency = 0
+		else
+			dot.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+			dot.BackgroundTransparency = 0.5
+		end
+
+		dot.BorderSizePixel = 0
+		dot.Parent = dotsFrame
+
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(1, 0)
+		corner.Parent = dot
+
+		-- Add shine effect for filled dots
+		if oreQueue[i] then
+			local shine = Instance.new("Frame")
+			shine.Size = UDim2.new(0.4, 0, 0.4, 0)
+			shine.Position = UDim2.new(0.2, 0, 0.2, 0)
+			shine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			shine.BackgroundTransparency = 0.7
+			shine.BorderSizePixel = 0
+			shine.Parent = dot
+
+			local shineCorner = Instance.new("UICorner")
+			shineCorner.CornerRadius = UDim.new(1, 0)
+			shineCorner.Parent = shine
+		end
+	end
+
+	-- Update status text
+	if isCurrentlySmelting then
+		statusLabel.Text = "SMELTING..."
+		statusLabel.TextColor3 = Color3.fromRGB(255, 150, 50)
+	elseif #oreQueue == REQUIRED_ORES then
+		statusLabel.Text = "READY TO SMELT"
+		statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+	else
+		statusLabel.Text = #oreQueue .. "/" .. REQUIRED_ORES .. " Ores"
+		statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+	end
+end
+
+-- Function to check if all ores are the same type
+local function areAllSameType()
+	if #oreQueue == 0 then return false end
+
+	local firstType = oreQueue[1].Type
+	for i = 2, #oreQueue do
+		if oreQueue[i].Type ~= firstType then
+			return false
+		end
+	end
+	return true
+end
+
+-- Function to create ingot (FIXED FALLING THROUGH CONVEYOR)
+local function createIngot()
+	print("=== CREATING INGOT ===")
+
+	local ingotName
+	if areAllSameType() then
+		local oreType = oreQueue[1].Type
+		ingotName = ACCEPTED_ORES[oreType].IngotName
+		print("All ores are", oreType, "- Creating", ingotName)
+	else
+		ingotName = "Impure Ingot"
+		print("Mixed ore types - Creating Impure Ingot")
+	end
+
+	-- Look for ingot model
+	local oreFolder = RepStorage:FindFirstChild("OreModels")
+	if not oreFolder then
+		warn("OreModels folder not found!")
+		return
+	end
+
+	local ingotModel = oreFolder:FindFirstChild(ingotName)
+	if not ingotModel then
+		warn("Ingot model '" .. ingotName .. "' not found!")
+		return
+	end
+
+	-- Clone the ingot
+	local newIngot = ingotModel:Clone()
+
+	-- CRITICAL: Set physics properties BEFORE parenting
+	if newIngot:IsA("Model") then
+		for _, part in pairs(newIngot:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = true
+				part.Anchored = false
+			end
+		end
+	elseif newIngot:IsA("BasePart") then
+		newIngot.CanCollide = true
+		newIngot.Anchored = false
+	end
+
+	-- Tag with ingot name
+	local ingotTag = Instance.new("StringValue", newIngot)
+	ingotTag.Name = "IngotType"
+	ingotTag.Value = ingotName
+
+	-- Calculate total cash value
+	local totalCash = 0
+	for _, ore in ipairs(oreQueue) do
+		totalCash = totalCash + ore.CashValue
+	end
+
+	-- Add cash value
+	local cashValue = Instance.new("NumberValue", newIngot)
+	cashValue.Name = "Cash"
+	if ingotName == "Impure Ingot" then
+		cashValue.Value = 1
+	else
+		cashValue.Value = totalCash * 2
+	end
+
+	-- Random spread
+	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
+
+	-- FIXED: Position ABOVE the output (add 1 stud up to prevent clipping through)
+	local spawnOffset = Vector3.new(randomX, 0, 0) -- 1 stud above output
+
+	if newIngot:IsA("Model") then
+		local outputCFrame = SMELT_OUTPUT.CFrame * CFrame.new(spawnOffset)
+		newIngot:PivotTo(outputCFrame)
+	elseif newIngot:IsA("BasePart") then
+		newIngot.CFrame = SMELT_OUTPUT.CFrame * CFrame.new(spawnOffset)
+	end
+
+	-- Parent to plot
+	newIngot.Parent = PLOT.MiscInfo.OresDropped
+
+	-- CRITICAL: Zero out velocity to prevent initial fall-through
+	task.wait(0.05) -- Small delay for physics to initialize
+
+	if newIngot:IsA("Model") and newIngot.PrimaryPart then
+		newIngot.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+		newIngot.PrimaryPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+	elseif newIngot:IsA("BasePart") then
+		newIngot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+		newIngot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+	end
+
+	print("Ingot created:", ingotName, "Worth: $" .. cashValue.Value)
+end
+
+-- Function to start smelting
+local function startSmelting()
+	if isCurrentlySmelting then
+		return
+	end
+
+	if #oreQueue < REQUIRED_ORES then
+		return
+	end
+
+	print("=== STARTING SMELT PROCESS ===")
+	isCurrentlySmelting = true
+	updateDisplay()
+
+	wait(SMELT_DELAY)
+
+	createIngot()
+
+	oreQueue = {}
+	isCurrentlySmelting = false
+	updateDisplay()
+
+	print("=== SMELT COMPLETE ===")
+end
+
+-- Function to get ore from hit
+local function getOreFromHit(HIT)
+	if HIT:FindFirstChild("Cash") then
+		return HIT
+	end
+
+	if HIT.Parent and HIT.Parent:IsA("Model") and HIT.Parent:FindFirstChild("Cash") then
+		return HIT.Parent
+	end
+
+	return nil
+end
+
+-- Function to process ore
+local function processOre(ORE)
+	if isCurrentlySmelting then
+		ORE:Destroy()
+		return
+	end
+
+	if #oreQueue >= REQUIRED_ORES then
+		ORE:Destroy()
+		return
+	end
+
+	local oreModelTag = ORE:FindFirstChild("OreModelName")
+	if not oreModelTag then
+		ORE:Destroy()
+		return
+	end
+
+	local oreType = oreModelTag.Value
+
+	if not ACCEPTED_ORES[oreType] then
+		ORE:Destroy()
+		return
+	end
+
+	local cashValue = ORE:FindFirstChild("Cash")
+	local cash = cashValue and cashValue.Value or 0
+
+	table.insert(oreQueue, {
+		Type = oreType,
+		Color = ACCEPTED_ORES[oreType].Color,
+		CashValue = cash
+	})
+
+	ORE:Destroy()
+
+	updateDisplay()
+
+	if #oreQueue >= REQUIRED_ORES then
+		while #oreQueue > REQUIRED_ORES do
+			table.remove(oreQueue)
+		end
+		startSmelting()
+	end
+end
+
+local processedOres = {}
+
+SMELT_INPUT.Touched:Connect(function(HIT)
+	local ORE = getOreFromHit(HIT)
+
+	if ORE and ORE:FindFirstChild("Cash") then
+		if processedOres[ORE] then return end
+		processedOres[ORE] = true
+
+		task.spawn(function()
+			processOre(ORE)
+		end)
+
+		task.delay(0.5, function()
+			processedOres[ORE] = nil
+		end)
+	end
+end)
+
+updateDisplay()
+
+print("Ore Smelter loaded!")
