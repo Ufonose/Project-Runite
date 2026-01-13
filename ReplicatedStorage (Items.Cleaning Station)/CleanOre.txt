@@ -1,0 +1,159 @@
+-- ReplicatedStorage (Items.OreCleanMachine)/CleanOre.txt
+
+local RepStorage = game:GetService("ReplicatedStorage")
+local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
+local ITEM_INFO = require(script.Parent.Parent.ItemStats)
+local PLOT = script.Parent.Parent.Parent.Parent
+
+local CLEAN_INPUT = script.Parent:WaitForChild("CleanInput")
+local CLEAN_OUTPUT = script.Parent:WaitForChild("CleanOutput")
+
+-- Random spread settings
+local SPREAD_WIDTH = 4  -- Left/right spread in studs
+
+-- Track recently cleaned ores to prevent duplicates
+local cleanedOres = {}
+
+local function cleanOre(ORE)
+	-- Prevent duplicate cleaning
+	if cleanedOres[ORE] then return end
+	cleanedOres[ORE] = true
+
+	print("=== CLEANING ORE ===")
+	print("Ore Name:", ORE.Name)
+
+	-- Get the original ore model name
+	local oreModelTag = ORE:FindFirstChild("OreModelName")
+	if not oreModelTag then
+		warn("Ore doesn't have OreModelName tag! Cannot clean.")
+		cleanedOres[ORE] = nil
+		return
+	end
+
+	local originalModelName = oreModelTag.Value
+	print("Original model name:", originalModelName)
+
+	-- ONLY process ores with "_Refined" in the name
+	if not string.find(originalModelName, "_Refined") then
+		print("Ore is not refined, ignoring")
+		cleanedOres[ORE] = nil
+		return
+	end
+
+	-- Check if already cleaned
+	if string.find(originalModelName, "_Clean") then
+		print("Ore is already clean, ignoring")
+		cleanedOres[ORE] = nil
+		return
+	end
+
+	-- UPGRADE THE ORE VALUE HERE (only for refined ores that will be cleaned)
+	ITEM_HANDLER.UPGRADE_ORE(
+		PLOT, 
+		script.Parent.Parent, 
+		ORE, 
+		ITEM_INFO.Addition, 
+		ITEM_INFO.Multiplier, 
+		ITEM_INFO.ItemId, 
+		30
+	)
+
+	-- Look for the clean version
+	local oreFolder = RepStorage:FindFirstChild("OreModels")
+	if not oreFolder then
+		warn("OreModels folder not found!")
+		cleanedOres[ORE] = nil
+		return
+	end
+
+	-- REPLACE "_Refined" with "_Clean" (not append!)
+	local cleanModelName = string.gsub(originalModelName, "_Refined", "_Clean")
+	print("Looking for clean model:", cleanModelName)
+
+	local cleanModel = oreFolder:FindFirstChild(cleanModelName)
+
+	if not cleanModel then
+		warn("Clean model '" .. cleanModelName .. "' not found!")
+		print("Make sure you have models like 'StoneOreModel_Clean' in OreModels folder")
+		cleanedOres[ORE] = nil
+		return
+	end
+
+	-- Validate clean model
+	if cleanModel:IsA("Model") and not cleanModel.PrimaryPart then
+		warn(cleanModelName .. " needs a PrimaryPart!")
+		cleanedOres[ORE] = nil
+		return
+	end
+
+	print("Found clean model! Creating...")
+
+	-- Clone the clean model
+	local newOre = cleanModel:Clone()
+	newOre.Name = ORE.Name -- Keep the mine name
+	newOre.CollisionGroup = "Ores"
+
+	-- Tag with clean model name
+	local newOreModelTag = Instance.new("StringValue", newOre)
+	newOreModelTag.Name = "OreModelName"
+	newOreModelTag.Value = cleanModelName
+
+	-- Copy Cash value
+	if ORE:FindFirstChild("Cash") then
+		local cashValue = Instance.new("NumberValue", newOre)
+		cashValue.Name = "Cash"
+		cashValue.Value = ORE.Cash.Value
+		print("Cash value copied:", cashValue.Value)
+	end
+
+	-- Copy upgrade tags
+	for _, child in pairs(ORE:GetChildren()) do
+		if child:IsA("NumberValue") and child.Name ~= "Cash" then
+			child:Clone().Parent = newOre
+		end
+	end
+
+	-- ADD RANDOM SPREAD (left/right only)
+	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
+
+	-- POSITION AT OUTPUT PART WITH RANDOM OFFSET
+	if newOre:IsA("Model") then
+		local outputCFrame = CLEAN_OUTPUT.CFrame * CFrame.new(randomX, 0, 0)
+		newOre:PivotTo(outputCFrame)
+	else
+		newOre.CFrame = CLEAN_OUTPUT.CFrame * CFrame.new(randomX, 0, 0)
+	end
+
+	-- Parent to same location
+	newOre.Parent = ORE.Parent
+
+	-- Destroy old ore
+	ORE:Destroy()
+
+	print("Cleaning complete! Spawned at random offset:", randomX)
+
+	-- Clean up tracking after a delay
+	task.delay(0.5, function()
+		cleanedOres[ORE] = nil
+	end)
+end
+
+-- Detect ores touching the input
+CLEAN_INPUT.Touched:Connect(function(HIT)
+	local ORE = nil
+
+	-- Check if part itself has Cash (single BasePart ore)
+	if HIT:FindFirstChild("Cash") then
+		ORE = HIT
+		-- Check if parent is a Model with Cash
+	elseif HIT.Parent and HIT.Parent:IsA("Model") and HIT.Parent:FindFirstChild("Cash") then
+		ORE = HIT.Parent
+	end
+
+	-- Clean if valid ore found (upgrade happens inside cleanOre function)
+	if ORE and ORE:FindFirstChild("Cash") then
+		cleanOre(ORE)
+	end
+end)
+
+print("Ore Clean Machine loaded!")
