@@ -1,0 +1,27 @@
+local module = {}
+
+module.ItemId = 17 -- Your item ID
+module.TierId = 2
+module.Description = "Sort ores left, right, or straight!"
+module.ThumbnailId = "rbxassetid://YOUR_ID"
+module.Cost = 500
+module.CostType = "Cash"
+module.ItemType = "MachineTab"
+module.TabItem = "Machine"
+
+module.ConveyorSpeed = 0
+module.Multiplier = 0
+module.Addition = 0
+module.DropWorth = 0
+module.DropSize = 0
+module.DropSpeed = 0
+module.PlacementLayer = 1
+
+-- Sorter specific
+module.SortSpeed = 12 -- Speed ores travel when sorted
+module.SortAngle = 45 -- Angle for left/right sorting (degrees)
+
+module.Creators = {"YourName"}
+module.SpecialTags = {}
+
+return module

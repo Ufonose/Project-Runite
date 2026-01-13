@@ -1,0 +1,119 @@
+local RepStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local ITEM_INFO = require(script.Parent.ItemStats)
+local PLOT = script.Parent.Parent.Parent.Parent
+
+local SPLITTER = script.Parent
+local SPLIT_DETECTOR = SPLITTER:WaitForChild("SortDetector")
+
+-- Simple alternating state (true = left, false = right)
+local sendLeft = true
+
+-- Detection settings
+local DETECTION_HEIGHT = 3
+local trackedOres = {}
+
+-- Helper to get ore info
+local function getOreInfo(part)
+	local ore = nil
+
+	-- Check if part itself is ore
+	if part:FindFirstChild("Cash") then
+		ore = part
+		-- Check if parent model is ore
+	elseif part.Parent and part.Parent:IsA("Model") and part.Parent:FindFirstChild("Cash") then
+		ore = part.Parent:FindFirstChildWhichIsA("BasePart")
+	end
+
+	return ore
+end
+
+-- Calculate split velocity
+local function getSplitVelocity(goLeft)
+	local baseCFrame = SPLIT_DETECTOR.CFrame
+	local speed = ITEM_INFO.SortSpeed
+
+	if goLeft then
+		-- Rotate left by SortAngle degrees
+		local angle = math.rad(ITEM_INFO.SortAngle)
+		return (baseCFrame * CFrame.Angles(0, angle, 0)).LookVector * speed
+	else
+		-- Rotate right by SortAngle degrees
+		local angle = math.rad(-ITEM_INFO.SortAngle)
+		return (baseCFrame * CFrame.Angles(0, angle, 0)).LookVector * speed
+	end
+end
+
+-- Check if ore is within splitter bounds
+local function isOreOnSplitter(orePart)
+	local localPos = SPLIT_DETECTOR.CFrame:PointToObjectSpace(orePart.Position)
+	local halfSize = SPLIT_DETECTOR.Size / 2
+
+	local marginX = 0.5
+	local marginY = 2.5
+	local marginZ = 0.5
+
+	local withinX = math.abs(localPos.X) <= (halfSize.X + marginX)
+	local withinY = math.abs(localPos.Y) <= (halfSize.Y + marginY)
+	local withinZ = math.abs(localPos.Z) <= (halfSize.Z + marginZ)
+
+	return withinX and withinY and withinZ
+end
+
+-- Continuously detect and split ores
+RunService.Heartbeat:Connect(function()
+	-- Get all parts in detection region
+	local detectionSize = Vector3.new(
+		SPLIT_DETECTOR.Size.X,
+		DETECTION_HEIGHT,
+		SPLIT_DETECTOR.Size.Z
+	)
+
+	local detectionCFrame = SPLIT_DETECTOR.CFrame * CFrame.new(0, DETECTION_HEIGHT/2, 0)
+	local partsInRegion = workspace:GetPartBoundsInBox(detectionCFrame, detectionSize)
+
+	-- First pass: Clean up tracked ores
+	for ore, data in pairs(trackedOres) do
+		-- Clean up if ore destroyed
+		if not ore.Parent then
+			trackedOres[ore] = nil
+			-- Clean up if traveled too far or too much time
+		elseif (ore.Position - data.startPosition).Magnitude > SPLIT_DETECTOR.Size.Z * 3 or (tick() - data.startTime) > 5 then
+			trackedOres[ore] = nil
+			-- Stop tracking if ore left the splitter
+		elseif not isOreOnSplitter(ore) then
+			trackedOres[ore] = nil
+		end
+	end
+
+	-- Second pass: Check for new ores and move tracked ones
+	for _, part in pairs(partsInRegion) do
+		local ore = getOreInfo(part)
+
+		if ore and isOreOnSplitter(ore) then
+			-- Check if this is a new ore
+			if not trackedOres[ore] then
+				-- NEW ORE - Assign direction and toggle for next ore
+				local direction = sendLeft and "Left" or "Right"
+				sendLeft = not sendLeft -- Toggle ONCE when ore is first detected
+
+				trackedOres[ore] = {
+					goLeft = (direction == "Left"),
+					startTime = tick(),
+					startPosition = ore.Position
+				}
+
+				print("New ore detected -> Split", direction)
+			end
+
+			-- Apply velocity to tracked ore
+			local data = trackedOres[ore]
+			if data then
+				local velocity = getSplitVelocity(data.goLeft)
+				ore.AssemblyLinearVelocity = velocity
+			end
+		end
+	end
+end)
+
+print("Splitter logic loaded!")
