@@ -15,8 +15,10 @@ end
 
 local SORT_CONFIG = SORTER.SortConfig
 
--- Detection settings
-local DETECTION_HEIGHT = 3
+-- Detection settings - LOWERED to detect small objects like ingots
+local DETECTION_HEIGHT = 4  -- Total height of detection box
+local DETECTION_OFFSET = -1  -- Shift box DOWN to catch objects on surface
+
 local trackedOres = {} -- Track ores and their assigned directions
 
 -- Helper to get ore info
@@ -25,13 +27,16 @@ local function getOreInfo(part)
 	local oreModelName = nil
 
 	-- Check if part itself is ore
-	if part:FindFirstChild("Cash") and part:FindFirstChild("OreModelName") then
+	if part:FindFirstChild("Cash") then
 		ore = part
-		oreModelName = part.OreModelName.Value
+		local nameTag = part:FindFirstChild("OreModelName")
+		oreModelName = nameTag and nameTag.Value or part.Name
 		-- Check if parent model is ore
-	elseif part.Parent and part.Parent:IsA("Model") and part.Parent:FindFirstChild("Cash") and part.Parent:FindFirstChild("OreModelName") then
-		ore = part.Parent:FindFirstChildWhichIsA("BasePart")
-		oreModelName = part.Parent.OreModelName.Value
+	elseif part.Parent and part.Parent:IsA("Model") and part.Parent:FindFirstChild("Cash") then
+		local model = part.Parent
+		ore = model:FindFirstChildWhichIsA("BasePart")
+		local nameTag = model:FindFirstChild("OreModelName")
+		oreModelName = nameTag and nameTag.Value or model.Name
 	end
 
 	return ore, oreModelName
@@ -100,14 +105,15 @@ end)
 
 -- Continuously move ores through the sorter
 RunService.Heartbeat:Connect(function()
-	-- Get all parts in detection region
+	-- Get all parts in detection region - LOWERED to catch small objects
 	local detectionSize = Vector3.new(
 		SORT_DETECTOR.Size.X,
 		DETECTION_HEIGHT,
 		SORT_DETECTOR.Size.Z
 	)
 
-	local detectionCFrame = SORT_DETECTOR.CFrame * CFrame.new(0, DETECTION_HEIGHT/2, 0)
+	-- Shift detection box DOWN so bottom is BELOW the surface
+	local detectionCFrame = SORT_DETECTOR.CFrame * CFrame.new(0, (DETECTION_HEIGHT/2) + DETECTION_OFFSET, 0)
 	local partsInRegion = workspace:GetPartBoundsInBox(detectionCFrame, detectionSize)
 
 	-- Update tracked ores
@@ -361,8 +367,6 @@ local function updateDisplay()
 	leftScroll.CanvasSize = UDim2.new(0, 0, 0, leftLayout.AbsoluteContentSize.Y + 10)
 	rightScroll.CanvasSize = UDim2.new(0, 0, 0, rightLayout.AbsoluteContentSize.Y + 10)
 
-	-- No straight items display anymore - removed!
-
 	print("=== SCREEN UPDATE (TWO COLUMN) ===")
 	print("Left items:", #leftItems, "| Right items:", #rightItems)
 end
@@ -379,4 +383,4 @@ end
 -- Initial update
 updateDisplay()
 
-print("Sorter logic loaded!")
+print("Sorter logic loaded with SMALL OBJECT DETECTION!")
