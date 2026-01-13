@@ -1,4 +1,4 @@
--- ServerScriptService/PlotHandling.txt (FIXED)
+-- ServerScriptService/PlotHandling.txt (SIMPLIFIED - NO HEIGHT CHECK)
 
 -- Services
 local RepStorage = game:GetService("ReplicatedStorage")
@@ -14,47 +14,23 @@ for I, PLOT in pairs(workspace.Plots:GetChildren()) do
 		FOLDER.Name = MISC_FOLDER_NAME
 	end
 
-	-- Updated to handle both Parts and Models with STRICT HEIGHT CHECK
+	-- ULTRA SIMPLE: If an ore touches the BasePlot directly, destroy it
+	-- Ores on conveyors won't touch the BasePlot because the conveyor is in between
 	PLOT.BasePlot.Touched:Connect(function(HIT)
-		-- Get the item (either a part or model)
-		local ITEM = nil
+		-- Check if HIT is part of an ore (has Cash)
+		local ORE_TO_DESTROY = nil
 
-		-- Check if the hit part has a Cash value (single part)
+		-- Check if HIT itself has Cash (single-part ore)
 		if HIT:FindFirstChild("Cash") then
-			ITEM = HIT
-		else
-			-- Check if the hit part's parent is a model with Cash value
-			local parent = HIT.Parent
-			if parent and parent:IsA("Model") and parent:FindFirstChild("Cash") then
-				ITEM = parent
-			end
+			ORE_TO_DESTROY = HIT
+			-- Check if HIT's parent is a Model with Cash (model ore)
+		elseif HIT.Parent and HIT.Parent:IsA("Model") and HIT.Parent:FindFirstChild("Cash") then
+			ORE_TO_DESTROY = HIT.Parent
 		end
 
-		-- If we found an item with cash, check if it should be destroyed
-		if ITEM then
-			local itemPosition
-
-			-- Get the item's Y position
-			if ITEM:IsA("Model") and ITEM.PrimaryPart then
-				itemPosition = ITEM.PrimaryPart.Position
-			elseif ITEM:IsA("BasePart") then
-				itemPosition = ITEM.Position
-			end
-
-			if itemPosition then
-				-- Calculate the top of the BasePlot
-				local basePlotTop = PLOT.BasePlot.Position.Y + (PLOT.BasePlot.Size.Y / 2)
-
-				-- STRICTER CHECK: Only destroy if VERY close to ground (within 0.5 studs)
-				-- This prevents items on conveyors (3+ studs up) from being destroyed
-				if itemPosition.Y <= basePlotTop + 1 then
-					print("Destroying item at ground level:", ITEM.Name, "Y:", itemPosition.Y)
-					ITEM:Destroy()
-				else
-					-- Debug: Item is above threshold, don't destroy
-					-- print("Item safe on conveyor:", ITEM.Name, "Y:", itemPosition.Y, "Above plot by:", itemPosition.Y - basePlotTop, "studs")
-				end
-			end
+		-- If we found an ore, destroy it
+		if ORE_TO_DESTROY then
+			ORE_TO_DESTROY:Destroy()
 		end
 	end)
 end
