@@ -1,0 +1,25 @@
+local module = {}
+
+module.ItemId = 18
+module.TierId = 1
+module.Description = "Give ores a nice $1 boost until the ore reaches $30!"
+module.ThumbnailId = "rbxassetid://7448167682"
+module.Cost = 150
+module.CostType = "Cash"
+module.ItemType = "MachineTab"
+module.TabItem = "Machine"
+
+module.ConveyorSpeed = 8
+module.Multiplier = 3
+module.Addition = 0
+module.DropWorth = 0
+module.DropSize = 0
+module.DropSpeed = 0
+module.PlacementLayer = {1,2} -- Higher level
+
+module.Creators = {"Zonix_Official"}
+module.SpecialTags = {
+	
+}
+
+return module

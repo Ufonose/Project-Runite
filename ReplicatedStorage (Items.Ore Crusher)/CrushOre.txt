@@ -1,0 +1,151 @@
+-- ReplicatedStorage (Items.OreCrusher)/CrushOre.txt
+
+local RepStorage = game:GetService("ReplicatedStorage")
+local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
+local ITEM_INFO = require(script.Parent.Parent.ItemStats)
+local PLOT = script.Parent.Parent.Parent.Parent
+
+local CRUSH_INPUT = script.Parent:WaitForChild("CrushInput")
+local CRUSH_OUTPUT = script.Parent:WaitForChild("CrushOutput")
+
+-- Random spread settings (same as ore dropper)
+local SPREAD_WIDTH = 2.7  -- Left/right spread in studs
+
+-- Track recently crushed ores to prevent duplicates
+local crushedOres = {}
+
+local function crushOre(ORE)
+	-- Prevent duplicate crushing
+	if crushedOres[ORE] then return end
+	crushedOres[ORE] = true
+
+	print("=== CRUSHING ORE ===")
+	print("Ore Name:", ORE.Name)
+
+	-- Get the original ore model name
+	local oreModelTag = ORE:FindFirstChild("OreModelName")
+	if not oreModelTag then
+		warn("Ore doesn't have OreModelName tag! Cannot crush.")
+		crushedOres[ORE] = nil
+		return
+	end
+
+	local originalModelName = oreModelTag.Value
+	print("Original model name:", originalModelName)
+
+	-- Check if already refined (crushed)
+	if string.find(originalModelName, "_Refined") then
+		print("Ore is already refined, skipping")
+		crushedOres[ORE] = nil
+		return
+	end
+
+	-- Look for the refined version
+	local oreFolder = RepStorage:FindFirstChild("OreModels")
+	if not oreFolder then
+		warn("OreModels folder not found!")
+		crushedOres[ORE] = nil
+		return
+	end
+
+	local refinedModelName = originalModelName .. "_Refined"
+	print("Looking for refined model:", refinedModelName)
+
+	local refinedModel = oreFolder:FindFirstChild(refinedModelName)
+
+	if not refinedModel then
+		warn("Refined model '" .. refinedModelName .. "' not found!")
+		crushedOres[ORE] = nil
+		return
+	end
+
+	-- Validate refined model
+	if refinedModel:IsA("Model") and not refinedModel.PrimaryPart then
+		warn(refinedModelName .. " needs a PrimaryPart!")
+		crushedOres[ORE] = nil
+		return
+	end
+
+	print("Found refined model! Creating...")
+
+	-- Clone the refined model
+	local newOre = refinedModel:Clone()
+	newOre.Name = ORE.Name -- Keep the mine name
+	newOre.CollisionGroup = "Ores"
+
+	-- Tag with refined model name
+	local newOreModelTag = Instance.new("StringValue", newOre)
+	newOreModelTag.Name = "OreModelName"
+	newOreModelTag.Value = refinedModelName
+
+	-- Copy Cash value
+	if ORE:FindFirstChild("Cash") then
+		local cashValue = Instance.new("NumberValue", newOre)
+		cashValue.Name = "Cash"
+		cashValue.Value = ORE.Cash.Value
+		print("Cash value copied:", cashValue.Value)
+	end
+
+	-- Copy upgrade tags
+	for _, child in pairs(ORE:GetChildren()) do
+		if child:IsA("NumberValue") and child.Name ~= "Cash" then
+			child:Clone().Parent = newOre
+		end
+	end
+
+	-- ADD RANDOM SPREAD (left/right only, same as ore dropper)
+	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
+
+	-- POSITION AT OUTPUT PART WITH RANDOM OFFSET
+	if newOre:IsA("Model") then
+		local outputCFrame = CRUSH_OUTPUT.CFrame * CFrame.new(randomX, 0, 0)
+		newOre:PivotTo(outputCFrame)
+	else
+		newOre.CFrame = CRUSH_OUTPUT.CFrame * CFrame.new(randomX, 0, 0)
+	end
+
+	-- Parent to same location
+	newOre.Parent = ORE.Parent
+
+	-- Destroy old ore
+	ORE:Destroy()
+
+	print("Crushing complete! Spawned at random offset:", randomX)
+
+	-- Clean up tracking after a delay
+	task.delay(0.5, function()
+		crushedOres[ORE] = nil
+	end)
+end
+
+-- Detect ores touching the input
+CRUSH_INPUT.Touched:Connect(function(HIT)
+	local ORE = nil
+
+	-- Check if part itself has Cash (single BasePart ore)
+	if HIT:FindFirstChild("Cash") then
+		ORE = HIT
+		-- Check if parent is a Model with Cash
+	elseif HIT.Parent and HIT.Parent:IsA("Model") and HIT.Parent:FindFirstChild("Cash") then
+		ORE = HIT.Parent
+	end
+
+	-- Crush if valid ore found
+	if ORE and ORE:FindFirstChild("Cash") then
+		-- Optional: Upgrade ore value before crushing
+		local upgraded = ITEM_HANDLER.UPGRADE_ORE(
+			PLOT, 
+			script.Parent.Parent, 
+			ORE, 
+			ITEM_INFO.Addition, 
+			ITEM_INFO.Multiplier, 
+			ITEM_INFO.ItemId, 
+			30
+		)
+
+		-- Crush the ore (works regardless of upgrade)
+		crushOre(ORE)
+	end
+end)
+
+print("Ore Crusher loaded!")
