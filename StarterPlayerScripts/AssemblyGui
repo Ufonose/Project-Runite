@@ -1,0 +1,321 @@
+-- StarterPlayerScripts/AssemblyGui.txt
+
+local Players = game:GetService("Players")
+local RepStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Create main config GUI
+local configGui = Instance.new("ScreenGui")
+configGui.Name = "AssemblyConfigGui"
+configGui.ResetOnSpawn = false
+configGui.Enabled = false
+configGui.Parent = playerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 450, 0, 480)
+mainFrame.Position = UDim2.new(0.5, -225, 0.5, -240)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = configGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 15)
+corner.Parent = mainFrame
+
+-- Title bar
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 60)
+titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 15)
+titleCorner.Parent = titleBar
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -60, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "⚙️ Configure Assembly Machine"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextSize = 20
+title.Font = Enum.Font.GothamBold
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = titleBar
+
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 45, 0, 45)
+closeButton.Position = UDim2.new(1, -52, 0, 7.5)
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeButton.Text = "✕"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextSize = 24
+closeButton.Font = Enum.Font.GothamBold
+closeButton.Parent = titleBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 10)
+closeCorner.Parent = closeButton
+
+-- Description
+local descLabel = Instance.new("TextLabel")
+descLabel.Size = UDim2.new(1, -40, 0, 50)
+descLabel.Position = UDim2.new(0, 20, 0, 75)
+descLabel.BackgroundTransparency = 1
+descLabel.Text = "Choose what to produce from plates:"
+descLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+descLabel.TextSize = 16
+descLabel.Font = Enum.Font.Gotham
+descLabel.TextXAlignment = Enum.TextXAlignment.Left
+descLabel.TextWrapped = true
+descLabel.Parent = mainFrame
+
+-- Options container
+local optionsFrame = Instance.new("Frame")
+optionsFrame.Size = UDim2.new(1, -40, 0, 210)
+optionsFrame.Position = UDim2.new(0, 20, 0, 135)
+optionsFrame.BackgroundTransparency = 1
+optionsFrame.Parent = mainFrame
+
+local optionsLayout = Instance.new("UIListLayout")
+optionsLayout.Padding = UDim.new(0, 15)
+optionsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+optionsLayout.Parent = optionsFrame
+
+-- Apply button
+local applyButton = Instance.new("TextButton")
+applyButton.Size = UDim2.new(1, -40, 0, 50)
+applyButton.Position = UDim2.new(0, 20, 1, -65)
+applyButton.BackgroundColor3 = Color3.fromRGB(70, 130, 70)
+applyButton.Text = "✓ Apply Settings"
+applyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+applyButton.TextSize = 18
+applyButton.Font = Enum.Font.GothamBold
+applyButton.Parent = mainFrame
+
+local applyCorner = Instance.new("UICorner")
+applyCorner.CornerRadius = UDim.new(0, 10)
+applyCorner.Parent = applyButton
+
+-- Current machine reference
+local currentMachine = nil
+local currentConfig = nil
+local pendingSelection = nil
+
+-- Output options
+local outputOptions = {
+	{Name = "Gear", Icon = "⚙️", Color = Color3.fromRGB(100, 200, 255)},
+	{Name = "Coil", Icon = "🔄", Color = Color3.fromRGB(255, 200, 100)},
+	{Name = "Pipe", Icon = "🔧", Color = Color3.fromRGB(150, 255, 150)},
+}
+
+-- Function to create option button
+local function createOptionButton(optionData)
+	local button = Instance.new("TextButton")
+	button.Name = optionData.Name .. "Button"
+	button.Size = UDim2.new(1, 0, 0, 60)
+	button.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+	button.BorderSizePixel = 0
+	button.Text = ""
+	button.LayoutOrder = optionData.LayoutOrder or 1
+	button.Parent = optionsFrame
+
+	local btnCorner = Instance.new("UICorner")
+	btnCorner.CornerRadius = UDim.new(0, 12)
+	btnCorner.Parent = button
+
+	-- Icon
+	local icon = Instance.new("TextLabel")
+	icon.Size = UDim2.new(0, 50, 1, 0)
+	icon.Position = UDim2.new(0, 10, 0, 0)
+	icon.BackgroundTransparency = 1
+	icon.Text = optionData.Icon
+	icon.TextSize = 35
+	icon.Parent = button
+
+	-- Name
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(1, -120, 1, 0)
+	nameLabel.Position = UDim2.new(0, 70, 0, 0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = optionData.Name
+	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	nameLabel.TextSize = 22
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.Parent = button
+
+	-- Selected indicator
+	local selectedIcon = Instance.new("TextLabel")
+	selectedIcon.Name = "SelectedIcon"
+	selectedIcon.Size = UDim2.new(0, 40, 0, 40)
+	selectedIcon.Position = UDim2.new(1, -50, 0.5, -20)
+	selectedIcon.BackgroundTransparency = 1
+	selectedIcon.Text = "✓"
+	selectedIcon.TextColor3 = Color3.fromRGB(100, 255, 100)
+	selectedIcon.TextSize = 30
+	selectedIcon.Font = Enum.Font.GothamBold
+	selectedIcon.Visible = false
+	selectedIcon.Parent = button
+
+	-- Click handler - just update UI, don't save yet
+	button.MouseButton1Click:Connect(function()
+		if currentMachine and currentConfig then
+			-- Store pending selection
+			pendingSelection = optionData.Name
+
+			print("Selected:", optionData.Name, "(not saved yet)")
+
+			-- Update all buttons to show selection
+			for _, btn in pairs(optionsFrame:GetChildren()) do
+				if btn:IsA("TextButton") then
+					local selectedIndicator = btn:FindFirstChild("SelectedIcon")
+					if selectedIndicator then
+						selectedIndicator.Visible = (btn.Name == optionData.Name .. "Button")
+					end
+
+					if btn.Name == optionData.Name .. "Button" then
+						btn.BackgroundColor3 = optionData.Color
+					else
+						btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+					end
+				end
+			end
+		end
+	end)
+
+	-- Hover effect
+	button.MouseEnter:Connect(function()
+		if button:FindFirstChild("SelectedIcon") and not button.SelectedIcon.Visible then
+			button.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+		end
+	end)
+
+	button.MouseLeave:Connect(function()
+		if button:FindFirstChild("SelectedIcon") and not button.SelectedIcon.Visible then
+			button.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		end
+	end)
+
+	return button
+end
+
+-- Create option buttons
+for i, option in ipairs(outputOptions) do
+	option.LayoutOrder = i
+	createOptionButton(option)
+end
+
+-- Function to load machine config
+local function loadMachineConfig(machine)
+	currentMachine = machine
+
+	-- Get current config
+	currentConfig = machine:FindFirstChild("AssemblyConfig")
+	if not currentConfig then
+		warn("Machine doesn't have AssemblyConfig!")
+		return
+	end
+
+	print("Loading assembly config:", currentConfig.Value)
+
+	-- Set pending selection to current config
+	pendingSelection = currentConfig.Value
+
+	-- Update button states
+	for _, btn in pairs(optionsFrame:GetChildren()) do
+		if btn:IsA("TextButton") then
+			local selectedIndicator = btn:FindFirstChild("SelectedIcon")
+			if selectedIndicator then
+				local isSelected = (btn.Name == currentConfig.Value .. "Button")
+				selectedIndicator.Visible = isSelected
+
+				if isSelected then
+					-- Find the matching option data for color
+					for _, option in ipairs(outputOptions) do
+						if btn.Name == option.Name .. "Button" then
+							btn.BackgroundColor3 = option.Color
+							break
+						end
+					end
+				else
+					btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+				end
+			end
+		end
+	end
+
+	-- Show GUI
+	configGui.Enabled = true
+end
+
+-- Apply button handler
+applyButton.MouseButton1Click:Connect(function()
+	if currentMachine and currentConfig and pendingSelection then
+		print("Applying settings:", pendingSelection)
+
+		-- Send changes to server
+		local success = RepStorage.Events.ConfigureAssembly:InvokeServer(currentMachine, pendingSelection)
+
+		if success then
+			print("Assembly machine configured to:", pendingSelection)
+
+			-- Close GUI
+			configGui.Enabled = false
+			currentMachine = nil
+			currentConfig = nil
+			pendingSelection = nil
+		else
+			warn("Failed to apply settings!")
+		end
+	end
+end)
+
+-- Close button
+closeButton.MouseButton1Click:Connect(function()
+	configGui.Enabled = false
+	currentMachine = nil
+	currentConfig = nil
+	pendingSelection = nil
+end)
+
+-- Create RemoteFunction for config
+if not RepStorage.Events:FindFirstChild("ConfigureAssembly") then
+	local remoteFunc = Instance.new("RemoteFunction")
+	remoteFunc.Name = "ConfigureAssembly"
+	remoteFunc.Parent = RepStorage.Events
+end
+
+-- Listen for proximity prompt triggers on existing machines
+workspace.DescendantAdded:Connect(function(descendant)
+	if descendant.Name == "AssemblyConfigPrompt" and descendant:IsA("ProximityPrompt") then
+		descendant.Triggered:Connect(function(playerWhoTriggered)
+			if playerWhoTriggered == player then
+				local machine = descendant.Parent
+				if machine and machine:FindFirstChild("ItemStats") then
+					loadMachineConfig(machine)
+				end
+			end
+		end)
+	end
+end)
+
+-- Setup existing prompts
+for _, descendant in pairs(workspace:GetDescendants()) do
+	if descendant.Name == "AssemblyConfigPrompt" and descendant:IsA("ProximityPrompt") then
+		descendant.Triggered:Connect(function(playerWhoTriggered)
+			if playerWhoTriggered == player then
+				local machine = descendant.Parent
+				if machine and machine:FindFirstChild("ItemStats") then
+					loadMachineConfig(machine)
+				end
+			end
+		end)
+	end
+end
+
+print("Assembly Machine GUI loaded!")
