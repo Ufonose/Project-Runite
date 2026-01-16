@@ -1,0 +1,253 @@
+-- ReplicatedStorage (Items.AssemblyMachine)/AssemblyLogic.txt
+
+local RepStorage = game:GetService("ReplicatedStorage")
+local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
+local ITEM_INFO = require(script.Parent.Parent.ItemStats)
+local PLOT = script.Parent.Parent.Parent.Parent
+
+local ASSEMBLY_INPUT = script.Parent:WaitForChild("AssemblyInput")
+local ASSEMBLY_OUTPUT = script.Parent:WaitForChild("AssemblyOutput")
+local DISPLAY_SCREEN = script.Parent:WaitForChild("DisplayScreen")
+local DISPLAY_SCREEN_2 = script.Parent:FindFirstChild("DisplayScreen2") -- Optional second screen
+
+-- Random spread settings
+local SPREAD_WIDTH = 3
+
+-- Storage for assembly configuration
+if not script.Parent.Parent:FindFirstChild("AssemblyConfig") then
+	local config = Instance.new("StringValue")
+	config.Name = "AssemblyConfig"
+	config.Value = "Gear" -- Default to Gear
+	config.Parent = script.Parent.Parent
+end
+
+local ASSEMBLY_CONFIG = script.Parent.Parent.AssemblyConfig
+
+-- Track recently processed items
+local processedItems = {}
+
+-- Helper to get item info
+local function getItemInfo(part)
+	local item = nil
+	local itemModelName = nil
+
+	-- Check if part itself has Cash
+	if part:FindFirstChild("Cash") then
+		item = part
+		local nameTag = part:FindFirstChild("OreModelName")
+		itemModelName = nameTag and nameTag.Value or part.Name
+		-- Check if parent model has Cash
+	elseif part.Parent and part.Parent:IsA("Model") and part.Parent:FindFirstChild("Cash") then
+		local model = part.Parent
+		item = model:FindFirstChildWhichIsA("BasePart")
+		local nameTag = model:FindFirstChild("OreModelName")
+		itemModelName = nameTag and nameTag.Value or model.Name
+	end
+
+	return item, itemModelName
+end
+
+-- Check if item is a plate
+local function isPlate(itemModelName)
+	return string.find(itemModelName, "Plate") ~= nil
+end
+
+-- Function to assemble item
+local function assembleItem(ITEM)
+	-- Prevent duplicate processing
+	if processedItems[ITEM] then return end
+	processedItems[ITEM] = true
+
+	print("=== ASSEMBLY MACHINE ===")
+	print("Item Name:", ITEM.Name)
+
+	-- Get the item model name
+	local itemModelTag = ITEM:FindFirstChild("OreModelName")
+	if not itemModelTag then
+		warn("Item doesn't have OreModelName tag! Passing through.")
+		processedItems[ITEM] = nil
+		return false -- Not a plate, let it pass
+	end
+
+	local itemModelName = itemModelTag.Value
+	print("Item model name:", itemModelName)
+
+	-- Check if it's a plate
+	if not isPlate(itemModelName) then
+		print("Not a plate, passing through")
+		processedItems[ITEM] = nil
+		return false -- Let it pass through
+	end
+
+	-- Extract the metal type (e.g., "Gold" from "Gold Plate")
+	local metalType = string.gsub(itemModelName, " Plate", "")
+	print("Metal type:", metalType)
+
+	-- Get current output type from config
+	local outputType = ASSEMBLY_CONFIG.Value
+	print("Output type:", outputType)
+
+	-- Build the output model name (e.g., "Gold Gear")
+	local outputModelName = metalType .. " " .. outputType
+
+	-- Look for the output model
+	local oreFolder = RepStorage:FindFirstChild("OreModels")
+	if not oreFolder then
+		warn("OreModels folder not found!")
+		processedItems[ITEM] = nil
+		return true -- Destroy the plate since we can't process it
+	end
+
+	local outputModel = oreFolder:FindFirstChild(outputModelName)
+	if not outputModel then
+		warn("Output model '" .. outputModelName .. "' not found!")
+		processedItems[ITEM] = nil
+		return true -- Destroy the plate since we can't process it
+	end
+
+	-- Validate output model
+	if outputModel:IsA("Model") and not outputModel.PrimaryPart then
+		warn(outputModelName .. " needs a PrimaryPart!")
+		processedItems[ITEM] = nil
+		return true
+	end
+
+	print("Found output model! Creating...")
+
+	-- Clone the output model
+	local newItem = outputModel:Clone()
+	newItem.Name = ITEM.Name -- Keep the original name
+	newItem.CollisionGroup = "Ores"
+
+	-- Tag with output model name
+	local newItemModelTag = Instance.new("StringValue", newItem)
+	newItemModelTag.Name = "OreModelName"
+	newItemModelTag.Value = outputModelName
+
+	-- Copy Cash value
+	if ITEM:FindFirstChild("Cash") then
+		local cashValue = Instance.new("NumberValue", newItem)
+		cashValue.Name = "Cash"
+		cashValue.Value = ITEM.Cash.Value
+		print("Cash value copied:", cashValue.Value)
+	end
+
+	-- Copy upgrade tags
+	for _, child in pairs(ITEM:GetChildren()) do
+		if child:IsA("NumberValue") and child.Name ~= "Cash" then
+			child:Clone().Parent = newItem
+		end
+	end
+
+	-- Random spread
+	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
+
+	-- Position at output with random offset
+	if newItem:IsA("Model") then
+		local outputCFrame = ASSEMBLY_OUTPUT.CFrame * CFrame.new(randomX, 0, 0)
+		newItem:PivotTo(outputCFrame)
+	else
+		newItem.CFrame = ASSEMBLY_OUTPUT.CFrame * CFrame.new(randomX, 0, 0)
+	end
+
+	-- Parent to plot
+	newItem.Parent = ITEM.Parent
+
+	print("Assembly complete! Created:", outputModelName)
+
+	-- Clean up tracking after a delay
+	task.delay(0.5, function()
+		processedItems[ITEM] = nil
+	end)
+
+	return true -- Destroy the input plate
+end
+
+-- Detect items touching the input
+ASSEMBLY_INPUT.Touched:Connect(function(HIT)
+	local ITEM, itemModelName = getItemInfo(HIT)
+
+	-- Process if valid item found
+	if ITEM and ITEM:FindFirstChild("Cash") then
+		local shouldDestroy = assembleItem(ITEM)
+
+		-- Only destroy if it was a plate that got processed
+		if shouldDestroy then
+			ITEM:Destroy()
+		end
+		-- If false, let it pass through (non-plate items)
+	end
+end)
+
+-- Function to create display on a screen
+local function createDisplayOnScreen(screen)
+	if not screen then return end
+
+	local displayGui = screen:FindFirstChild("DisplayGui")
+	if not displayGui then
+		displayGui = Instance.new("SurfaceGui")
+		displayGui.Name = "DisplayGui"
+		displayGui.Face = Enum.NormalId.Left
+		displayGui.AlwaysOnTop = false
+		displayGui.Parent = screen
+	end
+
+	-- Clear existing content
+	displayGui:ClearAllChildren()
+
+	-- Main frame
+	local mainFrame = Instance.new("Frame")
+	mainFrame.Name = "MainFrame"
+	mainFrame.Size = UDim2.new(1, 0, 1, 0)
+	mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	mainFrame.BorderSizePixel = 0
+	mainFrame.Parent = displayGui
+
+	-- Title
+	local titleLabel = Instance.new("TextLabel")
+	titleLabel.Size = UDim2.new(1, 0, 0.3, 0)
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Text = "⚙️ ASSEMBLY"
+	titleLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+	titleLabel.TextSize = 60
+	titleLabel.Font = Enum.Font.GothamBold
+	titleLabel.Parent = mainFrame
+
+	-- Current output display
+	local outputLabel = Instance.new("TextLabel")
+	outputLabel.Size = UDim2.new(1, -20, 0.35, 0)
+	outputLabel.Position = UDim2.new(0, 10, 0.35, 0)
+	outputLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+	outputLabel.BorderSizePixel = 0
+	outputLabel.Text = "Making: " .. ASSEMBLY_CONFIG.Value
+	outputLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+	outputLabel.TextSize = 50
+	outputLabel.Font = Enum.Font.GothamBold
+	outputLabel.Parent = mainFrame
+
+	local outputCorner = Instance.new("UICorner")
+	outputCorner.CornerRadius = UDim.new(0, 12)
+	outputCorner.Parent = outputLabel
+
+end
+
+-- Function to update display screen
+local function updateDisplay()
+	-- Update main screen
+	createDisplayOnScreen(DISPLAY_SCREEN)
+
+	-- Update second screen if it exists
+	if DISPLAY_SCREEN_2 then
+		createDisplayOnScreen(DISPLAY_SCREEN_2)
+	end
+
+	print("Display updated - Current output:", ASSEMBLY_CONFIG.Value)
+end
+
+-- Update display when config changes
+ASSEMBLY_CONFIG.Changed:Connect(updateDisplay)
+
+-- Initial display update
+updateDisplay()
+
+print("Assembly Machine loaded!")
