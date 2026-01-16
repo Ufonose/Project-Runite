@@ -1,3 +1,5 @@
+-- ServerStorage (Modules)/DataHandling.txt (UPDATED WITH ASSEMBLY CONFIG)
+
 -- Services
 local RepStorage = game:GetService("ReplicatedStorage")
 -- Modules
@@ -36,8 +38,6 @@ local function LOAD_ITEM_BASICS(ITEM)
 		end
 	end
 end
-
--- ServerStorage (Modules)/DataHandling.txt (UPDATE LOAD_PLOT)
 
 function DataHandling.LOAD_PLOT(Plr, PLOT_DATA)
 	Plr:WaitForChild("SetPlot")
@@ -103,6 +103,21 @@ function DataHandling.LOAD_PLOT(Plr, PLOT_DATA)
 				end
 			end
 
+			-- ✨ NEW: Restore assembly machine configuration if saved
+			if item_data["ASSEMBLY_CONFIG"] then
+				print("Loading assembly config for", ITEM_MODEL.Name)
+
+				local assemblyConfig = ITEM_MODEL:FindFirstChild("AssemblyConfig")
+				if not assemblyConfig then
+					assemblyConfig = Instance.new("StringValue")
+					assemblyConfig.Name = "AssemblyConfig"
+					assemblyConfig.Parent = ITEM_MODEL
+				end
+
+				assemblyConfig.Value = item_data["ASSEMBLY_CONFIG"]
+				print("Restored assembly config:", assemblyConfig.Value)
+			end
+
 			ITEM_MODEL.Parent = PLR_PLOT.PlacedItems
 			LOAD_ITEM_BASICS(ITEM_MODEL)
 		else
@@ -147,6 +162,13 @@ function DataHandling.UNLOAD_PLOT(Plr)
 						if next(configData) then
 							itemData["SORT_CONFIG"] = configData
 						end
+					end
+
+					-- ✨ NEW: Save assembly machine configuration
+					local assemblyConfig = ITEM:FindFirstChild("AssemblyConfig")
+					if assemblyConfig and assemblyConfig:IsA("StringValue") then
+						print("Saving assembly config for", ITEM.Name, ":", assemblyConfig.Value)
+						itemData["ASSEMBLY_CONFIG"] = assemblyConfig.Value
 					end
 
 					PLOT_DATA[#PLOT_DATA+1] = itemData
