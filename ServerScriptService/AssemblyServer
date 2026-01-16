@@ -1,0 +1,76 @@
+-- ServerScriptService/AssemblyServer.txt
+
+local RepStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+
+-- Make sure Events folder exists
+if not RepStorage:FindFirstChild("Events") then
+	Instance.new("Folder", RepStorage).Name = "Events"
+end
+
+-- Create or get RemoteFunction
+local configureRemote = RepStorage.Events:FindFirstChild("ConfigureAssembly")
+if not configureRemote then
+	configureRemote = Instance.new("RemoteFunction")
+	configureRemote.Name = "ConfigureAssembly"
+	configureRemote.Parent = RepStorage.Events
+end
+
+-- Valid output options
+local VALID_OUTPUTS = {
+	["Gear"] = true,
+	["Coil"] = true,
+	["Pipe"] = true,
+}
+
+configureRemote.OnServerInvoke = function(player, machine, outputType)
+	print("=== CONFIGURE ASSEMBLY MACHINE ===")
+	print("Player:", player.Name)
+	print("Machine:", machine)
+	print("Output Type:", outputType)
+
+	-- Verify machine exists
+	if not machine or not machine.Parent then
+		warn("Machine is nil or destroyed!")
+		return false
+	end
+
+	-- Verify output type is valid
+	if not VALID_OUTPUTS[outputType] then
+		warn("Invalid output type:", outputType)
+		return false
+	end
+
+	-- Verify player owns this plot
+	local plot = machine.Parent.Parent
+
+	if not plot or not plot:FindFirstChild("Owner") then
+		warn("Could not find plot or Owner!")
+		return false
+	end
+
+	if plot.Owner.Value ~= player.Name then
+		warn("Player doesn't own this plot!")
+		return false
+	end
+
+	print("Ownership verified, applying configuration...")
+
+	-- Get or create AssemblyConfig
+	local assemblyConfig = machine:FindFirstChild("AssemblyConfig")
+	if not assemblyConfig then
+		assemblyConfig = Instance.new("StringValue")
+		assemblyConfig.Name = "AssemblyConfig"
+		assemblyConfig.Parent = machine
+		print("Created AssemblyConfig")
+	end
+
+	-- Set the new output type
+	assemblyConfig.Value = outputType
+	print("Configured to produce:", outputType)
+
+	print("=== CONFIGURATION COMPLETE ===")
+	return true
+end
+
+print("Assembly machine configuration handler loaded!")
