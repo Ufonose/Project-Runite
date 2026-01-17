@@ -1,3 +1,5 @@
+-- ReplicatedStorage (Items.Sorter)/SorterLogic.txt (FIXED GUI UPDATE BUG)
+
 local RepStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ITEM_INFO = require(script.Parent.ItemStats)
@@ -198,7 +200,7 @@ local function updateDisplay()
 
 	-- Title bar (smaller)
 	local titleBar = Instance.new("Frame")
-	titleBar.Size = UDim2.new(1, 0, 0, 22) -- Even smaller
+	titleBar.Size = UDim2.new(1, 0, 0, 22)
 	titleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 	titleBar.BorderSizePixel = 0
 	titleBar.Parent = mainFrame
@@ -212,10 +214,10 @@ local function updateDisplay()
 	titleLabel.Font = Enum.Font.GothamBold
 	titleLabel.Parent = titleBar
 
-	-- Left column header (closer to title)
+	-- Left column header
 	local leftHeader = Instance.new("Frame")
-	leftHeader.Size = UDim2.new(0.48, 0, 0, 18) -- Smaller
-	leftHeader.Position = UDim2.new(0, 5, 0, 24) -- Much closer to title
+	leftHeader.Size = UDim2.new(0.48, 0, 0, 18)
+	leftHeader.Position = UDim2.new(0, 5, 0, 24)
 	leftHeader.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	leftHeader.BorderSizePixel = 0
 	leftHeader.Parent = mainFrame
@@ -229,10 +231,10 @@ local function updateDisplay()
 	leftHeaderText.Font = Enum.Font.GothamBold
 	leftHeaderText.Parent = leftHeader
 
-	-- Right column header (closer to title)
+	-- Right column header
 	local rightHeader = Instance.new("Frame")
-	rightHeader.Size = UDim2.new(0.48, 0, 0, 18) -- Smaller
-	rightHeader.Position = UDim2.new(0.52, 0, 0, 24) -- Much closer to title
+	rightHeader.Size = UDim2.new(0.48, 0, 0, 18)
+	rightHeader.Position = UDim2.new(0.52, 0, 0, 24)
 	rightHeader.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	rightHeader.BorderSizePixel = 0
 	rightHeader.Parent = mainFrame
@@ -248,16 +250,16 @@ local function updateDisplay()
 
 	-- Center divider line
 	local divider = Instance.new("Frame")
-	divider.Size = UDim2.new(0, 1, 1, -10) -- Adjusted
-	divider.Position = UDim2.new(0.5, -1, 0, 24) -- Adjusted
+	divider.Size = UDim2.new(0, 1, 1, -10)
+	divider.Position = UDim2.new(0.5, -1, 0, 24)
 	divider.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
 	divider.BorderSizePixel = 0
 	divider.Parent = mainFrame
 
-	-- Left scroll frame (closer to headers)
+	-- Left scroll frame
 	local leftScroll = Instance.new("ScrollingFrame")
-	leftScroll.Size = UDim2.new(0.48, -5, 1, -48) -- Takes up more space now
-	leftScroll.Position = UDim2.new(0, 5, 0, 44) -- Closer to header
+	leftScroll.Size = UDim2.new(0.48, -5, 1, -48)
+	leftScroll.Position = UDim2.new(0, 5, 0, 44)
 	leftScroll.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 	leftScroll.BorderSizePixel = 0
 	leftScroll.ScrollBarThickness = 3
@@ -269,10 +271,10 @@ local function updateDisplay()
 	leftLayout.SortOrder = Enum.SortOrder.Name
 	leftLayout.Parent = leftScroll
 
-	-- Right scroll frame (closer to headers)
+	-- Right scroll frame
 	local rightScroll = Instance.new("ScrollingFrame")
-	rightScroll.Size = UDim2.new(0.48, -5, 1, -48) -- Takes up more space now
-	rightScroll.Position = UDim2.new(0.52, 5, 0, 44) -- Closer to header
+	rightScroll.Size = UDim2.new(0.48, -5, 1, -48)
+	rightScroll.Position = UDim2.new(0.52, 5, 0, 44)
 	rightScroll.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 	rightScroll.BorderSizePixel = 0
 	rightScroll.ScrollBarThickness = 3
@@ -297,7 +299,7 @@ local function updateDisplay()
 			elseif config.Value == "Right" then
 				table.insert(rightItems, oreName)
 			end
-			-- Straight items are ignored now
+			-- Straight items are ignored
 		end
 	end
 
@@ -371,16 +373,30 @@ local function updateDisplay()
 	print("Left items:", #leftItems, "| Right items:", #rightItems)
 end
 
--- Update display when config changes
-SORT_CONFIG.ChildAdded:Connect(updateDisplay)
-SORT_CONFIG.ChildRemoved:Connect(updateDisplay)
-for _, config in pairs(SORT_CONFIG:GetChildren()) do
+-- FIX: Connect the Changed event to newly added configs
+local function connectConfigChanged(config)
 	if config:IsA("StringValue") then
-		config.Changed:Connect(updateDisplay)
+		config.Changed:Connect(function()
+			print("Config changed:", config.Name, "->", config.Value)
+			updateDisplay()
+		end)
 	end
+end
+
+-- Update display when config changes
+SORT_CONFIG.ChildAdded:Connect(function(child)
+	connectConfigChanged(child)  -- FIX: Connect Changed event to new configs
+	updateDisplay()
+end)
+
+SORT_CONFIG.ChildRemoved:Connect(updateDisplay)
+
+-- Connect to existing configs
+for _, config in pairs(SORT_CONFIG:GetChildren()) do
+	connectConfigChanged(config)
 end
 
 -- Initial update
 updateDisplay()
 
-print("Sorter logic loaded with SMALL OBJECT DETECTION!")
+print("Sorter logic loaded with SMALL OBJECT DETECTION and FIXED GUI updates!")
