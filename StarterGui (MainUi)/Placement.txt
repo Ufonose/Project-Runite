@@ -66,12 +66,12 @@ function module.LOAD(MODULE_INFO)
 						continue
 					end
 
-					-- Flip beam texture direction
+					-- FIXED: Just flip the beam texture directly instead of using abs()
 					local beam = descendant:FindFirstChildOfClass("Beam")
 					if beam then
-						local originalSpeed = math.abs(beam.TextureSpeed)
-						beam.TextureSpeed = CONVEYOR_REVERSED and -originalSpeed or originalSpeed
-						print("Beam TextureSpeed set to:", beam.TextureSpeed)
+						-- Simply negate the current speed to flip direction
+						beam.TextureSpeed = -beam.TextureSpeed
+						print("Beam TextureSpeed flipped to:", beam.TextureSpeed)
 					end
 				end
 			end
@@ -79,6 +79,7 @@ function module.LOAD(MODULE_INFO)
 
 		print("=== FLIP COMPLETE ===")
 	end
+	
 	function module.BEGIN_PLACING(ITEMS_PLACING, MOVING_ITEMS)
 		local MOVING_ITEMS = MOVING_ITEMS or false
 		module.DESTROY_PLACING()
