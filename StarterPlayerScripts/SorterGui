@@ -1,3 +1,5 @@
+-- StarterPlayerScripts/SorterGui (COMPACT VERSION)
+
 local Players = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
@@ -48,9 +50,9 @@ local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0, 45, 0, 45)
 closeButton.Position = UDim2.new(1, -52, 0, 7.5)
 closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeButton.Text = "✕"
+closeButton.Text = "X"
 closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextSize = 24
+closeButton.TextSize = 22
 closeButton.Font = Enum.Font.GothamBold
 closeButton.Parent = titleBar
 
@@ -58,10 +60,51 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 10)
 closeCorner.Parent = closeButton
 
+-- Category filter buttons
+local categoryFrame = Instance.new("Frame")
+categoryFrame.Size = UDim2.new(1, -40, 0, 40)
+categoryFrame.Position = UDim2.new(0, 20, 0, 75)
+categoryFrame.BackgroundTransparency = 1
+categoryFrame.Parent = mainFrame
+
+local categoryLayout = Instance.new("UIListLayout")
+categoryLayout.FillDirection = Enum.FillDirection.Horizontal
+categoryLayout.Padding = UDim.new(0, 6)
+categoryLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+categoryLayout.Parent = categoryFrame
+
+local currentFilter = "All"
+
+local function createCategoryButton(categoryName)
+	local button = Instance.new("TextButton")
+	button.Name = categoryName .. "Button"
+	button.Size = UDim2.new(0, 65, 0, 35)  -- Reduced from 80 to 65
+	button.BackgroundColor3 = categoryName == "All" and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(45, 45, 50)
+	button.Text = categoryName
+	button.TextColor3 = Color3.fromRGB(255, 255, 255)
+	button.TextSize = 14  -- Reduced from 13 to 12
+	button.Font = Enum.Font.GothamBold
+	button.Parent = categoryFrame
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = button
+
+	return button
+end
+
+local categories = {"All", "Ores", "Gems", "Ingots", "Plates", "Materials"}
+local categoryButtons = {}
+
+for _, category in ipairs(categories) do
+	local btn = createCategoryButton(category)
+	categoryButtons[category] = btn
+end
+
 -- Scroll frame for ore list
 local scrollFrame = Instance.new("ScrollingFrame")
-scrollFrame.Size = UDim2.new(1, -40, 1, -140)
-scrollFrame.Position = UDim2.new(0, 20, 0, 80)
+scrollFrame.Size = UDim2.new(1, -40, 1, -185)
+scrollFrame.Position = UDim2.new(0, 20, 0, 125)
 scrollFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 scrollFrame.BorderSizePixel = 0
 scrollFrame.ScrollBarThickness = 10
@@ -73,15 +116,15 @@ scrollCorner.CornerRadius = UDim.new(0, 12)
 scrollCorner.Parent = scrollFrame
 
 local listLayout = Instance.new("UIListLayout")
-listLayout.Padding = UDim.new(0, 10)
+listLayout.Padding = UDim.new(0, 5)
 listLayout.SortOrder = Enum.SortOrder.Name
 listLayout.Parent = scrollFrame
 
 local listPadding = Instance.new("UIPadding")
-listPadding.PaddingTop = UDim.new(0, 15)
-listPadding.PaddingBottom = UDim.new(0, 15)
-listPadding.PaddingLeft = UDim.new(0, 15)
-listPadding.PaddingRight = UDim.new(0, 15)
+listPadding.PaddingTop = UDim.new(0, 10)
+listPadding.PaddingBottom = UDim.new(0, 10)
+listPadding.PaddingLeft = UDim.new(0, 10)
+listPadding.PaddingRight = UDim.new(0, 10)
 listPadding.Parent = scrollFrame
 
 -- Apply button
@@ -103,51 +146,98 @@ applyCorner.Parent = applyButton
 local currentSorter = nil
 local pendingChanges = {}
 
--- Function to create ore config row
+-- Helper function to determine item category
+local function getItemCategory(itemName)
+	local name = itemName:lower()
+
+	if name:find("ore") then
+		return "Ores"
+	elseif name:find("ingot") then
+		return "Ingots"
+	elseif name:find("plate") then
+		return "Plates"
+	elseif name:find("gem") then
+		return "Gems"
+	elseif name:find("coil") or name:find("gear") or name:find("pipe") then
+		return "Materials"
+	else
+		return "Other"
+	end
+end
+
+-- Function to filter rows by category
+local function filterByCategory(category)
+	currentFilter = category
+
+	-- Update button colors
+	for catName, btn in pairs(categoryButtons) do
+		btn.BackgroundColor3 = catName == category and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(45, 45, 50)
+	end
+
+	-- Show/hide rows based on filter
+	for _, child in pairs(scrollFrame:GetChildren()) do
+		if child:IsA("Frame") then
+			local itemCategory = getItemCategory(child.Name)
+			child.Visible = (category == "All" or itemCategory == category)
+		end
+	end
+
+	-- Update canvas size
+	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 30)
+end
+
+-- Connect category button clicks
+for category, btn in pairs(categoryButtons) do
+	btn.MouseButton1Click:Connect(function()
+		filterByCategory(category)
+	end)
+end
+
+-- Function to create ore config row (COMPACT VERSION)
 local function createOreRow(oreName, currentDirection)
 	local row = Instance.new("Frame")
 	row.Name = oreName
-	row.Size = UDim2.new(1, -30, 0, 70)
+	row.Size = UDim2.new(1, -20, 0, 45)  -- Reduced from 70 to 45
 	row.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 	row.BorderSizePixel = 0
 	row.Parent = scrollFrame
 
 	local rowCorner = Instance.new("UICorner")
-	rowCorner.CornerRadius = UDim.new(0, 10)
+	rowCorner.CornerRadius = UDim.new(0, 8)
 	rowCorner.Parent = row
 
-	-- Ore name label
+	-- Ore name label (more compact)
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(0.4, -10, 1, -10)
-	nameLabel.Position = UDim2.new(0, 10, 0, 5)
+	nameLabel.Size = UDim2.new(0.48, -5, 1, 0)  -- Increased from 0.38 to 0.48
+	nameLabel.Position = UDim2.new(0, 8, 0, 0)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Text = oreName:gsub("OreModel", ""):gsub("_", " ")
 	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	nameLabel.TextSize = 16
+	nameLabel.TextSize = 18  -- Reduced from 16
 	nameLabel.Font = Enum.Font.GothamBold
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
 	nameLabel.Parent = row
 
-	-- Direction buttons
+	-- Direction buttons (narrower)
 	local directions = {"Left", "Straight", "Right"}
-	local buttonWidth = 0.18
-	local startX = 0.42
+	local buttonWidth = 0.14  -- Reduced from 0.18 to 0.14
+	local startX = 0.50  -- Adjusted from 0.42 to 0.50
 
 	for i, direction in ipairs(directions) do
 		local button = Instance.new("TextButton")
 		button.Name = direction .. "Button"
-		button.Size = UDim2.new(buttonWidth, -5, 0, 50)
-		button.Position = UDim2.new(startX + (i-1) * (buttonWidth + 0.02), 0, 0, 10)
+		button.Size = UDim2.new(buttonWidth, -5, 0, 35)  -- Reduced from 50 to 35
+		button.Position = UDim2.new(startX + (i-1) * (buttonWidth + 0.02), 0, 0, 5)
 		button.BackgroundColor3 = currentDirection == direction and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(50, 50, 55)
 		button.Text = direction == "Left" and "←" or (direction == "Right" and "→" or "↑")
 		button.TextColor3 = Color3.fromRGB(255, 255, 255)
-		button.TextSize = 24
+		button.TextSize = 20  -- Reduced from 24
 		button.Font = Enum.Font.GothamBold
 		button.Parent = row
 
 		local btnCorner = Instance.new("UICorner")
-		btnCorner.CornerRadius = UDim.new(0, 8)
+		btnCorner.CornerRadius = UDim.new(0, 6)
 		btnCorner.Parent = button
 
 		button.MouseButton1Click:Connect(function()
@@ -199,8 +289,8 @@ local function loadSorterConfig(sorter)
 		createOreRow(oreName, currentDirection)
 	end
 
-	-- Update canvas size
-	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 30)
+	-- Reset filter to "All"
+	filterByCategory("All")
 
 	-- Show GUI
 	configGui.Enabled = true
@@ -222,6 +312,7 @@ closeButton.MouseButton1Click:Connect(function()
 	configGui.Enabled = false
 	currentSorter = nil
 	pendingChanges = {}
+	filterByCategory("All")  -- Reset filter
 end)
 
 -- Apply button
@@ -233,6 +324,7 @@ applyButton.MouseButton1Click:Connect(function()
 		configGui.Enabled = false
 		currentSorter = nil
 		pendingChanges = {}
+		filterByCategory("All")  -- Reset filter
 	end
 end)
 
