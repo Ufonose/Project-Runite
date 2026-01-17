@@ -6,6 +6,7 @@ function module.LOAD(MODULE_INFO)
 	local SERVICES = MODULE_INFO["SERVICES"]
 	-- Services
 	local RepStorage = SERVICES["ReplicatedStorage"]
+	local RunService = SERVICES["RunService"]
 	local Plrs = SERVICES["Players"]
 	-- Modules
 	local MainLib = MODULES["MainLib"]
@@ -78,8 +79,29 @@ function module.LOAD(MODULE_INFO)
 				script.Parent.ItemName.Size = UDim2.new(0.667, 0, 0.202, 0)
 				script.Parent.ItemTier.Size = UDim2.new(0.667, 0, 0.14, 0)
 				script.Parent.ItemTier.Position = UDim2.new(0.027, 0, 0.248, 0)
-				script.Parent.UISizeConstraint.MaxSize = Vector2.new(300, 200) -- Increased for unlock text
+				script.Parent.UISizeConstraint.MaxSize = Vector2.new(300, 200)
 			end
+
+			-- NEW: Check if we're hovering over a placed item using ObjectValue reference
+			local hoveredItemRef = script.Parent:FindFirstChild("HoveredItemRef")
+			if hoveredItemRef and hoveredItemRef.Value then
+				local placedItem = hoveredItemRef.Value
+				if placedItem and placedItem:FindFirstChild("Hitbox") then
+					-- Position above the item
+					local hitbox = placedItem.Hitbox
+					local worldPos = hitbox.Position + Vector3.new(0, hitbox.Size.Y/2 + 1, 0)
+					local screenPos, onScreen = Camera:WorldToScreenPoint(worldPos)
+
+					if onScreen then
+						local tooltipX = screenPos.X - script.Parent.AbsoluteSize.X/2
+						local tooltipY = screenPos.Y - script.Parent.AbsoluteSize.Y - 10
+						script.Parent.Position = UDim2.new(0, tooltipX, 0, tooltipY)
+					end
+					return -- Don't use mouse positioning
+				end
+			end
+
+			-- Original mouse positioning for buttons
 			local MOUSE_X = Mouse.X + 25
 			local MOUSE_Y = Mouse.Y + 15
 			if Mouse.X > Camera.ViewportSize.X/2 then
@@ -91,6 +113,14 @@ function module.LOAD(MODULE_INFO)
 			script.Parent.Position = UDim2.new(0, MOUSE_X, 0, MOUSE_Y)
 		end
 	end
+
+	-- Update tooltip position every frame for placed items
+	RunService.RenderStepped:Connect(function()
+		local hoveredItemRef = script.Parent:FindFirstChild("HoveredItemRef")
+		if script.Parent.Visible and hoveredItemRef and hoveredItemRef.Value then
+			module.UPDATE_HOVER()
+		end
+	end)
 end
 
 return module
