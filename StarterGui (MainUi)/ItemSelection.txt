@@ -96,6 +96,12 @@ function module.LOAD(MODULE_INFO)
 		local CURRENT_HOVER_BACKUP = CURRENT_HOVER
 		if CURRENT_HOVER ~= ITEM then
 			script.Parent.Parent.ItemHover.Visible = false
+
+			-- NEW: Clear the item reference
+			if script.Parent.Parent.ItemHover:FindFirstChild("HoveredItemRef") then
+				script.Parent.Parent.ItemHover.HoveredItemRef.Value = nil
+			end
+
 			if CURRENT_HOVER_BACKUP ~= nil and not CURRENT_HOVER_BACKUP:GetAttribute("SELECTED") then
 				if CURRENT_HOVER_BACKUP:FindFirstChild("Hitbox") then
 					CURRENT_HOVER_BACKUP.Hitbox.Transparency = 1
@@ -120,12 +126,21 @@ function module.LOAD(MODULE_INFO)
 					ITEM.Hitbox.Transparency = .85
 				end
 			end
-			ITEM_HOVER.UPDATE_HOVER()
 			script.Parent.Parent.ItemHover.Visible = true
 			local TIER_NAME, TIER_INFO = MainLib.GET_ITEM_TIER_INFO(ITEM.Name)
 			script.Parent.Parent.ItemHover.ItemTier.TextColor3 = TIER_INFO["TIER_COLOR"]
 			script.Parent.Parent.ItemHover.ItemTier.Text = TIER_NAME
 			script.Parent.Parent.ItemHover.ItemName.Text = ITEM.Name
+
+			-- NEW: Store reference to the actual item object, not just the name
+			if not script.Parent.Parent.ItemHover:FindFirstChild("HoveredItemRef") then
+				local objValue = Instance.new("ObjectValue")
+				objValue.Name = "HoveredItemRef"
+				objValue.Parent = script.Parent.Parent.ItemHover
+			end
+			script.Parent.Parent.ItemHover.HoveredItemRef.Value = ITEM
+
+			ITEM_HOVER.UPDATE_HOVER()
 		end
 	end
 	
