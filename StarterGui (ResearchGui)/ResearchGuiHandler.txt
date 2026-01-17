@@ -65,7 +65,7 @@ local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0, 45, 0, 45)
 closeButton.Position = UDim2.new(1, -55, 0, 7.5)
 closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeButton.Text = "✕"
+closeButton.Text = "X"
 closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeButton.TextSize = 24
 closeButton.Font = Enum.Font.GothamBold
@@ -76,7 +76,30 @@ closeCorner.CornerRadius = UDim.new(0, 10)
 closeCorner.Parent = closeButton
 
 closeButton.MouseButton1Click:Connect(function()
-	mainFrame.Visible = false
+	-- FIXED: Properly close menu like other GUIs do
+	local mainUi = playerGui:FindFirstChild("MainUi")
+	if mainUi then
+		-- Clean up ItemHover
+		if mainUi:FindFirstChild("ItemHover") then
+			local itemHover = mainUi.ItemHover
+			if itemHover.ButtonHovering.Value and itemHover.ButtonHovering.Value:IsDescendantOf(researchGui) then
+				itemHover.Visible = false
+			end
+		end
+
+		-- Remove from OpenedMenus
+		if mainUi:FindFirstChild("Values") and mainUi.Values:FindFirstChild("OpenedMenus") then
+			local menuTag = mainUi.Values.OpenedMenus:FindFirstChild(researchGui.Name)
+			if menuTag then
+				menuTag:Destroy()
+			end
+		end
+	end
+
+	-- Set MenuObject to false (this will hide mainFrame)
+	if researchGui:FindFirstChild("MenuObject") then
+		researchGui.MenuObject.Value = false
+	end
 end)
 
 -- Research mode toggle
