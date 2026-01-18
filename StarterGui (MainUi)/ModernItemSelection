@@ -6,7 +6,7 @@ function module.CREATE_MODERN_SELECTION_UI(parent)
 	-- Main container - slightly wider to fit price text
 	local container = Instance.new("Frame")
 	container.Name = "ModernSelected"
-	container.Size = UDim2.new(0, 220, 0, 175)  -- Increased width from 200 to 220
+	container.Size = UDim2.new(0, 220, 0, 180)  -- Increased width from 200 to 220
 	container.Position = UDim2.new(0.5, -110, 0.5, -87.5)
 	container.AnchorPoint = Vector2.new(0.5, 0.5)
 	container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
