@@ -1,0 +1,146 @@
+local module = {}
+
+function module.CREATE_MODERN_HOVER_UI(parent)
+	-- Main container - compact tooltip
+	local container = Instance.new("Frame")
+	container.Name = "ModernHover"
+	container.Size = UDim2.new(0, 250, 0, 80)
+	container.Position = UDim2.new(0, 0, 0, 0)
+	container.AnchorPoint = Vector2.new(0, 0)
+	container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	container.BackgroundTransparency = 0.05  -- Changed from 0.1 to 0.05 (less transparent)
+	container.BorderSizePixel = 0
+	container.Visible = false
+	container.ZIndex = 5
+	container.Parent = parent
+
+	-- Blur/Glass effect background
+	local blur = Instance.new("Frame")
+	blur.Size = UDim2.new(1, 0, 1, 0)
+	blur.BackgroundColor3 = Color3.fromRGB(25, 25, 33)
+	blur.BackgroundTransparency = 0  -- Changed from 0.3 to 0.15 (less transparent)
+	blur.BorderSizePixel = 0
+	blur.ZIndex = 6
+	blur.Parent = container
+
+	local blurCorner = Instance.new("UICorner")
+	blurCorner.CornerRadius = UDim.new(0, 10)
+	blurCorner.Parent = blur
+
+	-- Outer glow/shadow
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(60, 60, 80)
+	stroke.Thickness = 2
+	stroke.Transparency = 0.5
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = container
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 10)
+	corner.Parent = container
+
+	-- Content container
+	local content = Instance.new("Frame")
+	content.Name = "Content"
+	content.Size = UDim2.new(1, -16, 1, -16)
+	content.Position = UDim2.new(0, 8, 0, 8)
+	content.BackgroundTransparency = 1
+	content.ZIndex = 7
+	content.Parent = container
+
+	-- Item name
+	local itemName = Instance.new("TextLabel")
+	itemName.Name = "ItemName"
+	itemName.Size = UDim2.new(1, 0, 0, 20)
+	itemName.Position = UDim2.new(0, 0, 0, 0)
+	itemName.BackgroundTransparency = 1
+	itemName.Text = "Item Name"
+	itemName.TextColor3 = Color3.fromRGB(255, 255, 255)
+	itemName.TextSize = 15
+	itemName.Font = Enum.Font.GothamBold
+	itemName.TextXAlignment = Enum.TextXAlignment.Left
+	itemName.TextTruncate = Enum.TextTruncate.AtEnd
+	itemName.ZIndex = 8
+	itemName.Parent = content
+
+	-- Item tier
+	local itemTier = Instance.new("TextLabel")
+	itemTier.Name = "ItemTier"
+	itemTier.Size = UDim2.new(1, 0, 0, 16)
+	itemTier.Position = UDim2.new(0, 0, 0, 22)
+	itemTier.BackgroundTransparency = 1
+	itemTier.Text = "First Age"
+	itemTier.TextColor3 = Color3.fromRGB(150, 150, 200)
+	itemTier.TextSize = 12
+	itemTier.Font = Enum.Font.Gotham
+	itemTier.TextXAlignment = Enum.TextXAlignment.Left
+	itemTier.ZIndex = 8
+	itemTier.Parent = content
+
+	-- Divider line (optional, shown for expanded view)
+	local divider = Instance.new("Frame")
+	divider.Name = "Divider"
+	divider.Size = UDim2.new(1, 0, 0, 1)
+	divider.Position = UDim2.new(0, 0, 0, 42)
+	divider.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+	divider.BackgroundTransparency = 0.5
+	divider.BorderSizePixel = 0
+	divider.Visible = false
+	divider.ZIndex = 7
+	divider.Parent = content
+
+	-- Item description (optional)
+	local itemDesc = Instance.new("TextLabel")
+	itemDesc.Name = "ItemDesc"
+	itemDesc.Size = UDim2.new(1, 0, 1, -48)
+	itemDesc.Position = UDim2.new(0, 0, 0, 48)
+	itemDesc.BackgroundTransparency = 1
+	itemDesc.Text = "Description text here"
+	itemDesc.TextColor3 = Color3.fromRGB(255, 255, 255)
+	itemDesc.TextSize = 12
+	itemDesc.Font = Enum.Font.Gotham
+	itemDesc.TextWrapped = true
+	itemDesc.TextXAlignment = Enum.TextXAlignment.Left
+	itemDesc.TextYAlignment = Enum.TextYAlignment.Top
+	itemDesc.Visible = false
+	itemDesc.ZIndex = 8
+	itemDesc.Parent = content
+
+	-- Functions to show compact or expanded view
+	function module.SHOW_COMPACT()
+		container.Size = UDim2.new(0, 250, 0, 50)
+		divider.Visible = false
+		itemDesc.Visible = false
+	end
+
+	function module.SHOW_EXPANDED(descriptionText)
+		-- Calculate height based on description length
+		local descHeight = math.min(100, math.max(40, #descriptionText / 3))
+		container.Size = UDim2.new(0, 250, 0, 50 + descHeight)
+		divider.Visible = true
+		itemDesc.Visible = true
+		itemDesc.Text = descriptionText
+	end
+
+	function module.HIDE()
+		container.Visible = false
+	end
+
+	function module.SHOW()
+		container.Visible = true
+	end
+
+	return {
+		Container = container,
+		ItemName = itemName,
+		ItemTier = itemTier,
+		ItemDesc = itemDesc,
+		Divider = divider,
+		ShowCompact = module.SHOW_COMPACT,
+		ShowExpanded = module.SHOW_EXPANDED,
+		Hide = module.HIDE,
+		Show = module.SHOW
+	}
+end
+
+return module
