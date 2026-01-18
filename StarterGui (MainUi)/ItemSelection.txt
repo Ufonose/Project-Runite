@@ -22,42 +22,95 @@ function module.LOAD(MODULE_INFO)
 	local PLACEMENT = MODULES["Placement"]
 	local MainLib = MODULES["MainLib"]
 	local INPUT = MODULES["Input"]
+	local ModernItemSelection = MODULES["ModernItemSelection"]
+	local CASH_LIB = MODULES["CashLib"]  -- For number formatting
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
 	local Mouse = Plr:GetMouse()
 	local PLR_PLOT = Plr.SetPlot.Value
 	-- Variables
-		-- Booleans
+	-- Booleans
 	local DB = true
 	module.SELECTING_ITEMS = false
-		-- Arrays
+	-- Arrays
 	local SELECTED_ITEMS = {}
-		-- Integers
+	-- Integers
 	module.SELECTED_COUNT = 0
-		-- Objects
+	-- Objects
 	local CURRENT_HOVER = nil
+	local FIRST_SELECTED_ITEM = nil  -- Track first selected item for anchoring
 
+	-- Create modern UI
+	local modernUI = ModernItemSelection.CREATE_MODERN_SELECTION_UI(script.Parent.Parent)
+	modernUI.Container.Visible = false
+
+	-- Hide old ItemSelection GUI
 	script.Parent.Parent.ItemSelection.Enabled = false
 	script.Parent.Parent.ItemSelection.Adornee = nil
+
+	-- Update menu position every frame when visible
+	RunService.RenderStepped:Connect(function()
+		if modernUI.Container.Visible and FIRST_SELECTED_ITEM then
+			modernUI.UpdatePosition()
+		end
+	end)
 
 	local function UPDATE_SELECTED_INFO()
 		if module.SELECTED_COUNT == 1 then
 			for I, ITEM_INFO in pairs(SELECTED_ITEMS) do
-				script.Parent.Parent.ItemSelection.Selected.ItemName.Text = ITEM_INFO.Name
+				modernUI.ItemName.Text = ITEM_INFO.Name
 				local TIER_NAME, TIER_INFO = MainLib.GET_ITEM_TIER_INFO(ITEM_INFO.Name)
-				script.Parent.Parent.ItemSelection.Selected.ItemTier.Text = TIER_NAME
-				script.Parent.Parent.ItemSelection.Selected.ItemTier.TextColor3 = TIER_INFO["TIER_COLOR"]
+				modernUI.ItemTier.Text = TIER_NAME
+				modernUI.ItemTier.TextColor3 = TIER_INFO["TIER_COLOR"]
+				FIRST_SELECTED_ITEM = ITEM_INFO  -- Store for anchoring
+
+				-- Get item stats and set prices
+				if ITEM_INFO:FindFirstChild("ItemStats") then
+					local itemStats = require(ITEM_INFO.ItemStats)
+					local buyPrice = itemStats.Cost or 0
+					local sellPrice = math.floor(buyPrice * 0.3)  -- Sell price is 30% of buy price
+
+					-- Update price labels (includes button name in text)
+					if modernUI.BuyPrice then
+						modernUI.BuyPrice.Text = "Buy - " .. CASH_LIB.SUFFIX_NUM(buyPrice)
+					end
+					if modernUI.SellPrice then
+						modernUI.SellPrice.Text = "Sell - " .. CASH_LIB.SUFFIX_NUM(sellPrice)
+					end
+				end
 			end
 		else
-			script.Parent.Parent.ItemSelection.Selected.ItemName.Text = "Multi-Select"
-			script.Parent.Parent.ItemSelection.Selected.ItemTier.TextColor3 = Color3.fromRGB(140, 140, 140)
-			script.Parent.Parent.ItemSelection.Selected.ItemTier.Text = "Item Count: "..module.SELECTED_COUNT
+			modernUI.ItemName.Text = "Multi-Select"
+			modernUI.ItemTier.TextColor3 = Color3.fromRGB(140, 140, 140)
+			modernUI.ItemTier.Text = "Item Count: "..module.SELECTED_COUNT
+
+			-- For multi-select, calculate total value
+			local totalBuyPrice = 0
+			local totalSellPrice = 0
+			for I, ITEM_INFO in pairs(SELECTED_ITEMS) do
+				if ITEM_INFO:FindFirstChild("ItemStats") then
+					local itemStats = require(ITEM_INFO.ItemStats)
+					local itemBuyPrice = itemStats.Cost or 0
+					totalBuyPrice = totalBuyPrice + itemBuyPrice
+					totalSellPrice = totalSellPrice + math.floor(itemBuyPrice * 0.3)  -- 30% of buy price
+				end
+				if I == 1 then
+					FIRST_SELECTED_ITEM = ITEM_INFO
+				end
+			end
+
+			-- Update price labels (includes button name in text)
+			if modernUI.BuyPrice then
+				modernUI.BuyPrice.Text = "Buy - " .. CASH_LIB.SUFFIX_NUM(totalBuyPrice)
+			end
+			if modernUI.SellPrice then
+				modernUI.SellPrice.Text = "Sell - " .. CASH_LIB.SUFFIX_NUM(totalSellPrice)
+			end
 		end
 	end
 
 	function module.SELECT_ITEM(ITEM)
 		module.SELECTING_ITEMS = true
-		script.Parent.Parent.ItemSelection.Size = UDim2.new(0, 200, 0, 60)
 		for I, ITEM in pairs(SELECTED_ITEMS) do
 			ITEM:SetAttribute("SELECTED", true)
 			if ITEM:FindFirstChild("Hitbox") then
@@ -69,12 +122,16 @@ function module.LOAD(MODULE_INFO)
 			if ITEM:FindFirstChild("Hitbox") then
 				ITEM.Hitbox.Transparency = .6
 				module.SELECTED_COUNT += 1
-				script.Parent.Parent.ItemSelection.Enabled = true
-				script.Parent.Parent.ItemSelection.Adornee = ITEM.Hitbox
 			end
 			UPDATE_SELECTED_INFO()
 		end
-		script.Parent.Parent.ItemHover.Visible = false
+		-- IMPORTANT: Hide tooltip and clear hover reference when selecting
+		if ITEM_HOVER.ModernHover then
+			ITEM_HOVER.ModernHover.Hide()
+		end
+		if script.Parent.Parent.ItemHover:FindFirstChild("HoveredItemRef") then
+			script.Parent.Parent.ItemHover.HoveredItemRef.Value = nil
+		end
 	end
 
 	function module.UNSELECT_ITEMS()
@@ -87,17 +144,20 @@ function module.LOAD(MODULE_INFO)
 		end
 		module.SELECTED_COUNT = 0
 		SELECTED_ITEMS = {}
-		script.Parent.Parent.ItemSelection.Enabled = false
-		script.Parent.Parent.ItemSelection.Adornee = nil
+		FIRST_SELECTED_ITEM = nil
+		ModernItemSelection.HIDE_MENU()
 	end
 
 	local function CLEAR_HOVER(ITEM)
 		local ITEM = ITEM or nil
 		local CURRENT_HOVER_BACKUP = CURRENT_HOVER
 		if CURRENT_HOVER ~= ITEM then
-			script.Parent.Parent.ItemHover.Visible = false
+			-- Hide modern hover UI
+			if ITEM_HOVER.ModernHover then
+				ITEM_HOVER.ModernHover.Hide()
+			end
 
-			-- NEW: Clear the item reference
+			-- Clear the item reference
 			if script.Parent.Parent.ItemHover:FindFirstChild("HoveredItemRef") then
 				script.Parent.Parent.ItemHover.HoveredItemRef.Value = nil
 			end
@@ -126,33 +186,42 @@ function module.LOAD(MODULE_INFO)
 					ITEM.Hitbox.Transparency = .85
 				end
 			end
-			script.Parent.Parent.ItemHover.Visible = true
-			local TIER_NAME, TIER_INFO = MainLib.GET_ITEM_TIER_INFO(ITEM.Name)
-			script.Parent.Parent.ItemHover.ItemTier.TextColor3 = TIER_INFO["TIER_COLOR"]
-			script.Parent.Parent.ItemHover.ItemTier.Text = TIER_NAME
-			script.Parent.Parent.ItemHover.ItemName.Text = ITEM.Name
 
-			-- NEW: Store reference to the actual item object, not just the name
-			if not script.Parent.Parent.ItemHover:FindFirstChild("HoveredItemRef") then
-				local objValue = Instance.new("ObjectValue")
-				objValue.Name = "HoveredItemRef"
-				objValue.Parent = script.Parent.Parent.ItemHover
+			-- Only show tooltip if we're not in selection mode
+			if not module.SELECTING_ITEMS and module.SELECTED_COUNT == 0 then
+				-- Use modern hover UI
+				if ITEM_HOVER.ModernHover then
+					local TIER_NAME, TIER_INFO = MainLib.GET_ITEM_TIER_INFO(ITEM.Name)
+					ITEM_HOVER.ModernHover.ItemTier.TextColor3 = TIER_INFO["TIER_COLOR"]
+					ITEM_HOVER.ModernHover.ItemTier.Text = TIER_NAME
+					ITEM_HOVER.ModernHover.ItemName.Text = ITEM.Name
+
+					-- Show compact view for placed items
+					ITEM_HOVER.ModernHover.ShowCompact()
+					ITEM_HOVER.ModernHover.Show()
+				end
+
+				-- Store reference to the actual item object
+				if not script.Parent.Parent.ItemHover:FindFirstChild("HoveredItemRef") then
+					local objValue = Instance.new("ObjectValue")
+					objValue.Name = "HoveredItemRef"
+					objValue.Parent = script.Parent.Parent.ItemHover
+				end
+				script.Parent.Parent.ItemHover.HoveredItemRef.Value = ITEM
+
+				ITEM_HOVER.UPDATE_HOVER()
 			end
-			script.Parent.Parent.ItemHover.HoveredItemRef.Value = ITEM
-
-			ITEM_HOVER.UPDATE_HOVER()
 		end
 	end
-	
+
 	local function FINALIZE_SELECTING()
 		module.SELECTING_ITEMS = false
 		if module.SELECTED_COUNT > 0 then
-			script.Parent.Parent.ItemSelection.Size = UDim2.new(0, 200, 0, 300)
-			script.Parent.Parent.ItemSelection.Selected.Buttons.Visible = true
 			UPDATE_SELECTED_INFO()
+			ModernItemSelection.SHOW_MENU(FIRST_SELECTED_ITEM)
 		end
 	end
-	
+
 	function module.ITEM_DETECT()
 		if PLACEMENT.PLACING_ITEMS then		-- Big no no for item selection :)
 			CLEAR_HOVER()
@@ -198,7 +267,6 @@ function module.LOAD(MODULE_INFO)
 					if not module.SELECTING_ITEMS then		-- Wipe previously selected items
 						module.UNSELECT_ITEMS()
 					end
-					script.Parent.Parent.ItemSelection.Selected.Buttons.Visible = false
 					module.SELECT_ITEM(ITEM_HOVERING.Parent)
 				else
 					FINALIZE_SELECTING()
@@ -206,14 +274,14 @@ function module.LOAD(MODULE_INFO)
 			else
 				if not INPUT.MOUSE_DOWN then
 					FINALIZE_SELECTING()
-				elseif INPUT.MOUSE_DOWN and script.Parent.Parent.ItemSelection.Adornee ~= nil and not module.SELECTING_ITEMS then
+				elseif INPUT.MOUSE_DOWN and not module.SELECTING_ITEMS then
 					module.UNSELECT_ITEMS()
 				end
 				CLEAR_HOVER(nil)
 			end
 		end
 	end
-	
+
 
 	function module.BUY_ITEMS()
 		if DB then
@@ -289,19 +357,20 @@ function module.LOAD(MODULE_INFO)
 		end
 	end
 
-	script.Parent.Parent.ItemSelection.Selected.Buttons.Withdraw.MouseButton1Click:Connect(function()
+	-- Connect modern UI buttons
+	modernUI.WithdrawButton.MouseButton1Click:Connect(function()
 		module.WITHDRAW_ITEM()
 	end)
 
-	script.Parent.Parent.ItemSelection.Selected.Buttons.Move.MouseButton1Click:Connect(function()
+	modernUI.MoveButton.MouseButton1Click:Connect(function()
 		module.MOVE_ITEMS()
 	end)
-	
-	script.Parent.Parent.ItemSelection.Selected.Buttons.Buy.MouseButton1Click:Connect(function()
+
+	modernUI.BuyButton.MouseButton1Click:Connect(function()
 		module.BUY_ITEMS()
 	end)
 
-	script.Parent.Parent.ItemSelection.Selected.Buttons.Sell.MouseButton1Click:Connect(function()
+	modernUI.SellButton.MouseButton1Click:Connect(function()
 		module.SELL_ITEMS()
 	end)
 end
