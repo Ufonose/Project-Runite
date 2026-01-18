@@ -16,8 +16,8 @@ function module.LOAD(MODULE_INFO)
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
 	local Mouse = Plr:GetMouse()
-	local PlayerGui = Plr:WaitForChild("PlayerGui")  -- ADD THIS
-	local ResearchGui = PlayerGui:WaitForChild("ResearchGui", 10)  -- ADD THIS
+	local PlayerGui = Plr:WaitForChild("PlayerGui")
+	local ResearchGui = PlayerGui:WaitForChild("ResearchGui", 10)
 	local PLR_PLOT = Plr.SetPlot.Value
 	-- Variables
 	-- Booleans
@@ -95,6 +95,58 @@ function module.LOAD(MODULE_INFO)
 			end
 		end
 	end)
+
+	-- ========================================
+	-- MODERN PLACEMENT MENU BUTTON CONNECTIONS
+	-- ========================================
+	-- Wait for PlacementMenu to load and get reference to modern menu
+	task.wait(0.5)  -- Small delay to ensure everything is loaded
+	local PlacementMenu = MODULES["PlacementMenu"]
+
+	-- Connect modern placement menu buttons
+	if PlacementMenu.ModernMenu then
+		local modernMenu = PlacementMenu.ModernMenu
+
+		-- Place button (left click when placing)
+		modernMenu.PlaceButton.MouseButton1Click:Connect(function()
+			if PLACEMENT.PLACING_ITEMS then
+				if PLACEMENT.PLACE_ITEM() then
+					PLACEMENT.DESTROY_PLACING()
+				end
+			end
+		end)
+
+		-- Rotate button (R key)
+		modernMenu.RotateButton.MouseButton1Click:Connect(function()
+			if PLACEMENT.PLACING_ITEMS then
+				PlacementLib.rotate()
+			end
+		end)
+
+		-- Flip button (F key)
+		modernMenu.FlipButton.MouseButton1Click:Connect(function()
+			if PLACEMENT.PLACING_ITEMS then
+				print("Flip button clicked! Attempting to flip conveyor...")
+				if PLACEMENT.FLIP_CONVEYOR_DIRECTION then
+					PLACEMENT.FLIP_CONVEYOR_DIRECTION()
+					print("Flip function called!")
+				else
+					warn("FLIP_CONVEYOR_DIRECTION function not found!")
+				end
+			end
+		end)
+
+		-- Cancel button (Q key)
+		modernMenu.CancelButton.MouseButton1Click:Connect(function()
+			if PLACEMENT.PLACING_ITEMS then
+				PLACEMENT.DESTROY_PLACING()
+			end
+		end)
+
+		print("Modern Placement Menu buttons connected!")
+	else
+		warn("ModernMenu not found in PlacementMenu!")
+	end
 end
 
 return module
