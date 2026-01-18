@@ -22,7 +22,7 @@ function module.LOAD(MODULE_INFO)
 	module.PLACING_ITEMS = false
 	-- Functions
 	local PLACING = nil
-	local CONVEYOR_REVERSED = false  -- NEW: Track if conveyor is reversed
+	local CONVEYOR_REVERSED = false
 
 	function module.DESTROY_PLACING()
 		if PLACING == nil then
@@ -33,12 +33,10 @@ function module.LOAD(MODULE_INFO)
 		end
 		PLACING:DISABLE_PLACING()
 		module.PLACING_ITEMS = false
-		CONVEYOR_REVERSED = false  -- Reset reversal state
+		CONVEYOR_REVERSED = false
 		PLACING = nil
 		PlacementMenu.UNLOAD_MENU()
 	end
-
-	-- StarterGui (MainUi)/Placement.txt (FIX FLIP FUNCTION)
 
 	-- Function to flip conveyor direction
 	function module.FLIP_CONVEYOR_DIRECTION()
@@ -79,18 +77,21 @@ function module.LOAD(MODULE_INFO)
 
 		print("=== FLIP COMPLETE ===")
 	end
-	
+
 	function module.BEGIN_PLACING(ITEMS_PLACING, MOVING_ITEMS)
 		local MOVING_ITEMS = MOVING_ITEMS or false
 		module.DESTROY_PLACING()
+
 		-- Close all menus
-		for I, CLOSE_MENU in pairs(script.Parent.Parent:GetDescendants()) do	-- Close all open menus
+		for I, CLOSE_MENU in pairs(script.Parent.Parent:GetDescendants()) do
 			if CLOSE_MENU:FindFirstChild("MenuObject") then
 				Main.CLOSE_MENU(CLOSE_MENU)
 			end
 		end
+
 		PLACING = PlacementLib.new(PLR_PLOT.BasePlot, PLR_PLOT.PlacedItems)
 		PLACING:ENABLE_PLACING(ITEMS_PLACING, MOVING_ITEMS)
+
 		for I, ITEM in pairs(ITEMS_PLACING) do
 			for O, THING in pairs(ITEM:GetDescendants()) do
 				if THING:IsA("BasePart") then
@@ -108,8 +109,9 @@ function module.LOAD(MODULE_INFO)
 			ITEM.Hitbox.Transparency = .7
 			ITEM.Parent = PLR_PLOT.PlacingItems
 		end
+
 		CURRENT_PLACING = ITEMS_PLACING
-		CONVEYOR_REVERSED = false  -- Reset on new placement
+		CONVEYOR_REVERSED = false
 		module.PLACING_ITEMS = true
 		PlacementMenu.LOAD_MENU()
 		return true
@@ -128,11 +130,13 @@ function module.LOAD(MODULE_INFO)
 				PLACING_ITEMS_INFO[#PLACING_ITEMS_INFO+1] = {
 					["ITEM_LOCATION"] = ITEM_POS,
 					["ITEM_NAME"] = ITEM_PLACED.Name,
-					["CONVEYOR_REVERSED"] = ITEM_PLACED:GetAttribute("ConveyorReversed") or false,  -- NEW
+					["CONVEYOR_REVERSED"] = ITEM_PLACED:GetAttribute("ConveyorReversed") or false,
 				}
 			end
+
 			-- Place the items!
 			local PLACED_ITEMS_DONE = RepStorage.Events.PlaceItem:InvokeServer(PLR_PLOT.PlacedItems, PLACING_ITEMS_INFO)
+
 			if PLACED_ITEMS_DONE then
 				warn("ITEMS PLACED SUCCESS!")
 				return true
