@@ -1,0 +1,433 @@
+local module = {}
+
+function module.CREATE_MODERN_OPTIONS_UI(parent)
+	local Plrs = game:GetService("Players")
+	local RepStorage = game:GetService("ReplicatedStorage")
+	local Plr = Plrs.LocalPlayer
+
+	-- Main container - larger to fit all settings
+	local container = Instance.new("Frame")
+	container.Name = "ModernOptions"
+	container.Size = UDim2.new(0, 550, 0, 650)
+	container.Position = UDim2.new(0.5, 0, 0.5, 0)
+	container.AnchorPoint = Vector2.new(0.5, 0.5)
+	container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	container.BackgroundTransparency = 0.1
+	container.BorderSizePixel = 0
+	container.Visible = false
+	container.ZIndex = 10
+	container.Parent = parent
+
+	-- Blur/Glass effect background
+	local blur = Instance.new("Frame")
+	blur.Size = UDim2.new(1, 0, 1, 0)
+	blur.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	blur.BackgroundTransparency = 0.3
+	blur.BorderSizePixel = 0
+	blur.ZIndex = 11
+	blur.Parent = container
+
+	local blurCorner = Instance.new("UICorner")
+	blurCorner.CornerRadius = UDim.new(0, 12)
+	blurCorner.Parent = blur
+
+	-- Outer glow/shadow
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(60, 60, 80)
+	stroke.Thickness = 2
+	stroke.Transparency = 0.5
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = container
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 12)
+	corner.Parent = container
+
+	-- Header
+	local header = Instance.new("Frame")
+	header.Name = "Header"
+	header.Size = UDim2.new(1, 0, 0, 60)
+	header.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	header.BorderSizePixel = 0
+	header.ZIndex = 12
+	header.Parent = container
+
+	local headerCorner = Instance.new("UICorner")
+	headerCorner.CornerRadius = UDim.new(0, 12)
+	headerCorner.Parent = header
+
+	-- Header bottom part should be square
+	local headerCover = Instance.new("Frame")
+	headerCover.Size = UDim2.new(1, 0, 0, 12)
+	headerCover.Position = UDim2.new(0, 0, 1, -12)
+	headerCover.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	headerCover.BorderSizePixel = 0
+	headerCover.ZIndex = 12
+	headerCover.Parent = header
+
+	-- Title
+	local title = Instance.new("TextLabel")
+	title.Name = "Title"
+	title.Size = UDim2.new(1, -100, 1, 0)
+	title.Position = UDim2.new(0, 20, 0, 0)
+	title.BackgroundTransparency = 1
+	title.Text = "⚙️ Settings"
+	title.TextColor3 = Color3.fromRGB(255, 255, 255)
+	title.TextSize = 24
+	title.Font = Enum.Font.GothamBold
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.ZIndex = 13
+	title.Parent = header
+
+	-- Close button
+	local closeButton = Instance.new("TextButton")
+	closeButton.Name = "CloseButton"
+	closeButton.Size = UDim2.new(0, 40, 0, 40)
+	closeButton.Position = UDim2.new(1, -50, 0.5, -20)
+	closeButton.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
+	closeButton.Text = "✕"
+	closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	closeButton.TextSize = 20
+	closeButton.Font = Enum.Font.GothamBold
+	closeButton.ZIndex = 13
+	closeButton.Parent = header
+
+	local closeCorner = Instance.new("UICorner")
+	closeCorner.CornerRadius = UDim.new(0, 8)
+	closeCorner.Parent = closeButton
+
+	-- Hover effect for close button
+	closeButton.MouseEnter:Connect(function()
+		closeButton.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
+	end)
+	closeButton.MouseLeave:Connect(function()
+		closeButton.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
+	end)
+
+	-- Content area
+	local content = Instance.new("ScrollingFrame")
+	content.Name = "Content"
+	content.Size = UDim2.new(1, -30, 1, -80)
+	content.Position = UDim2.new(0, 15, 0, 70)
+	content.BackgroundTransparency = 1
+	content.ScrollBarThickness = 6
+	content.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 100)
+	content.BorderSizePixel = 0
+	content.ZIndex = 12
+	content.Parent = container
+
+	local contentLayout = Instance.new("UIListLayout")
+	contentLayout.Padding = UDim.new(0, 15)
+	contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	contentLayout.Parent = content
+
+	-- Function to create a section
+	local function createSection(sectionName, icon, layoutOrder)
+		local section = Instance.new("Frame")
+		section.Name = sectionName
+		section.Size = UDim2.new(1, 0, 0, 0)  -- Height will be determined by layout
+		section.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+		section.BorderSizePixel = 0
+		section.LayoutOrder = layoutOrder
+		section.ZIndex = 12
+		section.Parent = content
+
+		local sectionCorner = Instance.new("UICorner")
+		sectionCorner.CornerRadius = UDim.new(0, 10)
+		sectionCorner.Parent = section
+
+		local sectionStroke = Instance.new("UIStroke")
+		sectionStroke.Color = Color3.fromRGB(50, 50, 60)
+		sectionStroke.Thickness = 1
+		sectionStroke.Transparency = 0.7
+		sectionStroke.Parent = section
+
+		-- Section header
+		local sectionHeader = Instance.new("TextLabel")
+		sectionHeader.Name = "Header"
+		sectionHeader.Size = UDim2.new(1, -20, 0, 40)
+		sectionHeader.Position = UDim2.new(0, 10, 0, 5)
+		sectionHeader.BackgroundTransparency = 1
+		sectionHeader.Text = icon .. " " .. sectionName
+		sectionHeader.TextColor3 = Color3.fromRGB(200, 200, 220)
+		sectionHeader.TextSize = 18
+		sectionHeader.Font = Enum.Font.GothamBold
+		sectionHeader.TextXAlignment = Enum.TextXAlignment.Left
+		sectionHeader.ZIndex = 13
+		sectionHeader.Parent = section
+
+		-- Section content container
+		local sectionContent = Instance.new("Frame")
+		sectionContent.Name = "SectionContent"
+		sectionContent.Size = UDim2.new(1, -20, 0, 0)
+		sectionContent.Position = UDim2.new(0, 10, 0, 50)
+		sectionContent.BackgroundTransparency = 1
+		sectionContent.ZIndex = 12
+		sectionContent.Parent = section
+
+		local sectionLayout = Instance.new("UIListLayout")
+		sectionLayout.Padding = UDim.new(0, 10)
+		sectionLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		sectionLayout.Parent = sectionContent
+
+		-- Update section size based on content
+		sectionLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+			sectionContent.Size = UDim2.new(1, -20, 0, sectionLayout.AbsoluteContentSize.Y)
+			section.Size = UDim2.new(1, 0, 0, sectionLayout.AbsoluteContentSize.Y + 65)
+		end)
+
+		return section, sectionContent
+	end
+
+	-- Function to create a toggle button
+	local function createToggle(parent, labelText, settingName, layoutOrder)
+		local toggleFrame = Instance.new("Frame")
+		toggleFrame.Name = settingName
+		toggleFrame.Size = UDim2.new(1, 0, 0, 50)
+		toggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		toggleFrame.BorderSizePixel = 0
+		toggleFrame.LayoutOrder = layoutOrder
+		toggleFrame.ZIndex = 13
+		toggleFrame.Parent = parent
+
+		local toggleCorner = Instance.new("UICorner")
+		toggleCorner.CornerRadius = UDim.new(0, 8)
+		toggleCorner.Parent = toggleFrame
+
+		-- Label
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(1, -80, 1, 0)
+		label.Position = UDim2.new(0, 15, 0, 0)
+		label.BackgroundTransparency = 1
+		label.Text = labelText
+		label.TextColor3 = Color3.fromRGB(220, 220, 220)
+		label.TextSize = 16
+		label.Font = Enum.Font.Gotham
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.ZIndex = 14
+		label.Parent = toggleFrame
+
+		-- Toggle button container
+		local toggleButton = Instance.new("TextButton")
+		toggleButton.Name = "ToggleButton"
+		toggleButton.Size = UDim2.new(0, 60, 0, 30)
+		toggleButton.Position = UDim2.new(1, -70, 0.5, -15)
+		toggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+		toggleButton.Text = ""
+		toggleButton.ZIndex = 14
+		toggleButton.Parent = toggleFrame
+
+		local toggleBtnCorner = Instance.new("UICorner")
+		toggleBtnCorner.CornerRadius = UDim.new(1, 0)
+		toggleBtnCorner.Parent = toggleButton
+
+		-- Toggle indicator (the circle that slides)
+		local toggleIndicator = Instance.new("Frame")
+		toggleIndicator.Name = "Indicator"
+		toggleIndicator.Size = UDim2.new(0, 24, 0, 24)
+		toggleIndicator.Position = UDim2.new(0, 3, 0.5, -12)
+		toggleIndicator.BackgroundColor3 = Color3.fromRGB(180, 180, 180)
+		toggleIndicator.BorderSizePixel = 0
+		toggleIndicator.ZIndex = 15
+		toggleIndicator.Parent = toggleButton
+
+		local indicatorCorner = Instance.new("UICorner")
+		indicatorCorner.CornerRadius = UDim.new(1, 0)
+		indicatorCorner.Parent = toggleIndicator
+
+		-- Function to update toggle appearance
+		local function updateToggle(isActive)
+			local TweenService = game:GetService("TweenService")
+			local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+			if isActive then
+				-- Active state - green
+				TweenService:Create(toggleButton, tweenInfo, {BackgroundColor3 = Color3.fromRGB(70, 180, 90)}):Play()
+				TweenService:Create(toggleIndicator, tweenInfo, {
+					Position = UDim2.new(1, -27, 0.5, -12),
+					BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+				}):Play()
+			else
+				-- Inactive state - gray
+				TweenService:Create(toggleButton, tweenInfo, {BackgroundColor3 = Color3.fromRGB(60, 60, 70)}):Play()
+				TweenService:Create(toggleIndicator, tweenInfo, {
+					Position = UDim2.new(0, 3, 0.5, -12),
+					BackgroundColor3 = Color3.fromRGB(180, 180, 180)
+				}):Play()
+			end
+		end
+
+		-- Set initial state
+		local realSetting = Plr.Settings:FindFirstChild(settingName)
+		if realSetting then
+			updateToggle(realSetting.Value)
+
+			-- Listen for changes
+			realSetting.Changed:Connect(function()
+				updateToggle(realSetting.Value)
+			end)
+
+			-- Handle clicks
+			toggleButton.MouseButton1Click:Connect(function()
+				RepStorage.Events.UpdateToggle:InvokeServer(settingName)
+			end)
+		end
+
+		return toggleFrame
+	end
+
+	-- Function to create an info label
+	local function createInfoLabel(parent, labelText, valueText, layoutOrder)
+		local infoFrame = Instance.new("Frame")
+		infoFrame.Name = "InfoLabel"
+		infoFrame.Size = UDim2.new(1, 0, 0, 40)
+		infoFrame.BackgroundTransparency = 1
+		infoFrame.LayoutOrder = layoutOrder
+		infoFrame.ZIndex = 13
+		infoFrame.Parent = parent
+
+		-- Label
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(0.5, 0, 1, 0)
+		label.Position = UDim2.new(0, 0, 0, 0)
+		label.BackgroundTransparency = 1
+		label.Text = labelText
+		label.TextColor3 = Color3.fromRGB(180, 180, 180)
+		label.TextSize = 15
+		label.Font = Enum.Font.Gotham
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.ZIndex = 14
+		label.Parent = infoFrame
+
+		-- Value
+		local value = Instance.new("TextLabel")
+		value.Name = "Value"
+		value.Size = UDim2.new(0.5, 0, 1, 0)
+		value.Position = UDim2.new(0.5, 0, 0, 0)
+		value.BackgroundTransparency = 1
+		value.Text = valueText
+		value.TextColor3 = Color3.fromRGB(255, 255, 255)
+		value.TextSize = 16
+		value.Font = Enum.Font.GothamBold
+		value.TextXAlignment = Enum.TextXAlignment.Right
+		value.ZIndex = 14
+		value.Parent = infoFrame
+
+		return infoFrame, value
+	end
+
+	-- Function to create an action button
+	local function createButton(parent, buttonText, buttonIcon, color, layoutOrder)
+		local button = Instance.new("TextButton")
+		button.Name = buttonText .. "Button"
+		button.Size = UDim2.new(1, 0, 0, 50)
+		button.BackgroundColor3 = color
+		button.Text = ""
+		button.BorderSizePixel = 0
+		button.LayoutOrder = layoutOrder
+		button.ZIndex = 13
+		button.Parent = parent
+
+		local btnCorner = Instance.new("UICorner")
+		btnCorner.CornerRadius = UDim.new(0, 10)
+		btnCorner.Parent = button
+
+		local btnStroke = Instance.new("UIStroke")
+		btnStroke.Color = Color3.new(1, 1, 1)
+		btnStroke.Thickness = 1.5
+		btnStroke.Transparency = 0.8
+		btnStroke.Parent = button
+
+		-- Button text with icon
+		local btnLabel = Instance.new("TextLabel")
+		btnLabel.Size = UDim2.new(1, 0, 1, 0)
+		btnLabel.BackgroundTransparency = 1
+		btnLabel.Text = buttonIcon .. " " .. buttonText
+		btnLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		btnLabel.TextSize = 18
+		btnLabel.Font = Enum.Font.GothamBold
+		btnLabel.ZIndex = 14
+		btnLabel.Parent = button
+
+		-- Hover effects
+		local originalColor = color
+		local hoverColor = Color3.new(
+			math.min(color.R * 1.2, 1),
+			math.min(color.G * 1.2, 1),
+			math.min(color.B * 1.2, 1)
+		)
+
+		button.MouseEnter:Connect(function()
+			button.BackgroundColor3 = hoverColor
+			btnStroke.Transparency = 0.5
+		end)
+
+		button.MouseLeave:Connect(function()
+			button.BackgroundColor3 = originalColor
+			btnStroke.Transparency = 0.8
+		end)
+
+		return button
+	end
+
+	-- Create sections
+
+	-- 1. Plot Settings Section
+	local plotSection, plotContent = createSection("Plot Settings", "🏗️", 1)
+	local minesToggle = createToggle(plotContent, "Enable All Miners", "MinesActive", 1)
+
+	-- 2. Rebirth Section
+	local rebirthSection, rebirthContent = createSection("Rebirth", "♻️", 2)
+
+	-- Info labels for rebirth
+	local rebirthInfo, rebirthValue = createInfoLabel(rebirthContent, "Current Rebirth:", "0", 1)
+	local costInfo, costValue = createInfoLabel(rebirthContent, "Rebirth Cost:", "$0", 2)
+
+	-- Rebirth button
+	local rebirthButton = createButton(rebirthContent, "Rebirth", "🔄", Color3.fromRGB(80, 60, 140), 3)
+
+	-- 3. Deluxe Section (Placeholder)
+	local deluxeSection, deluxeContent = createSection("Deluxe", "💎", 3)
+
+	-- Placeholder message
+	local placeholderFrame = Instance.new("Frame")
+	placeholderFrame.Size = UDim2.new(1, 0, 0, 80)
+	placeholderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+	placeholderFrame.BorderSizePixel = 0
+	placeholderFrame.LayoutOrder = 1
+	placeholderFrame.ZIndex = 13
+	placeholderFrame.Parent = deluxeContent
+
+	local placeholderCorner = Instance.new("UICorner")
+	placeholderCorner.CornerRadius = UDim.new(0, 8)
+	placeholderCorner.Parent = placeholderFrame
+
+	local placeholderLabel = Instance.new("TextLabel")
+	placeholderLabel.Size = UDim2.new(1, -20, 1, -20)
+	placeholderLabel.Position = UDim2.new(0, 10, 0, 10)
+	placeholderLabel.BackgroundTransparency = 1
+	placeholderLabel.Text = "🛒 Premium items and features coming soon!\n\nStay tuned for exclusive content."
+	placeholderLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
+	placeholderLabel.TextSize = 14
+	placeholderLabel.Font = Enum.Font.Gotham
+	placeholderLabel.TextWrapped = true
+	placeholderLabel.TextYAlignment = Enum.TextYAlignment.Top
+	placeholderLabel.ZIndex = 14
+	placeholderLabel.Parent = placeholderFrame
+
+	-- Update canvas size when content changes
+	contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		content.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 15)
+	end)
+
+	-- Return references and functions
+	return {
+		Container = container,
+		CloseButton = closeButton,
+		RebirthValue = rebirthValue,
+		CostValue = costValue,
+		RebirthButton = rebirthButton,
+	}
+end
+
+return module
