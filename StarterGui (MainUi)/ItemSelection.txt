@@ -321,20 +321,30 @@ function module.LOAD(MODULE_INFO)
 	function module.MOVE_ITEMS()
 		if DB then
 			DB = false
+
+			-- FIRST: Clone all selected items to preserve their properties/configurations
 			local MOVING = {}
+			local WITHDRAWING = {}
+
 			for I, ITEM in pairs(SELECTED_ITEMS) do
+				-- Clone the actual item (preserves all configurations, attributes, etc.)
 				MOVING[#MOVING+1] = ITEM:Clone()
+				-- Queue original for withdrawal
+				WITHDRAWING[#WITHDRAWING+1] = ITEM
 			end
+
+			-- Start placement with the clones BEFORE withdrawing
+			-- This way the clones appear immediately
 			local PLACING_STARTED = PLACEMENT.BEGIN_PLACING(MOVING, true)
+
 			if PLACING_STARTED then
-				local WITHDRAWING = {}
-				for I, ITEM in pairs(SELECTED_ITEMS) do
-					WITHDRAWING[#WITHDRAWING+1] = ITEM
-				end
+				-- NOW withdraw the originals (they disappear right after clones appear)
 				RepStorage.Events.WithdrawItems:InvokeServer(WITHDRAWING)
+
 				module.UNSELECT_ITEMS()
 				SELECTED_ITEMS = {}
 			end
+
 			wait(.2)
 			DB = true
 		end
