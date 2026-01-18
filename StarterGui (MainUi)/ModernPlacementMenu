@@ -1,0 +1,222 @@
+local module = {}
+
+function module.CREATE_MODERN_PLACEMENT_MENU(parent)
+	local Camera = workspace.CurrentCamera
+
+	-- Main container - now with header for inventory count
+	local container = Instance.new("Frame")
+	container.Name = "ModernPlacement"
+	container.Size = UDim2.new(0, 312, 0, 155)  -- Taller to fit header (was 117)
+	container.Position = UDim2.new(0.5, 0, 1, -173)  -- Adjusted for new height
+	container.AnchorPoint = Vector2.new(0.5, 0)  -- Anchor at center-top of frame
+	container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	container.BackgroundTransparency = 0.1
+	container.BorderSizePixel = 0
+	container.Visible = false
+	container.ZIndex = 10
+	container.Parent = parent
+
+	-- Blur/Glass effect background
+	local blur = Instance.new("Frame")
+	blur.Size = UDim2.new(1, 0, 1, 0)
+	blur.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	blur.BackgroundTransparency = 0.3
+	blur.BorderSizePixel = 0
+	blur.ZIndex = 11
+	blur.Parent = container
+
+	local blurCorner = Instance.new("UICorner")
+	blurCorner.CornerRadius = UDim.new(0, 14)  -- Scaled from 12
+	blurCorner.Parent = blur
+
+	-- Outer glow/shadow
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(60, 60, 80)
+	stroke.Thickness = 2
+	stroke.Transparency = 0.5
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = container
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 14)  -- Scaled from 12
+	corner.Parent = container
+
+	-- Header section for inventory count
+	local header = Instance.new("Frame")
+	header.Name = "Header"
+	header.Size = UDim2.new(1, -16, 0, 32)
+	header.Position = UDim2.new(0, 8, 0, 8)
+	header.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+	header.BackgroundTransparency = 0.3
+	header.BorderSizePixel = 0
+	header.ZIndex = 12
+	header.Parent = container
+
+	local headerCorner = Instance.new("UICorner")
+	headerCorner.CornerRadius = UDim.new(0, 8)
+	headerCorner.Parent = header
+
+	-- Item name label
+	local itemNameLabel = Instance.new("TextLabel")
+	itemNameLabel.Name = "ItemNameLabel"
+	itemNameLabel.Size = UDim2.new(0.6, 0, 1, 0)
+	itemNameLabel.Position = UDim2.new(0, 8, 0, 0)
+	itemNameLabel.BackgroundTransparency = 1
+	itemNameLabel.Text = "Item Name"
+	itemNameLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+	itemNameLabel.TextSize = 14
+	itemNameLabel.Font = Enum.Font.GothamBold
+	itemNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	itemNameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+	itemNameLabel.ZIndex = 13
+	itemNameLabel.Parent = header
+
+	-- Inventory count label
+	local inventoryLabel = Instance.new("TextLabel")
+	inventoryLabel.Name = "InventoryLabel"
+	inventoryLabel.Size = UDim2.new(0.4, -8, 1, 0)
+	inventoryLabel.Position = UDim2.new(0.6, 0, 0, 0)
+	inventoryLabel.BackgroundTransparency = 1
+	inventoryLabel.Text = "Inventory: 0"
+	inventoryLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+	inventoryLabel.TextSize = 14
+	inventoryLabel.Font = Enum.Font.GothamBold
+	inventoryLabel.TextXAlignment = Enum.TextXAlignment.Right
+	inventoryLabel.ZIndex = 13
+	inventoryLabel.Parent = header
+
+	-- Buttons container - 2x2 grid layout (moved down to make room for header)
+	local buttonsContainer = Instance.new("Frame")
+	buttonsContainer.Name = "ButtonsContainer"
+	buttonsContainer.Size = UDim2.new(1, -16, 0, 101)  -- Fixed height for 2x2 grid
+	buttonsContainer.Position = UDim2.new(0, 8, 0, 46)  -- Positioned below header
+	buttonsContainer.BackgroundTransparency = 1
+	buttonsContainer.ZIndex = 12
+	buttonsContainer.Parent = container
+
+	-- Use UIGridLayout for 2x2 grid
+	local gridLayout = Instance.new("UIGridLayout")
+	gridLayout.CellSize = UDim2.new(0, 143, 0, 47)  -- 30% bigger cells
+	gridLayout.CellPadding = UDim2.new(0, 8, 0, 8)  -- Slightly more padding
+	gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	gridLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	gridLayout.Parent = buttonsContainer
+
+	-- Button creation function
+	local function createButton(name, icon, color, hotkey, layoutOrder)
+		local button = Instance.new("TextButton")
+		button.Name = name
+		button.BackgroundColor3 = color
+		button.BorderSizePixel = 0
+		button.AutoButtonColor = false
+		button.Text = ""
+		button.ZIndex = 13
+		button.LayoutOrder = layoutOrder
+		button.Parent = buttonsContainer
+
+		local btnCorner = Instance.new("UICorner")
+		btnCorner.CornerRadius = UDim.new(0, 10)  -- Scaled from 8
+		btnCorner.Parent = button
+
+		-- Subtle inner shadow
+		local btnStroke = Instance.new("UIStroke")
+		btnStroke.Color = Color3.fromRGB(0, 0, 0)
+		btnStroke.Thickness = 1
+		btnStroke.Transparency = 0.7
+		btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		btnStroke.Parent = button
+
+		-- Button content container
+		local content = Instance.new("Frame")
+		content.Size = UDim2.new(1, -8, 1, 0)  -- Scaled from -6
+		content.Position = UDim2.new(0, 4, 0, 0)  -- Scaled from 3
+		content.BackgroundTransparency = 1
+		content.ZIndex = 14
+		content.Parent = button
+
+		-- Icon
+		local iconLabel = Instance.new("TextLabel")
+		iconLabel.Size = UDim2.new(0, 26, 1, 0)
+		iconLabel.Position = UDim2.new(0, 0, 0, 0)
+		iconLabel.BackgroundTransparency = 1
+		iconLabel.Text = icon
+		iconLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		iconLabel.TextSize = 20  -- Scaled up from 16
+		iconLabel.Font = Enum.Font.GothamBold
+		iconLabel.ZIndex = 15
+		iconLabel.Parent = content
+
+		-- Button text
+		local label = Instance.new("TextLabel")
+		label.Name = "ButtonLabel"
+		label.Size = UDim2.new(1, -55, 1, 0)
+		label.Position = UDim2.new(0, 28, 0, 0)
+		label.BackgroundTransparency = 1
+		label.Text = name
+		label.TextColor3 = Color3.fromRGB(255, 255, 255)
+		label.TextSize = 16  -- Scaled up from 13
+		label.Font = Enum.Font.GothamBold
+		label.TextXAlignment = Enum.TextXAlignment.Center
+		label.ZIndex = 15
+		label.Parent = content
+
+		-- Hotkey indicator - positioned at bottom right
+		local hotkeyLabel = Instance.new("TextLabel")
+		hotkeyLabel.Size = UDim2.new(0, 26, 0, 20)
+		hotkeyLabel.Position = UDim2.new(1, -28, 1, -22)
+		hotkeyLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+		hotkeyLabel.BackgroundTransparency = 0.3
+		hotkeyLabel.BorderSizePixel = 0
+		hotkeyLabel.Text = hotkey
+		hotkeyLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+		hotkeyLabel.TextSize = 11  -- Scaled up from 9
+		hotkeyLabel.Font = Enum.Font.GothamBold
+		hotkeyLabel.ZIndex = 15
+		hotkeyLabel.Parent = content
+
+		local hotkeyCorner = Instance.new("UICorner")
+		hotkeyCorner.CornerRadius = UDim.new(0, 5)  -- Scaled from 4
+		hotkeyCorner.Parent = hotkeyLabel
+
+		-- Simple hover effects
+		local originalColor = color
+		local hoverColor = Color3.new(
+			math.min(color.R * 1.3, 1),
+			math.min(color.G * 1.3, 1),
+			math.min(color.B * 1.3, 1)
+		)
+
+		button.MouseEnter:Connect(function()
+			button.BackgroundColor3 = hoverColor
+			btnStroke.Transparency = 0.3
+		end)
+
+		button.MouseLeave:Connect(function()
+			button.BackgroundColor3 = originalColor
+			btnStroke.Transparency = 0.7
+		end)
+
+		return button
+	end
+
+	-- Create buttons in 2x2 layout
+	-- Row 1: Place (1), Rotate (2)
+	-- Row 2: Flip (3), Cancel (4)
+	local placeBtn = createButton("Place", "✓", Color3.fromRGB(60, 120, 80), "Click", 1)  -- Green
+	local rotateBtn = createButton("Rotate", "↔", Color3.fromRGB(80, 100, 140), "R", 2)  -- Blue
+	local flipBtn = createButton("Flip", "⇄", Color3.fromRGB(120, 80, 120), "F", 3)  -- Purple
+	local cancelBtn = createButton("Cancel", "X", Color3.fromRGB(140, 60, 60), "Q", 4)  -- Red
+
+	return {
+		Container = container,
+		PlaceButton = placeBtn,
+		RotateButton = rotateBtn,
+		FlipButton = flipBtn,
+		CancelButton = cancelBtn,
+		ItemNameLabel = itemNameLabel,
+		InventoryLabel = inventoryLabel
+	}
+end
+
+return module
