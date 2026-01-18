@@ -1,0 +1,283 @@
+local module = {}
+
+function module.CREATE_MODERN_SELECTION_UI(parent)
+	local Camera = workspace.CurrentCamera
+
+	-- Main container - slightly wider to fit price text
+	local container = Instance.new("Frame")
+	container.Name = "ModernSelected"
+	container.Size = UDim2.new(0, 220, 0, 175)  -- Increased width from 200 to 220
+	container.Position = UDim2.new(0.5, -110, 0.5, -87.5)
+	container.AnchorPoint = Vector2.new(0.5, 0.5)
+	container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	container.BackgroundTransparency = 0.1
+	container.BorderSizePixel = 0
+	container.Visible = false
+	container.ZIndex = 10
+	container.Parent = parent
+
+	-- Blur/Glass effect background
+	local blur = Instance.new("Frame")
+	blur.Size = UDim2.new(1, 0, 1, 0)
+	blur.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	blur.BackgroundTransparency = 0.3
+	blur.BorderSizePixel = 0
+	blur.ZIndex = 11
+	blur.Parent = container
+
+	local blurCorner = Instance.new("UICorner")
+	blurCorner.CornerRadius = UDim.new(0, 10)
+	blurCorner.Parent = blur
+
+	-- Outer glow/shadow
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(60, 60, 80)
+	stroke.Thickness = 2
+	stroke.Transparency = 0.5
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = container
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 10)
+	corner.Parent = container
+
+	-- Header section - very compact
+	local header = Instance.new("Frame")
+	header.Name = "Header"
+	header.Size = UDim2.new(1, -12, 0, 38)
+	header.Position = UDim2.new(0, 6, 0, 6)
+	header.BackgroundTransparency = 1
+	header.ZIndex = 12
+	header.Parent = container
+
+	-- Item name
+	local itemName = Instance.new("TextLabel")
+	itemName.Name = "ItemName"
+	itemName.Size = UDim2.new(1, 0, 0, 17)
+	itemName.Position = UDim2.new(0, 0, 0, 2)
+	itemName.BackgroundTransparency = 1
+	itemName.Text = "Item Name"
+	itemName.TextColor3 = Color3.fromRGB(255, 255, 255)
+	itemName.TextSize = 15
+	itemName.Font = Enum.Font.GothamBold
+	itemName.TextXAlignment = Enum.TextXAlignment.Center
+	itemName.TextTruncate = Enum.TextTruncate.AtEnd
+	itemName.ZIndex = 13
+	itemName.Parent = header
+
+	-- Item tier
+	local itemTier = Instance.new("TextLabel")
+	itemTier.Name = "ItemTier"
+	itemTier.Size = UDim2.new(1, 0, 0, 13)
+	itemTier.Position = UDim2.new(0, 0, 0, 21)
+	itemTier.BackgroundTransparency = 1
+	itemTier.Text = "First Age"
+	itemTier.TextColor3 = Color3.fromRGB(150, 150, 200)
+	itemTier.TextSize = 10
+	itemTier.Font = Enum.Font.Gotham
+	itemTier.TextXAlignment = Enum.TextXAlignment.Center
+	itemTier.ZIndex = 13
+	itemTier.Parent = header
+
+	-- Divider line
+	local divider = Instance.new("Frame")
+	divider.Size = UDim2.new(1, -20, 0, 1)
+	divider.Position = UDim2.new(0, 10, 0, 48)
+	divider.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+	divider.BackgroundTransparency = 0.5
+	divider.BorderSizePixel = 0
+	divider.ZIndex = 12
+	divider.Parent = container
+
+	-- Buttons container - tight fit
+	local buttonsContainer = Instance.new("Frame")
+	buttonsContainer.Name = "ButtonsContainer"
+	buttonsContainer.Size = UDim2.new(1, -12, 0, 120)
+	buttonsContainer.Position = UDim2.new(0, 6, 0, 52)
+	buttonsContainer.BackgroundTransparency = 1
+	buttonsContainer.ZIndex = 12
+	buttonsContainer.Parent = container
+
+	local listLayout = Instance.new("UIListLayout")
+	listLayout.Padding = UDim.new(0, 3)
+	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	listLayout.Parent = buttonsContainer
+
+	-- Button creation function - with optional price label
+	local function createButton(name, icon, color, hotkey, layoutOrder, pricePrefix)
+		local button = Instance.new("TextButton")
+		button.Name = name
+		button.Size = UDim2.new(1, 0, 0, 28)
+		button.BackgroundColor3 = color
+		button.BorderSizePixel = 0
+		button.AutoButtonColor = false
+		button.Text = ""
+		button.ZIndex = 13
+		button.LayoutOrder = layoutOrder
+		button.Parent = buttonsContainer
+
+		local btnCorner = Instance.new("UICorner")
+		btnCorner.CornerRadius = UDim.new(0, 8)
+		btnCorner.Parent = button
+
+		-- Subtle inner shadow
+		local btnStroke = Instance.new("UIStroke")
+		btnStroke.Color = Color3.fromRGB(0, 0, 0)
+		btnStroke.Thickness = 1
+		btnStroke.Transparency = 0.7
+		btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		btnStroke.Parent = button
+
+		-- Button content container
+		local content = Instance.new("Frame")
+		content.Size = UDim2.new(1, -12, 1, 0)
+		content.Position = UDim2.new(0, 6, 0, 0)
+		content.BackgroundTransparency = 1
+		content.ZIndex = 14
+		content.Parent = button
+
+		-- Icon
+		local iconLabel = Instance.new("TextLabel")
+		iconLabel.Size = UDim2.new(0, 20, 1, 0)
+		iconLabel.Position = UDim2.new(0, 0, 0, 0)
+		iconLabel.BackgroundTransparency = 1
+		iconLabel.Text = icon
+		iconLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		iconLabel.TextSize = 14
+		iconLabel.Font = Enum.Font.GothamBold
+		iconLabel.ZIndex = 15
+		iconLabel.Parent = content
+
+		-- Button text OR Price label (if has price, use price label instead)
+		local label
+		local priceLabel
+
+		if pricePrefix then
+			-- For Buy/Sell buttons, create price label that includes button name
+			priceLabel = Instance.new("TextLabel")
+			priceLabel.Name = "PriceLabel"
+			priceLabel.Size = UDim2.new(1, -100, 1, 0)
+			priceLabel.Position = UDim2.new(0, 24, 0, 0)
+			priceLabel.BackgroundTransparency = 1
+			priceLabel.Text = name .. " - 100"  -- "Buy - 100" or "Sell - 100"
+			priceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+			priceLabel.TextSize = 12
+			priceLabel.Font = Enum.Font.GothamBold
+			priceLabel.TextXAlignment = Enum.TextXAlignment.Left
+			priceLabel.ZIndex = 15
+			priceLabel.Parent = content
+		else
+			-- For Move/Withdraw buttons, just show name
+			label = Instance.new("TextLabel")
+			label.Name = "ButtonLabel"
+			label.Size = UDim2.new(1, -50, 1, 0)
+			label.Position = UDim2.new(0, 24, 0, 0)
+			label.BackgroundTransparency = 1
+			label.Text = name
+			label.TextColor3 = Color3.fromRGB(255, 255, 255)
+			label.TextSize = 12
+			label.Font = Enum.Font.GothamBold
+			label.TextXAlignment = Enum.TextXAlignment.Left
+			label.ZIndex = 15
+			label.Parent = content
+		end
+
+		-- Hotkey indicator - positioned at far right
+		local hotkeyLabel = Instance.new("TextLabel")
+		hotkeyLabel.Size = UDim2.new(0, 24, 0, 18)
+		hotkeyLabel.Position = UDim2.new(1, -24, 0.5, -9)
+		hotkeyLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+		hotkeyLabel.BackgroundTransparency = 0.3
+		hotkeyLabel.BorderSizePixel = 0
+		hotkeyLabel.Text = hotkey
+		hotkeyLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+		hotkeyLabel.TextSize = 10
+		hotkeyLabel.Font = Enum.Font.GothamBold
+		hotkeyLabel.ZIndex = 15
+		hotkeyLabel.Parent = content
+
+		local hotkeyCorner = Instance.new("UICorner")
+		hotkeyCorner.CornerRadius = UDim.new(0, 4)
+		hotkeyCorner.Parent = hotkeyLabel
+
+		-- Simple hover effects
+		local originalColor = color
+		local hoverColor = Color3.new(
+			math.min(color.R * 1.3, 1),
+			math.min(color.G * 1.3, 1),
+			math.min(color.B * 1.3, 1)
+		)
+
+		button.MouseEnter:Connect(function()
+			button.BackgroundColor3 = hoverColor
+			btnStroke.Transparency = 0.3
+		end)
+
+		button.MouseLeave:Connect(function()
+			button.BackgroundColor3 = originalColor
+			btnStroke.Transparency = 0.7
+		end)
+
+		return {Button = button, PriceLabel = priceLabel, PricePrefix = pricePrefix}
+	end
+
+	-- Create buttons with uniform color - sleek dark gray-blue
+	local buttonColor = Color3.fromRGB(50, 55, 65)
+	local moveBtn = createButton("Move", "🔄", buttonColor, "R", 1, nil)
+	local withdrawBtn = createButton("Withdraw", "📦", buttonColor, "Z", 2, nil)
+	local buyBtn = createButton("Buy", "🛒", buttonColor, "C", 3, "Buy -")
+	local sellBtn = createButton("Sell", "💰", buttonColor, "X", 4, "Sell -")
+
+	-- Store reference to selected item for anchoring
+	local selectedItemRef = nil
+
+	-- Function to update position
+	local function updatePosition()
+		if selectedItemRef and selectedItemRef.Parent and selectedItemRef:FindFirstChild("Hitbox") then
+			local hitbox = selectedItemRef.Hitbox
+			local itemCenter = hitbox.Position
+			local screenPos, onScreen = Camera:WorldToScreenPoint(itemCenter)
+
+			if onScreen then
+				container.AnchorPoint = Vector2.new(0.5, 0.5)
+				container.Position = UDim2.new(0, screenPos.X, 0, screenPos.Y)
+			end
+		end
+	end
+
+	-- Show/hide functions with position anchoring
+	function module.SHOW_MENU(item)
+		selectedItemRef = item
+		container.Visible = true
+		updatePosition()
+	end
+
+	function module.HIDE_MENU()
+		selectedItemRef = nil
+		container.Visible = false
+	end
+
+	function module.UPDATE_POSITION()
+		if container.Visible then
+			updatePosition()
+		end
+	end
+
+	return {
+		Container = container,
+		ItemName = itemName,
+		ItemTier = itemTier,
+		MoveButton = moveBtn.Button,
+		WithdrawButton = withdrawBtn.Button,
+		SellButton = sellBtn.Button,
+		BuyButton = buyBtn.Button,
+		SellPrice = sellBtn.PriceLabel,
+		BuyPrice = buyBtn.PriceLabel,
+		SellPricePrefix = sellBtn.PricePrefix,
+		BuyPricePrefix = buyBtn.PricePrefix,
+		UpdatePosition = module.UPDATE_POSITION
+	}
+end
+
+return module
