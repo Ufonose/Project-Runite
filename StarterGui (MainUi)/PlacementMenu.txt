@@ -35,6 +35,7 @@ function module.LOAD(MODULE_INFO)
 	local Plrs = SERVICES["Players"]
 	-- Modules
 	local Main = MODULES["Main"]
+	local ModernPlacementMenu = MODULES["ModernPlacementMenu"]
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
 	local Mouse = Plr:GetMouse()
@@ -42,53 +43,106 @@ function module.LOAD(MODULE_INFO)
 	-- Booleans
 	local DB = true
 
-	-- Create instruction label if it doesn't exist
-	local instructionLabel = script.Parent:FindFirstChild("Instructions")
-	if not instructionLabel then
-		instructionLabel = Instance.new("TextLabel")
-		instructionLabel.Name = "Instructions"
-		instructionLabel.Size = UDim2.new(1, 0, 0, 40)
-		instructionLabel.Position = UDim2.new(0, 0, 0, -45)
-		instructionLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-		instructionLabel.BackgroundTransparency = 1
-		instructionLabel.Text = "R: Rotate | F: Flip Direction | Q: Cancel"
-		instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-		instructionLabel.TextSize = 16
-		instructionLabel.Font = Enum.Font.GothamBold
-		instructionLabel.TextStrokeTransparency = 0.5
-		instructionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-		instructionLabel.Visible = false
-		instructionLabel.ZIndex = 10
-		instructionLabel.Parent = script.Parent
+	-- Get the MainUi (parent of PlacementMenu script)
+	local mainUi = script.Parent.Parent
+
+	-- Hide old PlacementMenu Frame (NOT the script parent)
+	for _, child in pairs(script.Parent:GetChildren()) do
+		if child:IsA("GuiObject") then
+			child.Visible = false
+		end
+	end
+
+	-- Create modern placement menu
+	local modernMenu = ModernPlacementMenu.CREATE_MODERN_PLACEMENT_MENU(mainUi)
+
+	-- Store reference to current placing item for inventory updates
+	local currentPlacingItemId = nil
+
+	-- Function to update inventory count display
+	local function updateInventoryCount()
+		if not currentPlacingItemId then return end
+
+		local success, inventory = pcall(function()
+			return RepStorage.Events.GetInventoryType:InvokeServer("Items")
+		end)
+
+		if success and inventory and inventory[currentPlacingItemId] then
+			local amount = inventory[currentPlacingItemId].Amount or 0
+			modernMenu.InventoryLabel.Text = "Inventory: " .. amount
+
+			-- Change color based on amount (green if has items, red if empty)
+			if amount > 0 then
+				modernMenu.InventoryLabel.TextColor3 = Color3.fromRGB(100, 255, 150)  -- Green
+			else
+				modernMenu.InventoryLabel.TextColor3 = Color3.fromRGB(255, 100, 100)  -- Red
+			end
+		end
+	end
+
+	-- Listen for inventory updates
+	RepStorage.Events.InventoryUpdate.OnClientEvent:Connect(function()
+		if modernMenu.Container.Visible then
+			updateInventoryCount()
+		end
+	end)
+
+	-- HIDE/REMOVE the instruction label (this is the duplicate text!)
+	local instructionLabel = mainUi:FindFirstChild("PlacementInstructions")
+	if instructionLabel then
+		instructionLabel:Destroy()  -- Remove it completely
+	end
+
+	-- Also check for old instruction label in PlacementMenu
+	local oldInstructions = script.Parent:FindFirstChild("Instructions")
+	if oldInstructions then
+		oldInstructions:Destroy()
 	end
 
 	function module.LOAD_MENU()
-		if not script.Parent.Visible then
-			script.Parent.Position = UDim2.new(.5, 0, 1.207, 0)
+		-- Set initial position off-screen (perfectly centered, 30% bigger)
+		if not modernMenu.Container.Visible then
+			modernMenu.Container.Position = UDim2.new(0.5, 0, 1, 20)
 		end
 
-		-- Show instructions
-		if instructionLabel then
-			instructionLabel.Visible = true
+		-- Get the item being placed and update the header
+		local placingItems = Plr.SetPlot.Value.PlacingItems:GetChildren()
+		if #placingItems > 0 then
+			local firstItem = placingItems[1]
+
+			-- Update item name
+			modernMenu.ItemNameLabel.Text = firstItem.Name
+
+			-- Get the item's ID and store it for inventory updates
+			if firstItem:FindFirstChild("ItemStats") then
+				local itemInfo = require(firstItem.ItemStats)
+				currentPlacingItemId = itemInfo.ItemId
+
+				-- Update inventory count
+				updateInventoryCount()
+			end
 		end
 
-		script.Parent.Visible = true
-		PosAnim(script.Parent, UDim2.new(.5, 0, .983, 0), .3)
+		-- Show and animate menu sliding up
+		modernMenu.Container.Visible = true
+		PosAnim(modernMenu.Container, UDim2.new(0.5, 0, 1, -173), 0.3)
 	end
 
 	function module.UNLOAD_MENU()
-		-- Hide instructions
-		if instructionLabel then
-			instructionLabel.Visible = false
-		end
+		-- Clear current placing item reference
+		currentPlacingItemId = nil
 
-		if script.Parent.Visible then
-			script.Parent.Position = UDim2.new(.5, 0, .983, 0)
+		-- Animate menu sliding down
+		if modernMenu.Container.Visible then
+			modernMenu.Container.Position = UDim2.new(0.5, 0, 1, -173)
 		end
-		PosAnim(script.Parent, UDim2.new(.5, 0, 1.207, 0), .3)
-		wait(.3)
-		script.Parent.Visible = false
+		PosAnim(modernMenu.Container, UDim2.new(0.5, 0, 1, 20), 0.3)
+		wait(0.3)
+		modernMenu.Container.Visible = false
 	end
+
+	-- Store modern menu for external access
+	module.ModernMenu = modernMenu
 end
 
 return module
