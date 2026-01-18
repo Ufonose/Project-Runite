@@ -11,116 +11,104 @@ function module.LOAD(MODULE_INFO)
 	-- Modules
 	local MainLib = MODULES["MainLib"]
 	local Main = MODULES["Main"]
+	local ModernItemHover = MODULES["ModernItemHover"]
 	-- Plr Info
 	local Camera = workspace.CurrentCamera
 	local Plr = Plrs.LocalPlayer
 	local Mouse = Plr:GetMouse()
 	-- Variables
-	-- Booleans
 	local DB = true
 
+	-- Hide old ItemHover GUI
 	script.Parent.Visible = false
 
+	-- Create modern hover UI
+	local modernHover = ModernItemHover.CREATE_MODERN_HOVER_UI(script.Parent.Parent)
+	modernHover.Hide()
+
+	-- Button hovering (for shop/inventory buttons)
 	script.Parent.ButtonHovering.Changed:Connect(function()
 		local BUTTON = script.Parent.ButtonHovering.Value
 		if BUTTON ~= nil then
 			local REAL_ITEM = RepStorage.Items:FindFirstChild(BUTTON:GetAttribute("ITEM_NAME"))
+			if not REAL_ITEM then return end
+
 			local ITEM_INFO = require(REAL_ITEM.ItemStats)
 			local TIER_NAME, TIER_INFO = MainLib.GET_ITEM_TIER_INFO(REAL_ITEM.Name)
-			script.Parent.ItemTier.TextColor3 = TIER_INFO["TIER_COLOR"]
-			script.Parent.ItemTier.Text = TIER_NAME
-			script.Parent.ItemName.Text = REAL_ITEM.Name
-			script.Parent.ItemDesc.Text = ITEM_INFO.Description
+
+			modernHover.ItemTier.TextColor3 = TIER_INFO["TIER_COLOR"]
+			modernHover.ItemTier.Text = TIER_NAME
+			modernHover.ItemName.Text = REAL_ITEM.Name
 
 			-- Check if item is locked and show unlock requirement
 			local isUnlocked = BUTTON:GetAttribute("IS_UNLOCKED")
+			local descText = ITEM_INFO.Description
+
 			if isUnlocked == false then
-				-- Get unlock requirement from server
 				local unlockResearch = RepStorage.Events.GetItemUnlockRequirement:InvokeServer(ITEM_INFO.ItemId)
 				if unlockResearch then
-					script.Parent.ItemDesc.Text = "🔒 LOCKED\nComplete: " .. unlockResearch.Name .. "\n\n" .. ITEM_INFO.Description
+					descText = "🔒 LOCKED\nComplete: " .. unlockResearch.Name .. "\n\n" .. ITEM_INFO.Description
 				else
-					script.Parent.ItemDesc.Text = "🔒 LOCKED\n\n" .. ITEM_INFO.Description
+					descText = "🔒 LOCKED\n\n" .. ITEM_INFO.Description
 				end
 			end
 
-			script.Parent.ItemCreators.Text = "Creators: "
-			for I, CREATOR in pairs(ITEM_INFO.Creators) do
-				script.Parent.ItemCreators.Text = script.Parent.ItemCreators.Text..CREATOR
-				if I > 0 and I < #ITEM_INFO.Creators then
-					script.Parent.ItemCreators.Text = script.Parent.ItemCreators.Text..", "
-				end
-			end
-			script.Parent.Visible = true
+			-- Show expanded view for buttons (in menus)
+			modernHover.ShowExpanded(descText)
+			modernHover.Show()
 		else
-			script.Parent.Visible = false
+			modernHover.Hide()
 		end
 	end)
 
 	function module.UPDATE_HOVER()
-		if script.Parent.Visible then
-			local BUTTON_HOVER = #script.Parent.Parent.Values.OpenedMenus:GetChildren() > 0
-			if not BUTTON_HOVER then
-				script.Parent.Bar2.Visible = false
-				script.Parent.Bar3.Visible = false
-				script.Parent.ItemDesc.Visible = false
-				script.Parent.ItemCreators.Visible = false
-				script.Parent.Bar.Position = UDim2.new(0, 0, 0.562, 0)
-				script.Parent.ItemName.Size = UDim2.new(0.923, 0, 0.522, 0)
-				script.Parent.ItemTier.Size = UDim2.new(0.667, 0, 0.436, 0)
-				script.Parent.ItemTier.Position = UDim2.new(0.027, 0, 0.562, 0)
-				script.Parent.UISizeConstraint.MaxSize = Vector2.new(250, 50)
-			else
-				script.Parent.Bar2.Visible = true
-				script.Parent.Bar3.Visible = true
-				script.Parent.ItemDesc.Visible = true
-				script.Parent.ItemCreators.Visible = false
-				script.Parent.Bar.Position = UDim2.new(0, 0, 0.242, 0)
-				script.Parent.ItemName.Size = UDim2.new(0.667, 0, 0.202, 0)
-				script.Parent.ItemTier.Size = UDim2.new(0.667, 0, 0.14, 0)
-				script.Parent.ItemTier.Position = UDim2.new(0.027, 0, 0.248, 0)
-				script.Parent.UISizeConstraint.MaxSize = Vector2.new(300, 200)
-			end
+		if not modernHover.Container.Visible then return end
 
-			-- NEW: Check if we're hovering over a placed item using ObjectValue reference
-			local hoveredItemRef = script.Parent:FindFirstChild("HoveredItemRef")
-			if hoveredItemRef and hoveredItemRef.Value then
-				local placedItem = hoveredItemRef.Value
-				if placedItem and placedItem:FindFirstChild("Hitbox") then
-					-- Position above the item
-					local hitbox = placedItem.Hitbox
-					local worldPos = hitbox.Position + Vector3.new(0, hitbox.Size.Y/2 + 1, 0)
-					local screenPos, onScreen = Camera:WorldToScreenPoint(worldPos)
+		-- Check if we're hovering over a placed item using ObjectValue reference
+		local hoveredItemRef = script.Parent:FindFirstChild("HoveredItemRef")
+		if hoveredItemRef and hoveredItemRef.Value then
+			local placedItem = hoveredItemRef.Value
+			if placedItem and placedItem.Parent and placedItem:FindFirstChild("Hitbox") then
+				-- Position above the item
+				local hitbox = placedItem.Hitbox
+				local worldPos = hitbox.Position + Vector3.new(0, hitbox.Size.Y/2 + 0.5, 0)
+				local screenPos, onScreen = Camera:WorldToScreenPoint(worldPos)
 
-					if onScreen then
-						local tooltipX = screenPos.X - script.Parent.AbsoluteSize.X/2
-						local tooltipY = screenPos.Y - script.Parent.AbsoluteSize.Y - 10
-						script.Parent.Position = UDim2.new(0, tooltipX, 0, tooltipY)
-					end
-					return -- Don't use mouse positioning
+				if onScreen then
+					local tooltipX = screenPos.X - modernHover.Container.AbsoluteSize.X/2
+					local tooltipY = screenPos.Y - modernHover.Container.AbsoluteSize.Y - 5
+					modernHover.Container.Position = UDim2.new(0, tooltipX, 0, tooltipY)
 				end
+				return -- Don't use mouse positioning
 			end
-
-			-- Original mouse positioning for buttons
-			local MOUSE_X = Mouse.X + 25
-			local MOUSE_Y = Mouse.Y + 15
-			if Mouse.X > Camera.ViewportSize.X/2 then
-				MOUSE_X = Mouse.X - script.Parent.AbsoluteSize.X - 15
-			end
-			if Mouse.Y > Camera.ViewportSize.Y/1.3 then
-				MOUSE_Y = Mouse.Y - script.Parent.AbsoluteSize.Y - 15
-			end
-			script.Parent.Position = UDim2.new(0, MOUSE_X, 0, MOUSE_Y)
 		end
+
+		-- Original mouse positioning for buttons
+		local MOUSE_X = Mouse.X + 25
+		local MOUSE_Y = Mouse.Y + 15
+		if Mouse.X > Camera.ViewportSize.X/2 then
+			MOUSE_X = Mouse.X - modernHover.Container.AbsoluteSize.X - 15
+		end
+		if Mouse.Y > Camera.ViewportSize.Y/1.3 then
+			MOUSE_Y = Mouse.Y - modernHover.Container.AbsoluteSize.Y - 15
+		end
+		modernHover.Container.Position = UDim2.new(0, MOUSE_X, 0, MOUSE_Y)
 	end
 
 	-- Update tooltip position every frame for placed items
 	RunService.RenderStepped:Connect(function()
 		local hoveredItemRef = script.Parent:FindFirstChild("HoveredItemRef")
-		if script.Parent.Visible and hoveredItemRef and hoveredItemRef.Value then
+		local modernSelectionOpen = script.Parent.Parent:FindFirstChild("ModernSelected") 
+			and script.Parent.Parent.ModernSelected.Visible
+
+		-- Only update position if tooltip is visible, item is hovered, and selection menu is NOT open
+		if modernHover.Container.Visible and hoveredItemRef and hoveredItemRef.Value and not modernSelectionOpen then
 			module.UPDATE_HOVER()
 		end
 	end)
+
+	-- Expose modern hover to be used by ItemSelection
+	module.ModernHover = modernHover
 end
 
 return module
