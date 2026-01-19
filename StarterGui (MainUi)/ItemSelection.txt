@@ -24,6 +24,7 @@ function module.LOAD(MODULE_INFO)
 	local INPUT = MODULES["Input"]
 	local ModernItemSelection = MODULES["ModernItemSelection"]
 	local CASH_LIB = MODULES["CashLib"]  -- For number formatting
+	local SoundManager = require(RepStorage.Modules.SoundManager)
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
 	local Mouse = Plr:GetMouse()
@@ -369,18 +370,22 @@ function module.LOAD(MODULE_INFO)
 
 	-- Connect modern UI buttons
 	modernUI.WithdrawButton.MouseButton1Click:Connect(function()
+		SoundManager.ButtonClick()
 		module.WITHDRAW_ITEM()
 	end)
 
 	modernUI.MoveButton.MouseButton1Click:Connect(function()
+		SoundManager.ButtonClick()
 		module.MOVE_ITEMS()
 	end)
 
 	modernUI.BuyButton.MouseButton1Click:Connect(function()
+		SoundManager.ButtonClick()
 		module.BUY_ITEMS()
 	end)
 
 	modernUI.SellButton.MouseButton1Click:Connect(function()
+		SoundManager.ButtonClick()
 		module.SELL_ITEMS()
 	end)
 end
