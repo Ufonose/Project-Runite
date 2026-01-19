@@ -2,6 +2,7 @@ local player = game.Players.LocalPlayer
 local mouse = player:GetMouse()
 local runService = game:GetService("RunService")
 local RepStorage = game:GetService("ReplicatedStorage")
+local DirectionalArrows = require(RepStorage.Modules.DirectionalArrows) -- NEW: Arrow system
 local touch = game:GetService("UserInputService").TouchEnabled
 
 local Enums = require(RepStorage.Modules.CustomEnums)
@@ -445,6 +446,18 @@ end
 function module.rotate()
 	calc(nil, (cr + 1) % 4)
 	render()
+
+	-- NEW: Update arrows for all currently placing objects
+	if currentObjects then
+		for i = 1, #currentObjects do
+			local object = currentObjects[i]
+			if object and object.model then
+				-- Small delay to ensure item has moved before updating arrows
+				task.wait()
+				DirectionalArrows.UpdateArrows(object.model)
+			end
+		end
+	end
 end
 
 local function enablePlacement(plane, models, prealigned)
