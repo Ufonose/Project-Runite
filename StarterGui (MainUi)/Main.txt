@@ -1,3 +1,5 @@
+-- StarterGui/MainUi/Main.lua (UPDATED WITH SOUNDS)
+
 local module = {}
 
 function module.CLOSE_MENU()
@@ -25,11 +27,12 @@ function module.LOAD(MODULE_INFO)
 	local ITEM_HOVER = MODULES["ItemHover"]
 	local PLACEMENT = MODULES["Placement"]
 	local INPUT = MODULES["Input"]
+	local SoundManager = require(RepStorage.Modules.SoundManager) -- NEW: Sound system
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
 	local Mouse = Plr:GetMouse()
 	-- Variables
-		-- Booleans
+	-- Booleans
 	local DB = true
 
 	-- Menu Opening/Closing Handling
@@ -46,7 +49,14 @@ function module.LOAD(MODULE_INFO)
 			if MENU_OBJ:FindFirstChild("MenuObject") then
 				MENU_OBJ.MenuObject.Value = false
 			end
-			MENU_OBJ.Visible = false
+
+			-- NEW: Only set Visible if the object has this property (Frames have it, ScreenGuis don't)
+			if MENU_OBJ:IsA("Frame") or MENU_OBJ:IsA("ScrollingFrame") then
+				MENU_OBJ.Visible = false
+			end
+
+			-- NEW: Play close sound
+			SoundManager.MenuClose()
 		end
 	end
 
@@ -54,6 +64,7 @@ function module.LOAD(MODULE_INFO)
 		local mainUi = script.Parent.Parent
 
 		ITEM_SELECTION.UNSELECT_ITEMS()		-- Wipe the selected items before anything.
+
 		local MENU_OPENED = mainUi.Values.OpenedMenus:FindFirstChild(MENU_OBJ.Name)
 		if MENU_OPENED then
 			module.CLOSE_MENU(MENU_OBJ)
@@ -82,6 +93,9 @@ function module.LOAD(MODULE_INFO)
 				MENU_OBJ.MenuObject.Value = true
 			end
 			MENU_OBJ.Visible = true
+
+			-- NEW: Play open sound
+			SoundManager.MenuOpen()
 		end
 	end
 
