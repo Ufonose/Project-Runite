@@ -114,13 +114,13 @@ function module.LOAD(MODULE_INFO)
 		for I, ITEM in pairs(SELECTED_ITEMS) do
 			ITEM:SetAttribute("SELECTED", true)
 			if ITEM:FindFirstChild("Hitbox") then
-				ITEM.Hitbox.Transparency = .6
+				ITEM.Hitbox.Transparency = .7
 			end
 		end
 		if SELECTED_ITEMS[ITEM] ~= ITEM then
 			SELECTED_ITEMS[ITEM] = ITEM
 			if ITEM:FindFirstChild("Hitbox") then
-				ITEM.Hitbox.Transparency = .6
+				ITEM.Hitbox.Transparency = .7
 				module.SELECTED_COUNT += 1
 			end
 			UPDATE_SELECTED_INFO()
