@@ -1,0 +1,116 @@
+-- ReplicatedStorage/Modules/SoundManager.lua
+-- Handles all UI and game sounds
+
+local SoundService = game:GetService("SoundService")
+
+local module = {}
+
+-- Sound configuration (you can change these asset IDs to your own sounds)
+local SOUNDS = {
+	-- UI Sounds
+	MenuOpen = "rbxassetid://93927627634818",      -- Click sound when opening menu
+	MenuClose = "rbxassetid://93927627634818",     -- Softer click when closing menu
+	ButtonClick = "rbxassetid://93927627634818",   -- General button click
+	ButtonHover = "rbxassetid://93927627634818",   -- Hover over button
+
+	-- Placement Sounds (for future use)
+	PlaceItem = "rbxassetid://93927627634818",     -- Item placed successfully
+	RotateItem = "rbxassetid://93927627634818",    -- Rotate item
+	CancelPlace = "rbxassetid://93927627634818",   -- Cancel placement
+
+	-- Notification Sounds (for future use)
+	Success = "rbxassetid://93927627634818",       -- Success notification
+	Error = "rbxassetid://91660275693179",         -- Error notification
+	Purchase = "rbxassetid://93927627634818",      -- Item purchased
+}
+
+-- Volume settings
+local VOLUMES = {
+	MenuOpen = 0.4,
+	MenuClose = 0.3,
+	ButtonClick = 0.4,
+	ButtonHover = 0.2,
+	PlaceItem = 0.4,
+	RotateItem = 0.3,
+	CancelPlace = 0.3,
+	Success = 0.5,
+	Error = 0.5,
+	Purchase = 0.4,
+}
+
+-- Pre-created sound instances (created once, reused many times)
+local soundInstances = {}
+
+-- Initialize all sounds (call this once when the module loads)
+local function initializeSounds()
+	for soundName, soundId in pairs(SOUNDS) do
+		local sound = Instance.new("Sound")
+		sound.Name = soundName
+		sound.SoundId = soundId
+		sound.Volume = VOLUMES[soundName] or 0.5
+		sound.Parent = SoundService
+
+		soundInstances[soundName] = sound
+	end
+
+	print("SoundManager: All sounds pre-loaded!")
+end
+
+-- Initialize sounds immediately
+initializeSounds()
+
+-- Play a sound (instant - no delay!)
+function module.PlaySound(soundName)
+	local sound = soundInstances[soundName]
+
+	if sound then
+		-- Stop if already playing (allows rapid clicking)
+		sound.TimePosition = 0
+		sound:Play()
+	else
+		warn("Sound not found:", soundName)
+	end
+end
+
+-- Convenience functions for common sounds
+function module.MenuOpen()
+	module.PlaySound("MenuOpen")
+end
+
+function module.MenuClose()
+	module.PlaySound("MenuClose")
+end
+
+function module.ButtonClick()
+	module.PlaySound("ButtonClick")
+end
+
+function module.ButtonHover()
+	module.PlaySound("ButtonHover")
+end
+
+function module.PlaceItem()
+	module.PlaySound("PlaceItem")
+end
+
+function module.RotateItem()
+	module.PlaySound("RotateItem")
+end
+
+function module.CancelPlace()
+	module.PlaySound("CancelPlace")
+end
+
+function module.Success()
+	module.PlaySound("Success")
+end
+
+function module.Error()
+	module.PlaySound("Error")
+end
+
+function module.Purchase()
+	module.PlaySound("Purchase")
+end
+
+return module
