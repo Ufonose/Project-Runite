@@ -1,0 +1,158 @@
+-- ReplicatedStorage/Modules/DirectionalArrows.lua (VISIBILITY TOGGLE VERSION)
+-- Simply shows/hides pre-made arrow parts during placement
+
+local module = {}
+
+-- Configuration
+local ARROW_PART_NAME = "DirectionIndicator" -- Name of arrow parts in your items
+
+-- Store original CFrames when arrows are first created
+local originalArrowCFrames = {}
+
+-- Reset arrow to its default orientation (aligned with parent)
+local function resetArrowOrientation(arrowPart)
+	if not arrowPart or not arrowPart.Parent then return end
+
+	local parent = arrowPart.Parent
+
+	-- Reset to parent's orientation but keep the arrow's local offset
+	local localPosition = parent.CFrame:PointToObjectSpace(arrowPart.Position)
+	arrowPart.CFrame = parent.CFrame * CFrame.new(localPosition)
+end
+
+-- Show all direction arrows for an item
+function module.ShowArrows(item)
+	print("=== SHOWING ARROWS FOR:", item.Name, "===")
+
+	if not item then return end
+
+	local arrowCount = 0
+
+	-- FIRST: Reset all Conv DirectionIndicators to default orientation
+	for _, descendant in pairs(item:GetDescendants()) do
+		if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope") then
+			for _, child in pairs(descendant:GetChildren()) do
+				if child.Name == ARROW_PART_NAME and child:IsA("BasePart") then
+					resetArrowOrientation(child)
+					print("  Reset arrow orientation:", child:GetFullName())
+				end
+			end
+		end
+	end
+
+	-- Check if conveyor is reversed
+	local isReversed = item:GetAttribute("ConveyorReversed") or false
+	print("Item is reversed:", isReversed)
+
+	-- Find all DirectionIndicator parts and enable their SurfaceGuis
+	for _, descendant in pairs(item:GetDescendants()) do
+		if descendant.Name == ARROW_PART_NAME and descendant:IsA("BasePart") then
+			-- Keep the part transparent (don't change transparency)
+			descendant.CanCollide = false
+
+			-- Enable any SurfaceGuis inside the arrow part
+			for _, gui in pairs(descendant:GetChildren()) do
+				if gui:IsA("SurfaceGui") then
+					gui.Enabled = true
+					print("  Enabled SurfaceGui on:", descendant:GetFullName())
+				end
+			end
+
+			arrowCount = arrowCount + 1
+			print("  Showed arrow GUI:", descendant:GetFullName())
+		end
+	end
+
+	-- If the item is reversed, flip the Conv arrows to match
+	if isReversed then
+		print("Applying reversed state to arrows...")
+		module.FlipConvArrows(item)
+	end
+
+	print("  Total arrows shown:", arrowCount)
+end
+
+-- Hide all direction arrows for an item
+function module.HideArrows(item)
+	print("=== HIDING ARROWS FOR:", item.Name, "===")
+
+	if not item then return end
+
+	local arrowCount = 0
+
+	-- Find all DirectionIndicator parts and disable their SurfaceGuis
+	for _, descendant in pairs(item:GetDescendants()) do
+		if descendant.Name == ARROW_PART_NAME and descendant:IsA("BasePart") then
+			-- Don't change part transparency - leave it transparent
+
+			-- Disable any SurfaceGuis inside the arrow part
+			for _, gui in pairs(descendant:GetChildren()) do
+				if gui:IsA("SurfaceGui") then
+					gui.Enabled = false
+					print("  Disabled SurfaceGui on:", descendant:GetFullName())
+				end
+			end
+
+			arrowCount = arrowCount + 1
+			print("  Hid arrow GUI:", descendant:GetFullName())
+		end
+	end
+
+	print("  Total arrows hidden:", arrowCount)
+end
+
+-- Flip arrows for Conv parts (but NOT ConvMerge parts)
+function module.FlipConvArrows(item)
+	print("=== FLIPPING CONV ARROWS FOR:", item.Name, "===")
+
+	if not item then return end
+
+	local flippedCount = 0
+
+	-- Find all Conv parts (NOT ConvMerge) and flip ALL their arrow children
+	for _, descendant in pairs(item:GetDescendants()) do
+		if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope") then
+			-- Find ALL arrow indicators that are children of this Conv part
+			for _, child in pairs(descendant:GetChildren()) do
+				if child.Name == ARROW_PART_NAME and child:IsA("BasePart") then
+					-- Flip the arrow 180 degrees (rotate around Y axis)
+					child.CFrame = child.CFrame * CFrame.Angles(0, math.pi, 0)
+					flippedCount = flippedCount + 1
+					print("  Flipped arrow on:", child:GetFullName())
+				end
+			end
+		end
+	end
+
+	print("  Total arrows flipped:", flippedCount)
+end
+
+-- Rotate arrows when item is rotated (they should rotate with the item automatically)
+function module.RotateArrows(item)
+	-- Arrows are part of the item, so they rotate automatically
+	-- No action needed - just here for consistency
+	print("Arrows will rotate with item automatically")
+end
+
+-- Main functions for placement system
+function module.CreateArrows(item)
+	-- Just show the arrows
+	module.ShowArrows(item)
+end
+
+function module.UpdateArrows(item)
+	-- Arrows update automatically since they're part of the item
+	-- Nothing to do here
+end
+
+function module.DestroyArrows(item)
+	-- Hide the arrows
+	module.HideArrows(item)
+end
+
+function module.DestroyAllArrows()
+	-- Not needed since we're just toggling visibility
+	print("DestroyAllArrows called (no action needed)")
+end
+
+return module
