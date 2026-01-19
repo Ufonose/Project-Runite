@@ -13,7 +13,8 @@ function module.LOAD(MODULE_INFO)
 	local PlacementMenu = MODULES["PlacementMenu"]
 	local PlacementLib = MODULES["PlacementLib"]
 	local Main = MODULES["Main"]
-	local DirectionalArrows = require(RepStorage.Modules.DirectionalArrows) -- NEW: Arrow system
+	local DirectionalArrows = require(RepStorage.Modules.DirectionalArrows)
+	local SoundManager = require(RepStorage.Modules.SoundManager) -- NEW: Sound system
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
 	local PLR_PLOT = Plr.SetPlot.Value
@@ -32,7 +33,7 @@ function module.LOAD(MODULE_INFO)
 			return
 		end
 		for I, OLD_ITEM in pairs(CURRENT_PLACING) do
-			-- NEW: Destroy arrows for this item
+			-- Destroy arrows for this item
 			DirectionalArrows.DestroyArrows(OLD_ITEM)
 			OLD_ITEM:Destroy()
 		end
@@ -41,6 +42,8 @@ function module.LOAD(MODULE_INFO)
 		CONVEYOR_REVERSED = false
 		PLACING = nil
 		PlacementMenu.UNLOAD_MENU()
+
+		-- No sound needed for canceling
 	end
 
 	-- Function to flip conveyor direction
@@ -79,9 +82,12 @@ function module.LOAD(MODULE_INFO)
 				end
 			end
 
-			-- NEW: Flip the Conv arrows (but not ConvMerge arrows)
+			-- Flip the Conv arrows (but not ConvMerge arrows)
 			DirectionalArrows.FlipConvArrows(ITEM)
 		end
+
+		-- NEW: Play flip sound
+		SoundManager.RotateItem()
 
 		print("=== FLIP COMPLETE ===")
 	end
@@ -100,7 +106,7 @@ function module.LOAD(MODULE_INFO)
 		PLACING = PlacementLib.new(PLR_PLOT.BasePlot, PLR_PLOT.PlacedItems)
 		PLACING:ENABLE_PLACING(ITEMS_PLACING, MOVING_ITEMS)
 
-		-- NEW: Initialize CONVEYOR_REVERSED based on the first item's current state
+		-- Initialize CONVEYOR_REVERSED based on the first item's current state
 		if ITEMS_PLACING[1] then
 			CONVEYOR_REVERSED = ITEMS_PLACING[1]:GetAttribute("ConveyorReversed") or false
 			print("Initialized CONVEYOR_REVERSED to:", CONVEYOR_REVERSED)
@@ -120,16 +126,19 @@ function module.LOAD(MODULE_INFO)
 				end
 			end
 			ITEM.Hitbox.Color = Color3.fromRGB(0, 0, 0)
-			ITEM.Hitbox.Transparency = .75
+			ITEM.Hitbox.Transparency = .7
 			ITEM.Parent = PLR_PLOT.PlacingItems
 
-			-- NEW: Create directional arrows for this item
+			-- Create directional arrows for this item
 			DirectionalArrows.CreateArrows(ITEM)
 		end
 
 		CURRENT_PLACING = ITEMS_PLACING
 		module.PLACING_ITEMS = true
 		PlacementMenu.LOAD_MENU()
+
+		-- No sound here - the inventory button already plays a click sound
+
 		return true
 	end
 
@@ -155,6 +164,10 @@ function module.LOAD(MODULE_INFO)
 
 			if PLACED_ITEMS_DONE then
 				warn("ITEMS PLACED SUCCESS!")
+
+				-- NEW: Play place item sound
+				SoundManager.PlaceItem()
+
 				return true
 			else
 				warn("ITEMS PLACED FAILED!")
