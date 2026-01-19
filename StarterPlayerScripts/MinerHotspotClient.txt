@@ -1,7 +1,8 @@
-print("=== MINER HOTSPOT CLIENT STARTING ===")
+print("=== MODERN MINER HOTSPOT CLIENT STARTING ===")
 
 local Players = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
 print("Player found:", player.Name)
@@ -37,11 +38,153 @@ end
 
 print("MinerHotspots folder found!")
 
+-- Function to create modern UI elements
+local function createModernHotspotUI(parent, info)
+	local billboardGui = Instance.new("BillboardGui")
+	billboardGui.Name = "BuyPrompt"
+	billboardGui.Size = UDim2.new(0, 200, 0, 85)
+	billboardGui.StudsOffset = Vector3.new(0, 5, 0)
+	billboardGui.AlwaysOnTop = true
+	billboardGui.MaxDistance = 50  -- Only visible within 25 studs
+	billboardGui.Adornee = parent
+	billboardGui.Parent = parent
+
+	-- Main container with modern styling
+	local container = Instance.new("Frame")
+	container.Size = UDim2.new(1, 0, 1, 0)
+	container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	container.BackgroundTransparency = 0.1
+	container.BorderSizePixel = 0
+	container.ZIndex = 10
+	container.Parent = billboardGui
+
+	local containerCorner = Instance.new("UICorner")
+	containerCorner.CornerRadius = UDim.new(0, 12)
+	containerCorner.Parent = container
+
+	-- Glass-morphism blur effect
+	local blur = Instance.new("Frame")
+	blur.Size = UDim2.new(1, 0, 1, 0)
+	blur.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	blur.BackgroundTransparency = 0.3
+	blur.BorderSizePixel = 0
+	blur.ZIndex = 11
+	blur.Parent = container
+
+	local blurCorner = Instance.new("UICorner")
+	blurCorner.CornerRadius = UDim.new(0, 12)
+	blurCorner.Parent = blur
+
+	-- Outer glow/shadow
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(60, 60, 80)
+	stroke.Thickness = 2
+	stroke.Transparency = 0.5
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = container
+
+	-- Content frame
+	local content = Instance.new("Frame")
+	content.Size = UDim2.new(1, -16, 1, -16)
+	content.Position = UDim2.new(0, 8, 0, 8)
+	content.BackgroundTransparency = 1
+	content.ZIndex = 12
+	content.Parent = container
+
+	-- Miner name (title)
+	local titleLabel = Instance.new("TextLabel")
+	titleLabel.Name = "TitleLabel"
+	titleLabel.Size = UDim2.new(1, 0, 0, 20)
+	titleLabel.Position = UDim2.new(0, 0, 0, 0)
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Text = info.Config.MinerName
+	titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	titleLabel.TextSize = 14
+	titleLabel.Font = Enum.Font.GothamBold
+	titleLabel.TextXAlignment = Enum.TextXAlignment.Center
+	titleLabel.ZIndex = 13
+	titleLabel.Parent = content
+
+	-- Divider line
+	local divider = Instance.new("Frame")
+	divider.Size = UDim2.new(1, -10, 0, 1)
+	divider.Position = UDim2.new(0, 5, 0, 24)
+	divider.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+	divider.BackgroundTransparency = 0.5
+	divider.BorderSizePixel = 0
+	divider.ZIndex = 12
+	divider.Parent = content
+
+	-- Cost label with background for better visibility
+	local costContainer = Instance.new("Frame")
+	costContainer.Size = UDim2.new(1, -10, 0, 32)
+	costContainer.Position = UDim2.new(0, 5, 0, 30)
+	costContainer.BackgroundColor3 = Color3.fromRGB(50, 55, 65)
+	costContainer.BorderSizePixel = 0
+	costContainer.ZIndex = 12
+	costContainer.Parent = content
+
+	local costCorner = Instance.new("UICorner")
+	costCorner.CornerRadius = UDim.new(0, 8)
+	costCorner.Parent = costContainer
+
+	local costStroke = Instance.new("UIStroke")
+	costStroke.Color = Color3.fromRGB(0, 0, 0)
+	costStroke.Thickness = 1
+	costStroke.Transparency = 0.7
+	costStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	costStroke.Parent = costContainer
+
+	local costLabel = Instance.new("TextLabel")
+	costLabel.Name = "CostLabel"
+	costLabel.Size = UDim2.new(1, -10, 1, 0)
+	costLabel.Position = UDim2.new(0, 5, 0, 0)
+	costLabel.BackgroundTransparency = 1
+	costLabel.ZIndex = 13
+	costLabel.Font = Enum.Font.GothamBold
+	costLabel.TextSize = 14
+	costLabel.TextXAlignment = Enum.TextXAlignment.Center
+	costLabel.Parent = costContainer
+
+	if info.Config.Cost == 0 then
+		costLabel.Text = "✨ FREE!"
+		costLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+	else
+		costLabel.Text = "🔬 " .. info.Config.Cost .. " Tokens"
+		costLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
+	end
+
+	-- Function to reset cost display
+	local function resetCostDisplay()
+		if info.Config.Cost == 0 then
+			costLabel.Text = "✨ FREE!"
+			costLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+		else
+			costLabel.Text = "🔬 " .. info.Config.Cost .. " Tokens"
+			costLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
+		end
+	end
+
+	-- Subtle pulse animation for cost container
+	local pulseInfo = TweenInfo.new(
+		1.5,
+		Enum.EasingStyle.Sine,
+		Enum.EasingDirection.InOut,
+		-1,
+		true
+	)
+	local pulseTween = TweenService:Create(costStroke, pulseInfo, {
+		Transparency = 0.4
+	})
+	pulseTween:Play()
+
+	return billboardGui, costLabel, costContainer, pulseTween, resetCostDisplay
+end
+
 -- Function to setup a hotspot
 local function setupHotspot(hotspot)
 	print("=== Setting up hotspot:", hotspot.Name, "===")
 
-	-- Wait for HotspotId to replicate
 	local hotspotId = hotspot:WaitForChild("HotspotId", 5)
 	if not hotspotId then 
 		warn("No HotspotId in", hotspot.Name, "after timeout")
@@ -50,25 +193,13 @@ local function setupHotspot(hotspot)
 
 	print("HotspotId:", hotspotId.Value)
 
-	-- Wait for BuyButton to replicate
-	print("Waiting for BuyButton to replicate...")
 	local buyButton = hotspot:WaitForChild("BuyButton", 10)
-
 	if not buyButton then 
 		warn("No BuyButton in", hotspot.Name, "after timeout")
 		return 
 	end
 
 	print("BuyButton found! Type:", buyButton.ClassName)
-
-	-- Make sure ClickDetector exists or wait for it
-	local clickDetector = buyButton:WaitForChild("ClickDetector", 5)
-	if not clickDetector then
-		warn("No ClickDetector found, creating one")
-		clickDetector = Instance.new("ClickDetector", buyButton)
-	end
-
-	print("ClickDetector ready")
 
 	if not RepStorage.Events:FindFirstChild("GetHotspotInfo") then
 		warn("GetHotspotInfo RemoteFunction not found!")
@@ -88,13 +219,11 @@ local function setupHotspot(hotspot)
 
 	if not info or not info.Config then
 		warn("No config returned for hotspot", hotspotId.Value)
-		warn("Server may not have loaded player data yet")
 		return
 	end
 
 	print("Got hotspot info - Miner:", info.Config.MinerName, "Cost:", info.Config.Cost, "Unlocked:", info.IsUnlocked)
 
-	-- Store reference to ghost miner for cleanup
 	local ghostMiner = nil
 
 	if not info.IsUnlocked then
@@ -108,10 +237,8 @@ local function setupHotspot(hotspot)
 			ghostMiner = minerModel:Clone()
 			ghostMiner.Name = "GhostMiner"
 
-			-- Make all parts transparent and non-collidable
 			for _, descendant in pairs(ghostMiner:GetDescendants()) do
 				if descendant:IsA("BasePart") then
-					-- Make Hitbox completely invisible
 					if descendant.Name == "Hitbox" then
 						descendant.Transparency = 1
 					else
@@ -119,7 +246,6 @@ local function setupHotspot(hotspot)
 					end
 					descendant.CanCollide = false
 					descendant.Anchored = true
-					--descendant.Material = Enum.Material.ForceField
 				end
 			end
 
@@ -135,95 +261,71 @@ local function setupHotspot(hotspot)
 			print("Ghost miner created!")
 		end
 
-		print("Creating BillboardGui...")
+		print("Creating modern BillboardGui...")
 
-		local billboardGui = Instance.new("BillboardGui")
-		billboardGui.Name = "BuyPrompt"
-		billboardGui.Size = UDim2.new(0, 200, 0, 100)
-		billboardGui.StudsOffset = Vector3.new(0, 3, 0)
-		billboardGui.AlwaysOnTop = true
-		billboardGui.Adornee = buyButton
-		billboardGui.Parent = buyButton
+		-- Create modern UI
+		local billboardGui, costLabel, costContainer, pulseTween, resetCostDisplay = createModernHotspotUI(buyButton, info)
 
-		local frame = Instance.new("Frame")
-		frame.Size = UDim2.new(1, 0, 1, 0)
-		frame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-		frame.BorderSizePixel = 0
-		frame.Parent = billboardGui
+		print("Modern BillboardGui created!")
 
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 10)
-		corner.Parent = frame
-
-		local titleLabel = Instance.new("TextLabel")
-		titleLabel.Size = UDim2.new(1, -10, 0, 30)
-		titleLabel.Position = UDim2.new(0, 5, 0, 5)
-		titleLabel.BackgroundTransparency = 1
-		titleLabel.Text = info.Config.MinerName
-		titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-		titleLabel.TextSize = 16
-		titleLabel.Font = Enum.Font.GothamBold
-		titleLabel.Parent = frame
-
-		local costLabel = Instance.new("TextLabel")
-		costLabel.Size = UDim2.new(1, -10, 0, 25)
-		costLabel.Position = UDim2.new(0, 5, 0, 35)
-		costLabel.BackgroundTransparency = 1
-
-		if info.Config.Cost == 0 then
-			costLabel.Text = "FREE!"
-			costLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-		else
-			costLabel.Text = "🔬 " .. info.Config.Cost .. " Tokens"
-			costLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
+		-- Wait for or create ProximityPrompt
+		local proximityPrompt = buyButton:FindFirstChild("UnlockPrompt")
+		if not proximityPrompt then
+			print("Creating ProximityPrompt...")
+			proximityPrompt = Instance.new("ProximityPrompt")
+			proximityPrompt.Name = "UnlockPrompt"
+			proximityPrompt.ActionText = "Unlock Hotspot"
+			proximityPrompt.ObjectText = info.Config.MinerName
+			proximityPrompt.KeyboardKeyCode = Enum.KeyCode.E
+			proximityPrompt.MaxActivationDistance = 10
+			proximityPrompt.RequiresLineOfSight = false
+			proximityPrompt.Parent = buyButton
 		end
 
-		costLabel.TextSize = 14
-		costLabel.Font = Enum.Font.Gotham
-		costLabel.Parent = frame
+		-- Handle ProximityPrompt trigger
+		proximityPrompt.Triggered:Connect(function(playerWhoTriggered)
+			print("=== PROXIMITY PROMPT TRIGGERED ===")
+			print("Triggered by:", playerWhoTriggered.Name)
 
-		local statusLabel = Instance.new("TextLabel")
-		statusLabel.Size = UDim2.new(1, -10, 0, 20)
-		statusLabel.Position = UDim2.new(0, 5, 0, 60)
-		statusLabel.BackgroundTransparency = 1
-		statusLabel.Text = "Click to unlock!"
-		statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-		statusLabel.TextSize = 12
-		statusLabel.Font = Enum.Font.Gotham
-		statusLabel.Parent = frame
-
-		print("BillboardGui created!")
-
-		clickDetector.MouseClick:Connect(function(playerWhoClicked)
-			print("=== CLICK DETECTED ===")
-			print("Clicked by:", playerWhoClicked.Name)
-
-			if playerWhoClicked ~= player then 
+			if playerWhoTriggered ~= player then 
 				print("Not the local player, ignoring")
 				return 
 			end
 
 			print("Processing unlock for hotspot", hotspotId.Value)
-			statusLabel.Text = "Unlocking..."
 
-			local success, result = pcall(function()
+			-- Stop pulse animation
+			pulseTween:Pause()
+
+			local success, result, errorMsg = pcall(function()
 				return RepStorage.Events.UnlockMinerHotspot:InvokeServer(hotspotId.Value)
 			end)
 
 			if not success then
 				warn("Error calling UnlockMinerHotspot:", result)
-				statusLabel.Text = "Error!"
-				statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+				costLabel.Text = "❌ Error!"
+				costLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+				task.wait(1.5)
+				resetCostDisplay()
+				pulseTween:Play()
 				return
 			end
 
-			print("Server response:", result)
+			print("Server response:", result, errorMsg)
 
 			if result == true then
 				print("Hotspot unlocked successfully!")
-				statusLabel.Text = "Unlocked! ✓"
-				statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-				wait(0.5)
+				costLabel.Text = "✓ Unlocked!"
+				costLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+
+				-- Fade out animation
+				local fadeInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+				local fadeTween = TweenService:Create(billboardGui.Frame, fadeInfo, {
+					BackgroundTransparency = 1
+				})
+				fadeTween:Play()
+
+				task.wait(0.5)
 
 				-- Destroy both the billboard AND the ghost miner
 				billboardGui:Destroy()
@@ -235,16 +337,28 @@ local function setupHotspot(hotspot)
 
 				print("Cleanup complete!")
 			else
-				warn("Failed to unlock:", result)
-				statusLabel.Text = tostring(result) or "Failed!"
-				statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-				wait(2)
-				statusLabel.Text = "Click to unlock!"
-				statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+				-- Handle failure - check for specific error message
+				warn("Failed to unlock:", errorMsg or result)
+
+				-- Display specific error message
+				if errorMsg == "Not enough tokens" then
+					costLabel.Text = "Not enough tokens!"
+				elseif errorMsg == "Already unlocked" then
+					costLabel.Text = "✓ Already unlocked!"
+				elseif errorMsg then
+					costLabel.Text = "❌ " .. errorMsg
+				else
+					costLabel.Text = "❌ Cannot unlock!"
+				end
+
+				costLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+				task.wait(2)
+				resetCostDisplay()
+				pulseTween:Play()
 			end
 		end)
 
-		print("Click handler connected!")
+		print("ProximityPrompt handler connected!")
 		print("Setup complete for", hotspot.Name)
 	else
 		print("Hotspot already unlocked")
@@ -265,4 +379,4 @@ for _, hotspot in pairs(hotspotFolder:GetChildren()) do
 	end)
 end
 
-print("=== MINER HOTSPOT CLIENT LOADED ===")
+print("=== MODERN MINER HOTSPOT CLIENT LOADED ===")
