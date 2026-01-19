@@ -19,6 +19,7 @@ function module.LOAD(MODULE_INFO)
 	local PlayerGui = Plr:WaitForChild("PlayerGui")
 	local ResearchGui = PlayerGui:WaitForChild("ResearchGui", 10)
 	local PLR_PLOT = Plr.SetPlot.Value
+	local SoundManager = require(RepStorage.Modules.SoundManager)
 	-- Variables
 	-- Booleans
 	local DB = true
@@ -46,6 +47,7 @@ function module.LOAD(MODULE_INFO)
 		if KEY_INPUT.KeyCode == Enum.KeyCode.R then
 			if PLACEMENT.PLACING_ITEMS then
 				PlacementLib.rotate()
+				SoundManager.RotateItem()
 			elseif not module.SELECTING_ITEMS and ItemSelection.SELECTED_COUNT > 0 then
 				ItemSelection.MOVE_ITEMS()
 			end
