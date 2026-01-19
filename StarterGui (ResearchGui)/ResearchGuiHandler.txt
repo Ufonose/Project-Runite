@@ -3,6 +3,7 @@ local RepStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local researchGui = script.Parent
+local SoundManager = require(RepStorage.Modules.SoundManager)
 
 -- Constants for tree layout
 local CARD_WIDTH = 220
@@ -76,7 +77,10 @@ closeCorner.CornerRadius = UDim.new(0, 10)
 closeCorner.Parent = closeButton
 
 closeButton.MouseButton1Click:Connect(function()
-	-- FIXED: Properly close menu like other GUIs do
+	-- NEW: Play close sound
+	SoundManager.MenuClose()
+
+	-- EXISTING CODE: Properly close menu like other GUIs do
 	local mainUi = playerGui:FindFirstChild("MainUi")
 	if mainUi then
 		-- Clean up ItemHover
@@ -120,6 +124,7 @@ modeCorner.Parent = modeToggle
 local isResearchMode = false
 
 modeToggle.MouseButton1Click:Connect(function()
+	SoundManager.ButtonClick()
 	isResearchMode = RepStorage.Events.ToggleResearchMode:InvokeServer()
 
 	if isResearchMode then
@@ -480,10 +485,16 @@ local function createObjectiveCard(objectiveData, researchData, position)
 
 		if canStart and prereqsMet then
 			actionButton.MouseButton1Click:Connect(function()
+				SoundManager.ButtonClick()  -- ADD THIS LINE
 				local success = RepStorage.Events.StartObjective:InvokeServer(objectiveData.Id)
 				if success then
 					refreshTree() -- Rebuild tree when objective starts
 				end
+			end)
+		else
+			-- ADD THIS SECTION for locked research clicks
+			actionButton.MouseButton1Click:Connect(function()
+				SoundManager.Error()  -- Play error sound for locked research
 			end)
 		end
 	end
@@ -649,8 +660,11 @@ local function createAgeTab(ageData, completedObjectives)
 
 	button.MouseButton1Click:Connect(function()
 		if isUnlocked then
+			SoundManager.ButtonClick()  -- ADD THIS LINE
 			currentAge = ageData.Id
 			refreshAgeTabsAndTree()
+		else
+			SoundManager.Error()  -- ADD THIS LINE (for locked age)
 		end
 	end)
 
@@ -697,6 +711,8 @@ menuObject.Changed:Connect(function()
 	print("ResearchGui MenuObject changed to:", menuObject.Value)  -- DEBUG
 	mainFrame.Visible = menuObject.Value
 	if mainFrame.Visible then
+		-- NEW: Play open sound when opening
+		SoundManager.MenuOpen()
 		refreshAgeTabsAndTree()
 	end
 end)
