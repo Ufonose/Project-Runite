@@ -11,6 +11,7 @@ function module.LOAD(MODULE_INFO)
 	local PLACEMENT = MODULES["Placement"]
 	local MainLib = MODULES["MainLib"]
 	local Main = MODULES["Main"]
+	local SoundManager = require(RepStorage.Modules.SoundManager)
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
 	-- Variables
@@ -88,7 +89,7 @@ function module.LOAD(MODULE_INFO)
 	closeButton.Size = UDim2.new(0, 50, 0, 50)
 	closeButton.Position = UDim2.new(1, -60, 0, 10)
 	closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-	closeButton.Text = "✕"
+	closeButton.Text = "X"
 	closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	closeButton.TextSize = 26
 	closeButton.Font = Enum.Font.GothamBold
@@ -260,6 +261,7 @@ function module.LOAD(MODULE_INFO)
 		table.insert(categoryButtons, tabButton)
 
 		tabButton.MouseButton1Click:Connect(function()
+			SoundManager.ButtonClick()
 			CURRENT_ITEM_FILTER = category.Name
 			allButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 			for _, btn in pairs(categoryButtons) do
@@ -272,6 +274,7 @@ function module.LOAD(MODULE_INFO)
 
 	-- All button click handler
 	allButton.MouseButton1Click:Connect(function()
+		SoundManager.ButtonClick()
 		CURRENT_ITEM_FILTER = "All"
 		allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
 		for _, btn in pairs(categoryButtons) do
