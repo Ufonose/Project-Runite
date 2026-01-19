@@ -1,3 +1,5 @@
+-- StarterGui/MainUi/Placement.lua (UPDATED WITH DIRECTIONAL ARROWS)
+
 local module = {}
 
 function module.LOAD(MODULE_INFO)
@@ -11,6 +13,7 @@ function module.LOAD(MODULE_INFO)
 	local PlacementMenu = MODULES["PlacementMenu"]
 	local PlacementLib = MODULES["PlacementLib"]
 	local Main = MODULES["Main"]
+	local DirectionalArrows = require(RepStorage.Modules.DirectionalArrows) -- NEW: Arrow system
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
 	local PLR_PLOT = Plr.SetPlot.Value
@@ -29,6 +32,8 @@ function module.LOAD(MODULE_INFO)
 			return
 		end
 		for I, OLD_ITEM in pairs(CURRENT_PLACING) do
+			-- NEW: Destroy arrows for this item
+			DirectionalArrows.DestroyArrows(OLD_ITEM)
 			OLD_ITEM:Destroy()
 		end
 		PLACING:DISABLE_PLACING()
@@ -73,6 +78,9 @@ function module.LOAD(MODULE_INFO)
 					end
 				end
 			end
+
+			-- NEW: Flip the Conv arrows (but not ConvMerge arrows)
+			DirectionalArrows.FlipConvArrows(ITEM)
 		end
 
 		print("=== FLIP COMPLETE ===")
@@ -92,12 +100,18 @@ function module.LOAD(MODULE_INFO)
 		PLACING = PlacementLib.new(PLR_PLOT.BasePlot, PLR_PLOT.PlacedItems)
 		PLACING:ENABLE_PLACING(ITEMS_PLACING, MOVING_ITEMS)
 
+		-- NEW: Initialize CONVEYOR_REVERSED based on the first item's current state
+		if ITEMS_PLACING[1] then
+			CONVEYOR_REVERSED = ITEMS_PLACING[1]:GetAttribute("ConveyorReversed") or false
+			print("Initialized CONVEYOR_REVERSED to:", CONVEYOR_REVERSED)
+		else
+			CONVEYOR_REVERSED = false
+		end
+
 		for I, ITEM in pairs(ITEMS_PLACING) do
 			for O, THING in pairs(ITEM:GetDescendants()) do
 				if THING:IsA("BasePart") then
-					if THING.Transparency < .1 then
-						THING.Transparency = .1
-					end
+					-- Removed transparency change - keep original appearance
 					THING.Anchored = true
 					THING.CanCollide = false
 				end
@@ -106,12 +120,14 @@ function module.LOAD(MODULE_INFO)
 				end
 			end
 			ITEM.Hitbox.Color = Color3.fromRGB(0, 0, 0)
-			ITEM.Hitbox.Transparency = .7
+			ITEM.Hitbox.Transparency = .75
 			ITEM.Parent = PLR_PLOT.PlacingItems
+
+			-- NEW: Create directional arrows for this item
+			DirectionalArrows.CreateArrows(ITEM)
 		end
 
 		CURRENT_PLACING = ITEMS_PLACING
-		CONVEYOR_REVERSED = false
 		module.PLACING_ITEMS = true
 		PlacementMenu.LOAD_MENU()
 		return true
