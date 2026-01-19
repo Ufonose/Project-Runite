@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
+local SoundManager = require(RepStorage.Modules.SoundManager)
 
 print("Player found:", player.Name)
 
@@ -342,6 +343,7 @@ local function setupHotspot(hotspot)
 
 				-- Display specific error message
 				if errorMsg == "Not enough tokens" then
+					SoundManager.Error()
 					costLabel.Text = "Not enough tokens!"
 				elseif errorMsg == "Already unlocked" then
 					costLabel.Text = "✓ Already unlocked!"
