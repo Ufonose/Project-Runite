@@ -277,6 +277,7 @@ local function setupHotspot(hotspot)
 			proximityPrompt.Name = "UnlockPrompt"
 			proximityPrompt.ActionText = "Unlock Hotspot"
 			proximityPrompt.ObjectText = info.Config.MinerName
+			proximityPrompt.HoldDuration = 0.5
 			proximityPrompt.KeyboardKeyCode = Enum.KeyCode.E
 			proximityPrompt.MaxActivationDistance = 10
 			proximityPrompt.RequiresLineOfSight = false
