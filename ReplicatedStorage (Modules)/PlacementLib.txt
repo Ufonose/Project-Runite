@@ -2,6 +2,8 @@ local player = game.Players.LocalPlayer
 local mouse = player:GetMouse()
 local runService = game:GetService("RunService")
 local RepStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
+local cachedCaveWalls = {} -- Cache for current plot's cave walls
 local DirectionalArrows = require(RepStorage.Modules.DirectionalArrows) -- NEW: Arrow system
 local touch = game:GetService("UserInputService").TouchEnabled
 
@@ -176,16 +178,44 @@ local function floatLesser(a, b)
 	return (b - a) > .01
 end
 
+-- PlacementLib - obstacleCollision with IMPROVED cave wall detection
+-- Add this at the top of your module:
+-- local CollectionService = game:GetService("CollectionService")
+
+local function cacheCurrentPlotCaveWalls()
+	cachedCaveWalls = {}
+
+	if currentPlane and currentPlane.base then
+		local plotBase = currentPlane.base.Parent
+		local allCaveWalls = CollectionService:GetTagged("CaveWall")
+
+		-- Only cache walls on THIS plot
+		for _, wall in pairs(allCaveWalls) do
+			if wall:IsDescendantOf(plotBase) then
+				table.insert(cachedCaveWalls, wall)
+			end
+		end
+
+		print("Cached", #cachedCaveWalls, "cave walls for placement detection")
+	end
+end
+
+-- ============================================
+-- COMPLETE obstacleCollision FUNCTION
+-- ============================================
 local function obstacleCollision(obstacles)
 	local px, pz = cx, cz
 
 	local collision = false
 	local obstacles = obstacles or currentPlane.obstacles
 
+	-- ============================================
+	-- PART 1: Check placed items (EXISTING CODE)
+	-- ============================================
 	for _, model in pairs(obstacles:GetChildren()) do
 		if (model.PrimaryPart) then
 
-			-- NEW: Check if this obstacle is on the same layer
+			-- Check if this obstacle is on the same layer
 			local obstacleLayer = model:FindFirstChild("PlacementLayer")
 			local obstacleLayers = model:FindFirstChild("PlacementLayers")
 
@@ -271,6 +301,64 @@ local function obstacleCollision(obstacles)
 		end
 	end
 
+	-- ============================================
+	-- PART 2: Check CACHED cave walls (FAST!)
+	-- ============================================
+	for i = 1, #currentObjects do
+		local object = currentObjects[i]
+
+		if not object.collision then
+			-- Calculate item position (same math as item-to-item collision)
+			local r = (object.r + cr) % 4
+			local x0, z0 = translate(object.px, -object.pz, cr)
+			x0 = x0 + px
+			z0 = z0 + pz
+
+			local extentsX0, extentsZ0
+			if (r == 1 or r == 3) then
+				extentsX0, extentsZ0 = object.sz, object.sx
+			else
+				extentsX0, extentsZ0 = object.sx, object.sz
+			end
+
+			-- Calculate 3D world position
+			local itemWorldPos = Vector3.new(
+				ox + x0 * dxx + z0 * dzx,
+				currentPlane.base.Position.Y + object.sy/2,
+				oz + x0 * dxz + z0 * dzz
+			)
+
+			-- Check against cached cave walls (SUPER FAST - no CollectionService call)
+			for _, wall in pairs(cachedCaveWalls) do
+				-- Verify wall still exists
+				if wall.Parent then
+					-- Simple 3D bounding box collision
+					local buffer = -0.1 -- Small buffer for better detection
+
+					local itemMin = itemWorldPos - Vector3.new(extentsX0/2 + buffer, object.sy/2 + buffer, extentsZ0/2 + buffer)
+					local itemMax = itemWorldPos + Vector3.new(extentsX0/2 + buffer, object.sy/2 + buffer, extentsZ0/2 + buffer)
+
+					local wallMin = wall.Position - wall.Size/2
+					local wallMax = wall.Position + wall.Size/2
+
+					-- AABB (Axis-Aligned Bounding Box) overlap test
+					if (itemMax.X > wallMin.X and itemMin.X < wallMax.X and
+						itemMax.Y > wallMin.Y and itemMin.Y < wallMax.Y and
+						itemMax.Z > wallMin.Z and itemMin.Z < wallMax.Z) then
+
+						collision = true
+						object.collision = true
+						setState(object, states.collision)
+						break
+					end
+				end
+			end
+		end
+	end
+
+	-- ============================================
+	-- PART 3: Reset states (EXISTING CODE)
+	-- ============================================
 	for i = 1, #currentObjects do
 		local object = currentObjects[i]
 
@@ -607,6 +695,7 @@ local function enablePlacement(plane, models, prealigned)
 	end
 	renderConnection = runService.RenderStepped:connect(run)
 	module.currentPlane = currentPlane
+	cacheCurrentPlotCaveWalls() -- Cache cave walls for instant collision detection
 	currentEvent = Instance.new("BindableEvent")
 	if (GRID_TEXTURE) then
 		currentTexture = Instance.new("Texture", currentPlane.base)
