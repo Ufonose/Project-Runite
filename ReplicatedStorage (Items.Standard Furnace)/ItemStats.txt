@@ -17,7 +17,7 @@ module.Addition = 0
 module.DropWorth = 0
 module.DropSize = 0
 module.DropSpeed = 0
-
+module.PlacementLayer = {1,2}  -- Higher level
 module.Creators = {"Zonix_Official"}
 
 -- HIDE FROM SHOP/INVENTORY - This is now a hotspot-only item
