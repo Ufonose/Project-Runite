@@ -1,3 +1,5 @@
+-- ReplicatedStorage > Items > Standard Furnace > ItemStats
+
 local module = {}
 
 module.ItemId = 3
@@ -17,8 +19,10 @@ module.DropSize = 0
 module.DropSpeed = 0
 
 module.Creators = {"Zonix_Official"}
+
+-- HIDE FROM SHOP/INVENTORY - This is now a hotspot-only item
 module.SpecialTags = {
-	
+	HotspotOnly = true,  -- This makes it invisible in shop/inventory
 }
 
 return module
