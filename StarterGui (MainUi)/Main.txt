@@ -127,7 +127,7 @@ function module.LOAD(MODULE_INFO)
 				if DB then
 					DB = false
 					PLACEMENT.PLACE_ITEM()
-					wait(.1)
+					wait(.2)
 					DB = true
 				end
 			end
@@ -136,3 +136,4 @@ function module.LOAD(MODULE_INFO)
 end
 
 return module
+
