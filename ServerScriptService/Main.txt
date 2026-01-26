@@ -157,10 +157,16 @@ function SELL_ITEM(Plr, ITEMS)
 			ITEM_ID = {ITEM_ID}
 		end
 		for I, REAL_ID in pairs(ITEM_ID) do
-			-- CHECK IF IT'S A HOTSPOT MINER
+			-- CHECK IF IT'S A HOTSPOT MINER OR FURNACE (UPDATED!)
 			if REAL_ID:GetAttribute("HotspotMiner") == true then
 				warn("Cannot sell hotspot miner!")
 				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "Hotspot miners cannot be sold!"})
+				return false
+			end
+
+			if REAL_ID:GetAttribute("HotspotFurnace") == true then
+				warn("Cannot sell hotspot furnace!")
+				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "The central furnace cannot be sold!"})
 				return false
 			end
 
@@ -189,10 +195,16 @@ function WITHDRAW_ITEMS(Plr, ITEMS)
 	end
 	if Plr then
 		for I, ITEM in pairs(ITEMS) do
-			-- CHECK IF IT'S A HOTSPOT MINER
+			-- CHECK IF IT'S A HOTSPOT MINER OR FURNACE (UPDATED!)
 			if ITEM:GetAttribute("HotspotMiner") == true then
 				warn("Cannot withdraw hotspot miner!")
 				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "Hotspot miners cannot be moved!"})
+				return false
+			end
+
+			if ITEM:GetAttribute("HotspotFurnace") == true then
+				warn("Cannot withdraw hotspot furnace!")
+				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "The central furnace cannot be moved!"})
 				return false
 			end
 
@@ -202,17 +214,6 @@ function WITHDRAW_ITEMS(Plr, ITEMS)
 		end
 		RepStorage.Events.InventoryUpdate:FireClient(Plr)
 		return true
-	end
-	return false
-end
-
-function UPDATE_STORT(Plr, SORT_VAL_NAME, NEW_SORT)
-	local SORT_VAL = Plr:FindFirstChild(SORT_VAL_NAME)
-	if SORT_VAL then
-		if NEW_SORT ~= SORT_VAL.Value then
-			SORT_VAL.Value = NEW_SORT
-			return true
-		end
 	end
 	return false
 end
