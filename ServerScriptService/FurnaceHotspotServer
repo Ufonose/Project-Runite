@@ -1,0 +1,65 @@
+-- ServerScriptService > FurnaceHotspotServer
+
+local Players = game:GetService("Players")
+local ServerStorage = game:GetService("ServerStorage")
+
+local FurnaceHotspotHandler = require(ServerStorage.Modules.FurnaceHotspotHandler)
+
+print("=== FURNACE HOTSPOT SERVER STARTING ===")
+
+-- Initialize player's furnace hotspot when they join
+local function InitializePlayerFurnaceHotspot(player)
+	-- Wait for DataLoaded
+	local dataLoaded = player:WaitForChild("DataLoaded", 30)
+	if not dataLoaded then
+		warn("DataLoaded not found for", player.Name)
+		return
+	end
+
+	print("Player data loaded for", player.Name, "- initializing furnace hotspot")
+
+	-- Wait for SetPlot
+	local setPlot = player:WaitForChild("SetPlot", 10)
+	if not setPlot or not setPlot.Value then
+		warn("SetPlot not found for", player.Name)
+		return
+	end
+
+	local plot = setPlot.Value
+	local hotspotFolder = plot:FindFirstChild("FurnaceHotspot")
+
+	if not hotspotFolder then
+		warn("No FurnaceHotspot folder in plot for", player.Name)
+		return
+	end
+
+	print("Found FurnaceHotspot folder for", player.Name)
+
+	-- ALWAYS activate the furnace hotspot (it's auto-unlocked)
+	if FurnaceHotspotHandler.IsHotspotUnlocked(player) then
+		print("Auto-activating furnace hotspot for", player.Name)
+		FurnaceHotspotHandler.ActivateHotspot(player)
+	else
+		-- This shouldn't happen since it's always unlocked, but just in case
+		warn("Furnace hotspot not unlocked for", player.Name, "- this is unexpected!")
+		-- Force unlock and activate
+		if _G["global_data"] and _G["global_data"][player.Name] then
+			_G["global_data"][player.Name]["FurnaceHotspot"] = {Unlocked = true}
+			FurnaceHotspotHandler.ActivateHotspot(player)
+		end
+	end
+end
+
+-- Initialize furnace hotspot for players when they join
+Players.PlayerAdded:Connect(function(player)
+	-- Wait for character
+	player.CharacterAdded:Connect(function()
+		-- Initialize furnace hotspot (waits for data internally)
+		task.spawn(function()
+			InitializePlayerFurnaceHotspot(player)
+		end)
+	end)
+end)
+
+print("FurnaceHotspotServer loaded!")
+print("=== FURNACE HOTSPOT SERVER READY ===")
