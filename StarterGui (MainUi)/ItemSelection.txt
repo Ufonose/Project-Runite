@@ -223,6 +223,8 @@ function module.LOAD(MODULE_INFO)
 		end
 	end
 
+	-- Replace your existing module.ITEM_DETECT() function with this:
+
 	function module.ITEM_DETECT()
 		if PLACEMENT.PLACING_ITEMS then		-- Big no no for item selection :)
 			CLEAR_HOVER()
@@ -243,12 +245,13 @@ function module.LOAD(MODULE_INFO)
 		local SELECTION_RAY = Ray.new(CAM_RAY.Origin, CAM_RAY.Direction * 1000)
 		if PLR_PLOT ~= nil then
 			local ITEM_HOVERING = workspace:FindPartOnRayWithWhitelist(SELECTION_RAY, PLR_PLOT.PlacedItems:GetChildren())
-			if ITEM_HOVERING and ITEM_HOVERING.Parent:FindFirstChild("ItemStats") then		-- We check for ItemStats because the hitbox part might not be called "Hitbox" for some reason or there could be a different part type that is not the Hitbox
+			if ITEM_HOVERING and ITEM_HOVERING.Parent:FindFirstChild("ItemStats") then
 
 				local isHotspotMiner = ITEM_HOVERING.Parent:GetAttribute("HotspotMiner") == true
+				local isHotspotFurnace = ITEM_HOVERING.Parent:GetAttribute("HotspotFurnace") == true
 
-				-- ALLOW HOVERING (show tooltip) but prevent selection for hotspot miners
-				if isHotspotMiner then
+				-- ALLOW HOVERING (show tooltip) but prevent selection for hotspot items
+				if isHotspotMiner or isHotspotFurnace then
 					HOVER_ITEM(ITEM_HOVERING.Parent)
 
 					-- If they try to click, clear any existing selections
