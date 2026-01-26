@@ -132,47 +132,57 @@ function DataHandling.UNLOAD_PLOT(Plr)
 		local PLOT_DATA = {}
 		for I, ITEM in pairs(PLR_PLOT.PlacedItems:GetChildren()) do
 			if ITEM:FindFirstChild("Hitbox") and ITEM:FindFirstChild("ItemStats") then
-				-- SKIP HOTSPOT MINERS
-				if ITEM:GetAttribute("HotspotMiner") ~= true then
-					local ITEM_INFO = require(ITEM.ItemStats)
-					local itemData = {
-						["ITEM_ID"] = ITEM_INFO.ItemId,
-						["item_pos"] = {(PLR_PLOT.BasePlot.CFrame:Inverse() * ITEM.PrimaryPart.CFrame):components()}
-					}
 
-					-- NEW: Save conveyor reversal state
-					if ITEM:GetAttribute("ConveyorReversed") then
-						itemData["CONVEYOR_REVERSED"] = true
-					end
-
-					-- NEW: Save sorter configuration
-					local sortConfig = ITEM:FindFirstChild("SortConfig")
-					if sortConfig then
-						print("Saving sorter config for", ITEM.Name)
-
-						local configData = {}
-						for _, config in pairs(sortConfig:GetChildren()) do
-							if config:IsA("StringValue") then
-								configData[config.Name] = config.Value
-								print("Saved:", config.Name, "->", config.Value)
-							end
-						end
-
-						-- Only save if there's actual config data
-						if next(configData) then
-							itemData["SORT_CONFIG"] = configData
-						end
-					end
-
-					-- ✨ NEW: Save assembly machine configuration
-					local assemblyConfig = ITEM:FindFirstChild("AssemblyConfig")
-					if assemblyConfig and assemblyConfig:IsA("StringValue") then
-						print("Saving assembly config for", ITEM.Name, ":", assemblyConfig.Value)
-						itemData["ASSEMBLY_CONFIG"] = assemblyConfig.Value
-					end
-
-					PLOT_DATA[#PLOT_DATA+1] = itemData
+				-- ✨ SKIP HOTSPOT ITEMS - DON'T SAVE THEM!
+				if ITEM:GetAttribute("HotspotMiner") == true then
+					print("Skipping hotspot miner:", ITEM.Name)
+					continue  -- Don't save hotspot miners
 				end
+
+				if ITEM:GetAttribute("HotspotFurnace") == true then
+					print("Skipping hotspot furnace:", ITEM.Name)
+					continue  -- Don't save hotspot furnaces
+				end
+
+				-- Normal items - save them with all their data
+				local ITEM_INFO = require(ITEM.ItemStats)
+				local itemData = {
+					["ITEM_ID"] = ITEM_INFO.ItemId,
+					["item_pos"] = {(PLR_PLOT.BasePlot.CFrame:Inverse() * ITEM.PrimaryPart.CFrame):components()}
+				}
+
+				-- Save conveyor reversal state
+				if ITEM:GetAttribute("ConveyorReversed") then
+					itemData["CONVEYOR_REVERSED"] = true
+				end
+
+				-- Save sorter configuration
+				local sortConfig = ITEM:FindFirstChild("SortConfig")
+				if sortConfig then
+					print("Saving sorter config for", ITEM.Name)
+
+					local configData = {}
+					for _, config in pairs(sortConfig:GetChildren()) do
+						if config:IsA("StringValue") then
+							configData[config.Name] = config.Value
+							print("Saved:", config.Name, "->", config.Value)
+						end
+					end
+
+					-- Only save if there's actual config data
+					if next(configData) then
+						itemData["SORT_CONFIG"] = configData
+					end
+				end
+
+				-- Save assembly machine configuration
+				local assemblyConfig = ITEM:FindFirstChild("AssemblyConfig")
+				if assemblyConfig and assemblyConfig:IsA("StringValue") then
+					print("Saving assembly config for", ITEM.Name, ":", assemblyConfig.Value)
+					itemData["ASSEMBLY_CONFIG"] = assemblyConfig.Value
+				end
+
+				PLOT_DATA[#PLOT_DATA+1] = itemData
 			end
 		end
 		return PLOT_DATA
