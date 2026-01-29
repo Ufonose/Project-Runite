@@ -14,10 +14,29 @@ module.Multiplier = 0
 module.Addition = 0
 module.DropWorth = 1
 module.DropSize = 1
+
+-- NEW: Random drop timing
+module.DropSpeedMin = 2  -- Minimum seconds between drops
+module.DropSpeedMax = 3  -- Maximum seconds between drops
+
+-- DEPRECATED (kept for compatibility)
 module.DropSpeed = 1.15
+
 module.DropColor = Color3.fromRGB(116, 116, 116)
 module.DropMaterial = Enum.Material.Slate
+
+-- NEW: Drop Table with rarities (must total 100%)
+-- Format: {OreName, DropChance%, DropWorth}
+module.DropTable = {
+	{Name = "Iron Ore", Chance = 99.6, Worth = 1},
+	{Name = "Diamond Gem", Chance = 0.1, Worth = 100},
+	{Name = "Ruby Gem", Chance = 0.2, Worth = 50},
+	{Name = "Emerald Gem", Chance = 0.3, Worth = 25},
+}
+
+-- DEPRECATED (kept for compatibility)
 module.OreModelName = "Iron Ore"
+
 module.PlacementLayer = {1,2} -- Higher level
 
 module.Creators = {"Zonix_Official"}
