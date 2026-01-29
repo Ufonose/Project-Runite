@@ -219,7 +219,8 @@ function module.LOAD(MODULE_INFO)
 								["Ruby Gem"] = "#FF0000",      -- Red
 								["Emerald Gem"] = "#00FF00",   -- Green
 								["Gold Ore"] = "#FFD700",      -- Gold
-								["Iron Ore"] = "#C0C0C0",      -- Silver/Gray
+								["Iron Ore"] = "#a16f53",      
+								["Copper Ore"] = "#a34827",     
 								-- Add more ore/gem colors as needed
 							}
 
@@ -298,37 +299,78 @@ function module.LOAD(MODULE_INFO)
 		end
 		local CAM_RAY = workspace.CurrentCamera:ViewportPointToRay(ITEM_CAST_POINT.X, ITEM_CAST_POINT.Y)
 		local SELECTION_RAY = Ray.new(CAM_RAY.Origin, CAM_RAY.Direction * 1000)
+
 		if PLR_PLOT ~= nil then
+			-- Use the old whitelist system to find the item we're aiming at
 			local ITEM_HOVERING = workspace:FindPartOnRayWithWhitelist(SELECTION_RAY, PLR_PLOT.PlacedItems:GetChildren())
+
 			if ITEM_HOVERING and ITEM_HOVERING.Parent:FindFirstChild("ItemStats") then
+				-- NEW: Add line-of-sight check to the found item
+				local itemPosition = ITEM_HOVERING.Position
+				local cameraPosition = workspace.CurrentCamera.CFrame.Position
+				local directionToItem = (itemPosition - cameraPosition).Unit
+				local distanceToItem = (itemPosition - cameraPosition).Magnitude
 
-				local isHotspotMiner = ITEM_HOVERING.Parent:GetAttribute("HotspotMiner") == true
-				local isHotspotFurnace = ITEM_HOVERING.Parent:GetAttribute("HotspotFurnace") == true
+				-- Raycast from camera to item to check for obstructions
+				local raycastParams = RaycastParams.new()
 
-				-- ALLOW HOVERING (show tooltip) but prevent selection for hotspot items
-				if isHotspotMiner or isHotspotFurnace then
+				-- Build filter list - exclude player, placed items, and hotspot folders
+				local filterList = {Plr.Character, PLR_PLOT.PlacedItems}
+				if PLR_PLOT:FindFirstChild("MinerHotspots") then
+					table.insert(filterList, PLR_PLOT.MinerHotspots)
+				end
+				if PLR_PLOT:FindFirstChild("FurnaceHotspot") then
+					table.insert(filterList, PLR_PLOT.FurnaceHotspot)
+				end
+				if PLR_PLOT:FindFirstChild("Collector") then
+					table.insert(filterList, PLR_PLOT.Collector)
+				end
+
+				raycastParams.FilterDescendantsInstances = filterList
+				raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+				raycastParams.IgnoreWater = true
+
+				local obstructionCheck = workspace:Raycast(cameraPosition, directionToItem * distanceToItem, raycastParams)
+
+				-- If there's no obstruction (or only hit the item itself), show tooltip
+				if not obstructionCheck then
+					-- No obstruction - item is visible
+					local isHotspotMiner = ITEM_HOVERING.Parent:GetAttribute("HotspotMiner") == true
+					local isHotspotFurnace = ITEM_HOVERING.Parent:GetAttribute("HotspotFurnace") == true
+
+					-- ALLOW HOVERING (show tooltip) but prevent selection for hotspot items
+					if isHotspotMiner or isHotspotFurnace then
+						HOVER_ITEM(ITEM_HOVERING.Parent)
+
+						-- If they try to click, clear any existing selections
+						if INPUT.MOUSE_DOWN then
+							if module.SELECTING_ITEMS or module.SELECTED_COUNT > 0 then
+								module.UNSELECT_ITEMS()
+							end
+						else
+							FINALIZE_SELECTING()
+						end
+						return
+					end
+
+					-- Normal items - allow full interaction
 					HOVER_ITEM(ITEM_HOVERING.Parent)
-
-					-- If they try to click, clear any existing selections
 					if INPUT.MOUSE_DOWN then
-						if module.SELECTING_ITEMS or module.SELECTED_COUNT > 0 then
+						if not module.SELECTING_ITEMS then		-- Wipe previously selected items
 							module.UNSELECT_ITEMS()
 						end
+						module.SELECT_ITEM(ITEM_HOVERING.Parent)
 					else
 						FINALIZE_SELECTING()
 					end
-					return
-				end
-
-				-- Normal items - allow full interaction
-				HOVER_ITEM(ITEM_HOVERING.Parent)
-				if INPUT.MOUSE_DOWN then
-					if not module.SELECTING_ITEMS then		-- Wipe previously selected items
+				else
+					-- Obstruction detected - don't show tooltip
+					if not INPUT.MOUSE_DOWN then
+						FINALIZE_SELECTING()
+					elseif INPUT.MOUSE_DOWN and not module.SELECTING_ITEMS then
 						module.UNSELECT_ITEMS()
 					end
-					module.SELECT_ITEM(ITEM_HOVERING.Parent)
-				else
-					FINALIZE_SELECTING()
+					CLEAR_HOVER(nil)
 				end
 			else
 				if not INPUT.MOUSE_DOWN then
