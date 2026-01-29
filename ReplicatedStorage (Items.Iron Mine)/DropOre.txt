@@ -7,19 +7,61 @@ local PLOT = script.Parent.Parent.Parent.Parent
 -- Random spread settings
 local SPREAD_WIDTH = 2  -- Left/right spread in studs
 
-while wait(ITEM_INFO.DropSpeed) do
+-- Function to select a random ore based on weighted chances
+local function SelectRandomOre()
+	local dropTable = ITEM_INFO.DropTable
+	if not dropTable or #dropTable == 0 then
+		-- Fallback to old system if no drop table
+		return ITEM_INFO.OreModelName, ITEM_INFO.DropWorth
+	end
+
+	-- Generate random number between 0 and 100
+	local roll = math.random() * 100
+	local accumulated = 0
+
+	-- Loop through drop table and find which item was rolled
+	for _, dropData in ipairs(dropTable) do
+		accumulated = accumulated + dropData.Chance
+		if roll <= accumulated then
+			return dropData.Name, dropData.Worth
+		end
+	end
+
+	-- Fallback to first item if something went wrong
+	return dropTable[1].Name, dropTable[1].Worth
+end
+
+while true do
+	-- NEW: Random wait time between min and max
+	local waitTime = ITEM_INFO.DropSpeedMin + math.random() * (ITEM_INFO.DropSpeedMax - ITEM_INFO.DropSpeedMin)
+	wait(waitTime)
+
 	local plot_owner = Plrs:FindFirstChild(PLOT.Owner.Value)
 	if plot_owner ~= nil then
 		if plot_owner.Settings.MinesActive.Value then
-			local ORE, CASH_VALUE = ITEM_HANDLER.DROP_ORE(PLOT, script.Parent.Parent, script.Parent.Drop, Vector3.new(ITEM_INFO.DropSize, ITEM_INFO.DropSize, ITEM_INFO.DropSize), ITEM_INFO.DropColor, ITEM_INFO.DropMaterial, ITEM_INFO.DropWorth)
+			-- NEW: Select random ore based on rarity
+			local selectedOreName, selectedWorth = SelectRandomOre()
+
+			-- Create the ore using the selected ore name and worth
+			local ORE, CASH_VALUE = ITEM_HANDLER.DROP_ORE(
+				PLOT, 
+				script.Parent.Parent, 
+				script.Parent.Drop, 
+				Vector3.new(ITEM_INFO.DropSize, ITEM_INFO.DropSize, ITEM_INFO.DropSize), 
+				ITEM_INFO.DropColor, 
+				ITEM_INFO.DropMaterial, 
+				selectedWorth,
+				selectedOreName  -- Pass the selected ore name
+			)
+
 			if ORE then
-				-- NEW: Add random left/right offset only
+				-- Add random left/right offset only
 				local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
 
 				-- Handle both Models and single BaseParts
 				local currentCFrame
 				if ORE:IsA("Model") then
-					currentCFrame = ORE:GetPivot()  -- Modern way to get Model position
+					currentCFrame = ORE:GetPivot()
 					local newCFrame = currentCFrame * CFrame.new(randomX, 0, 0)
 					ORE:PivotTo(newCFrame)
 				elseif ORE:IsA("BasePart") then
