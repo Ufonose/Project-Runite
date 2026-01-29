@@ -98,7 +98,8 @@ local function createModernHotspotUI(parent, info)
 	titleLabel.Size = UDim2.new(1, 0, 0, 20)
 	titleLabel.Position = UDim2.new(0, 0, 0, 0)
 	titleLabel.BackgroundTransparency = 1
-	titleLabel.Text = info.Config.MinerName
+	local displayName = info.Config.MinerName:gsub("%s*%d+$", "")
+	titleLabel.Text = displayName
 	titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	titleLabel.TextSize = 14
 	titleLabel.Font = Enum.Font.GothamBold
@@ -276,7 +277,7 @@ local function setupHotspot(hotspot)
 			proximityPrompt = Instance.new("ProximityPrompt")
 			proximityPrompt.Name = "UnlockPrompt"
 			proximityPrompt.ActionText = "Unlock Hotspot"
-			proximityPrompt.ObjectText = info.Config.MinerName
+			--proximityPrompt.ObjectText = info.Config.MinerName
 			proximityPrompt.HoldDuration = 0.5
 			proximityPrompt.KeyboardKeyCode = Enum.KeyCode.E
 			proximityPrompt.MaxActivationDistance = 10
