@@ -102,6 +102,7 @@ function module.CREATE_MODERN_HOVER_UI(parent)
 	itemDesc.TextWrapped = true
 	itemDesc.TextXAlignment = Enum.TextXAlignment.Left
 	itemDesc.TextYAlignment = Enum.TextYAlignment.Top
+	itemDesc.RichText = true  -- ← ADD THIS LINE HERE!
 	itemDesc.Visible = false
 	itemDesc.ZIndex = 8
 	itemDesc.Parent = content
