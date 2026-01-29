@@ -8,21 +8,51 @@ local MinerHotspotHandler = {}
 MinerHotspotHandler.HotspotConfigs = {
 	[1] = {
 		Id = 1,
-		MinerName = "Gold Mine",
+		MinerName = "Iron Mine 1",
 		Cost = 0, -- Free starter mine
-		Description = "Your first mine - free to start!",
+		Description = "",
 	},
 	[2] = {
 		Id = 2,
-		MinerName = "Iron Mine",
+		MinerName = "Iron Mine 2",
 		Cost = 0,
-		Description = "Expand your stone production",
+		Description = "",
 	},
 	[3] = {
 		Id = 3,
-		MinerName = "Iron Mine",
-		Cost = 10,
-		Description = "Even more stone!",
+		MinerName = "Copper Mine 1",
+		Cost = 0,
+		Description = "",
+	},
+	[4] = {
+		Id = 4,
+		MinerName = "Copper Mine 2",
+		Cost = 0,
+		Description = "",
+	},
+	[5] = {
+		Id = 5,
+		MinerName = "Iron Mine 3",
+		Cost = 0,
+		Description = "",
+	},
+	[6] = {
+		Id = 6,
+		MinerName = "Copper Mine 3",
+		Cost = 0,
+		Description = "",
+	},
+	[7] = {
+		Id = 7,
+		MinerName = "Gold Mine 1",
+		Cost = 0,
+		Description = "",
+	},
+	[8] = {
+		Id = 8,
+		MinerName = "Gold Mine 1",
+		Cost = 0,
+		Description = "",
 	},
 }
 
