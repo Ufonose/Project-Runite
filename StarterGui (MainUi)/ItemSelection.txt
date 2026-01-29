@@ -195,10 +195,65 @@ function module.LOAD(MODULE_INFO)
 					local TIER_NAME, TIER_INFO = MainLib.GET_ITEM_TIER_INFO(ITEM.Name)
 					ITEM_HOVER.ModernHover.ItemTier.TextColor3 = TIER_INFO["TIER_COLOR"]
 					ITEM_HOVER.ModernHover.ItemTier.Text = TIER_NAME
-					ITEM_HOVER.ModernHover.ItemName.Text = ITEM.Name
 
-					-- Show compact view for placed items
-					ITEM_HOVER.ModernHover.ShowCompact()
+					-- Remove trailing numbers from the display name (e.g., "Gold Mine 1" → "Gold Mine")
+					local displayName = ITEM.Name:gsub("%s*%d+$", "")
+					ITEM_HOVER.ModernHover.ItemName.Text = displayName
+
+					-- Check if this is a hotspot miner with a drop table
+					local isHotspotMiner = ITEM:GetAttribute("HotspotMiner") == true
+					local showDropTable = false
+					local dropTableText = ""
+
+					if isHotspotMiner and ITEM:FindFirstChild("ItemStats") then
+						local success, itemStats = pcall(function()
+							return require(ITEM.ItemStats)
+						end)
+
+						if success and itemStats.DropTable and #itemStats.DropTable > 0 then
+							showDropTable = true
+
+							-- Define colors for different gems
+							local colorMap = {
+								["Diamond Gem"] = "#00FFFF",  -- Cyan
+								["Ruby Gem"] = "#FF0000",      -- Red
+								["Emerald Gem"] = "#00FF00",   -- Green
+								["Gold Ore"] = "#FFD700",      -- Gold
+								["Iron Ore"] = "#C0C0C0",      -- Silver/Gray
+								-- Add more ore/gem colors as needed
+							}
+
+							-- Build the drop table text with colored entries
+							for i, drop in ipairs(itemStats.DropTable) do
+								local dropName = drop.Name
+								local dropChance = drop.Chance
+
+								-- Get color for this drop type (default to white if not in map)
+								local hexColor = colorMap[dropName] or "#FFFFFF"
+
+								-- Format: "Name - X.X%"
+								local line = string.format(
+									'<font color="%s">%s - %.1f%%</font>',
+									hexColor,
+									dropName,
+									dropChance
+								)
+
+								if i > 1 then
+									dropTableText = dropTableText .. "\n"
+								end
+								dropTableText = dropTableText .. line
+							end
+						end
+					end
+
+					-- Show expanded or compact view based on whether we have drop data
+					if showDropTable then
+						ITEM_HOVER.ModernHover.ShowExpanded(dropTableText)
+					else
+						ITEM_HOVER.ModernHover.ShowCompact()
+					end
+
 					ITEM_HOVER.ModernHover.Show()
 				end
 
