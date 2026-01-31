@@ -23,84 +23,48 @@ script.Parent.Smelt.Touched:Connect(function(HIT)
 	-- Process the ore if we found one
 	if ORE and ORE:FindFirstChild("Cash") then
 		if ORE.Cash.Value >= 0 then
-			-- Check if player has research mode enabled
 			local Plrs = game:GetService("Players")
 			local plot_owner = Plrs:FindFirstChild(PLOT.Owner.Value)
 
 			if plot_owner and isServer then
-				-- Check if player is in research mode
-				local researchMode = plot_owner:FindFirstChild("ResearchMode")
+				-- ALWAYS process for cash first
+				local PROCESSED = ITEM_HANDLER.PROCESS_ORE(PLOT, script.Parent.Parent, script.Parent.Smelt, ITEM_INFO.Addition, ITEM_INFO.Multiplier, ORE)
 
-				print("=== FURNACE DEBUG ===")
-				print("Plot Owner:", plot_owner.Name)
-				print("Research Mode:", researchMode and researchMode.Value or "not found")
-				print("Ore Name:", ORE.Name)
-
-				if researchMode and researchMode.Value == true then
-					-- RESEARCH MODE: Deposit ore for research
+				if PROCESSED then
+					-- ALSO try to deposit to research (if any active objectives need this item)
 					local ResearchHandler = require(ServerStorage.Modules.ResearchHandler)
 
-					-- Get the ACTUAL ore model name from the tag (not the mine name)
+					-- Get the ore model name from tag or fallback to Name
 					local oreModelName = nil
 					local oreModelTag = ORE:FindFirstChild("OreModelName")
 
 					if oreModelTag then
 						oreModelName = oreModelTag.Value
-						print("Found OreModelName tag:", oreModelName)
 					else
-						-- Fallback to using the ore's Name if no tag exists
 						oreModelName = ORE.Name
-						warn("No OreModelName tag found! Using ore Name instead:", oreModelName)
 					end
-
-					print("Attempting to deposit:", oreModelName)
 
 					-- Try to deposit to any active objective that needs this item
 					local research = ResearchHandler.GetPlayerResearch(plot_owner)
-					print("Active Objectives:", #research.ActiveObjectives)
-
-					for i, objectiveId in pairs(research.ActiveObjectives) do
-						print("Checking objective", objectiveId, "for item", oreModelName)
-					end
-
 					local deposited = false
 
 					for _, objectiveId in pairs(research.ActiveObjectives) do
 						local success, progress = ResearchHandler.DepositItem(plot_owner, objectiveId, oreModelName, 1)
-						print("Deposit result for objective", objectiveId, ":", success, progress)
 
 						if success then
 							deposited = true
-							-- Show deposit message
+							-- Show research progress message (subtle, doesn't block view)
 							RepStorage.Events.MessageClient:FireClient(plot_owner, "visual", {
 								["visual_part"] = script.Parent.Smelt, 
-								["message"] = "Deposited: " .. oreModelName .. " (" .. progress .. ")", 
+								["message"] = "🔬 " .. oreModelName .. " (" .. progress .. ")", 
 								["message_color"] = Color3.fromRGB(101, 167, 207)
 							})
-							print("Successfully deposited! New progress:", progress)
-							break
+							break  -- Only deposit to one objective
 						end
 					end
 
-					if not deposited then
-						print("No active objective needs:", oreModelName)
-						-- No active objective needs this item
-						RepStorage.Events.MessageClient:FireClient(plot_owner, "visual", {
-							["visual_part"] = script.Parent.Smelt, 
-							["message"] = "No objective needs " .. oreModelName .. "!", 
-							["message_color"] = Color3.fromRGB(207, 101, 101)
-						})
-					end
-
-					-- Destroy ore regardless
+					-- Destroy ore after processing
 					ORE:Destroy()
-				else
-					-- NORMAL MODE: Process for cash
-					print("Normal cash mode - processing ore")
-					local PROCESSED = ITEM_HANDLER.PROCESS_ORE(PLOT, script.Parent.Parent, script.Parent.Smelt, ITEM_INFO.Addition, ITEM_INFO.Multiplier, ORE)
-					if PROCESSED then
-						ORE:Destroy()
-					end
 				end
 			else
 				-- Default behavior if no plot owner
