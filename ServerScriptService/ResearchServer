@@ -3,18 +3,6 @@ local ServerStorage = game:GetService("ServerStorage")
 local ResearchHandler = require(ServerStorage.Modules.ResearchHandler)
 local ResearchData = require(ServerStorage.Modules.ResearchData)
 
--- Helper function to ensure ResearchMode exists
-local function ensureResearchMode(player)
-	local researchMode = player:FindFirstChild("ResearchMode")
-	if not researchMode then
-		print("Creating ResearchMode for", player.Name)
-		researchMode = Instance.new("BoolValue", player)
-		researchMode.Name = "ResearchMode"
-		researchMode.Value = false
-	end
-	return researchMode
-end
-
 -- Get research data for player
 RepStorage.Events.GetResearchData.OnServerInvoke = function(player)
 	local research = ResearchHandler.GetPlayerResearch(player)
@@ -30,19 +18,12 @@ end
 
 -- Start an objective
 RepStorage.Events.StartObjective.OnServerInvoke = function(player, objectiveId)
-	ensureResearchMode(player)
 	return ResearchHandler.StartObjective(player, objectiveId)
 end
 
--- Toggle research mode
-RepStorage.Events.ToggleResearchMode.OnServerInvoke = function(player)
-	local researchMode = ensureResearchMode(player)
-	researchMode.Value = not researchMode.Value
-	print(player.Name, "toggled research mode to:", researchMode.Value)
-	return researchMode.Value
-end
+-- REMOVED: ToggleResearchMode function (no longer needed - always both modes)
 
--- NEW: Get which research unlocks a specific item
+-- Get which research unlocks a specific item
 RepStorage.Events.GetItemUnlockRequirement.OnServerInvoke = function(player, itemId)
 	return ResearchData.GetUnlockingResearch(itemId)
 end
