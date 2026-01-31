@@ -23,85 +23,103 @@ function module.LOAD(MODULE_INFO)
 	local INV
 	local LOAD_SHOP  -- Forward declaration
 
-	-- Create main shop frame
+	-- Create main shop frame with modern styling
 	local shopFrame = Instance.new("Frame")
 	shopFrame.Name = "ShopFrame"
 	shopFrame.Size = UDim2.new(0, 560, 0, 900)
-	shopFrame.Position = UDim2.new(1, -555, 1, -890)
-	shopFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	shopFrame.Position = UDim2.new(1, -5, 1, -5)
+	shopFrame.AnchorPoint = Vector2.new(1, 1)
+	shopFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	shopFrame.BackgroundTransparency = 0.1
 	shopFrame.BorderSizePixel = 0
 	shopFrame.Visible = false
 	shopFrame.ZIndex = 5
 	shopFrame.Parent = script.Parent
 
+	-- Blur/Glass effect background
+	local blur = Instance.new("Frame")
+	blur.Size = UDim2.new(1, 0, 1, 0)
+	blur.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	blur.BackgroundTransparency = 0.3
+	blur.BorderSizePixel = 0
+	blur.ZIndex = 6
+	blur.Parent = shopFrame
+
+	local blurCorner = Instance.new("UICorner")
+	blurCorner.CornerRadius = UDim.new(0, 15)
+	blurCorner.Parent = blur
+
+	-- Outer glow/shadow
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(60, 60, 80)
+	stroke.Thickness = 2
+	stroke.Transparency = 0.5
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = shopFrame
+
 	local shopCorner = Instance.new("UICorner")
 	shopCorner.CornerRadius = UDim.new(0, 15)
 	shopCorner.Parent = shopFrame
 
-	-- Title bar
+	-- Title bar with modern styling
 	local titleBar = Instance.new("Frame")
 	titleBar.Name = "TitleBar"
-	titleBar.Size = UDim2.new(1, 0, 0, 70)
-	titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+	titleBar.Size = UDim2.new(1, 0, 0, 50)
+	titleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	titleBar.BorderSizePixel = 0
-	titleBar.ZIndex = 5
+	titleBar.ZIndex = 7
 	titleBar.Parent = shopFrame
 
 	local titleCorner = Instance.new("UICorner")
 	titleCorner.CornerRadius = UDim.new(0, 15)
 	titleCorner.Parent = titleBar
 
-	-- Title text
+	-- Cover for bottom of title bar
+	local titleCover = Instance.new("Frame")
+	titleCover.Size = UDim2.new(1, 0, 0, 15)
+	titleCover.Position = UDim2.new(0, 0, 1, -15)
+	titleCover.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	titleCover.BorderSizePixel = 0
+	titleCover.ZIndex = 7
+	titleCover.Parent = titleBar
+
+	-- Title text (centered)
 	local titleText = Instance.new("TextLabel")
-	titleText.Size = UDim2.new(0, 200, 1, 0)
-	titleText.Position = UDim2.new(0, 20, 0, 0)
+	titleText.Size = UDim2.new(1, -120, 1, 0)
+	titleText.Position = UDim2.new(0, 60, 0, 0)
 	titleText.BackgroundTransparency = 1
 	titleText.Text = "🛒 Shop"
 	titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 	titleText.TextSize = 28
 	titleText.Font = Enum.Font.GothamBold
-	titleText.TextXAlignment = Enum.TextXAlignment.Left
-	titleText.ZIndex = 5
+	titleText.TextXAlignment = Enum.TextXAlignment.Center
+	titleText.ZIndex = 8
 	titleText.Parent = titleBar
 
-	-- Cash display
-	local cashDisplay = Instance.new("TextLabel")
-	cashDisplay.Size = UDim2.new(0, 200, 0, 40)
-	cashDisplay.Position = UDim2.new(0.5, -100, 0, 15)
-	cashDisplay.BackgroundTransparency = 1
-	cashDisplay.Text = "💰 $0"
-	cashDisplay.TextColor3 = Color3.fromRGB(134, 207, 101)
-	cashDisplay.TextSize = 24
-	cashDisplay.Font = Enum.Font.GothamBold
-	cashDisplay.ZIndex = 5
-	cashDisplay.Parent = titleBar
-
-	-- Update cash display
-	local function updateCash()
-		if Plr.leaderstats and Plr.leaderstats:FindFirstChild("Cash") then
-			cashDisplay.Text = "💰 " .. Plr.leaderstats.Cash.Value
-		end
-	end
-	updateCash()
-	if Plr.leaderstats and Plr.leaderstats:FindFirstChild("Cash") then
-		Plr.leaderstats.Cash.Changed:Connect(updateCash)
-	end
-
-	-- Close button
+	-- Close button with modern styling
 	local closeButton = Instance.new("TextButton")
-	closeButton.Size = UDim2.new(0, 50, 0, 50)
-	closeButton.Position = UDim2.new(1, -60, 0, 10)
+	closeButton.Size = UDim2.new(0, 40, 0, 40)
+	closeButton.Position = UDim2.new(1, -45, 0, 5)
 	closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+	closeButton.BackgroundTransparency = 0
 	closeButton.Text = "X"
 	closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-	closeButton.TextSize = 26
+	closeButton.TextSize = 22
 	closeButton.Font = Enum.Font.GothamBold
-	closeButton.ZIndex = 5
+	closeButton.ZIndex = 8
 	closeButton.Parent = titleBar
 
 	local closeCorner = Instance.new("UICorner")
 	closeCorner.CornerRadius = UDim.new(0, 10)
 	closeCorner.Parent = closeButton
+
+	-- Close button stroke
+	local closeStroke = Instance.new("UIStroke")
+	closeStroke.Color = Color3.fromRGB(0, 0, 0)
+	closeStroke.Thickness = 1
+	closeStroke.Transparency = 0.7
+	closeStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	closeStroke.Parent = closeButton
 
 	closeButton.MouseButton1Click:Connect(function()
 		Main.CLOSE_MENU(script.Parent)
@@ -110,49 +128,40 @@ function module.LOAD(MODULE_INFO)
 
 	-- Category and search bar frame
 	local topFrame = Instance.new("Frame")
-	topFrame.Size = UDim2.new(1, -40, 0, 100)
-	topFrame.Position = UDim2.new(0, 20, 0, 85)
+	topFrame.Size = UDim2.new(1, -40, 0, 80)
+	topFrame.Position = UDim2.new(0, 20, 0, 60)
 	topFrame.BackgroundTransparency = 1
-	topFrame.ZIndex = 5
+	topFrame.ZIndex = 7
 	topFrame.Parent = shopFrame
 
-	-- "All" button (special purple one)
-	local allButton = Instance.new("TextButton")
-	allButton.Name = "AllTab"
-	allButton.Size = UDim2.new(0, 120, 0, 40)
-	allButton.Position = UDim2.new(0, 0, 0, 0)
-	allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
-	allButton.Text = "📦 All"
-	allButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-	allButton.TextSize = 16
-	allButton.Font = Enum.Font.GothamBold
-	allButton.ZIndex = 5
-	allButton.Parent = topFrame
-
-	local allCorner = Instance.new("UICorner")
-	allCorner.CornerRadius = UDim.new(0, 10)
-	allCorner.Parent = allButton
-
-	-- Search bar
+	-- Search bar with modern styling (full width on top)
 	local searchFrame = Instance.new("Frame")
-	searchFrame.Size = UDim2.new(1, -130, 0, 40)
-	searchFrame.Position = UDim2.new(0, 130, 0, 0)
+	searchFrame.Size = UDim2.new(1, 0, 0, 35)
+	searchFrame.Position = UDim2.new(0, 0, 0, 0)
 	searchFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 	searchFrame.BorderSizePixel = 0
-	searchFrame.ZIndex = 5
+	searchFrame.ZIndex = 8
 	searchFrame.Parent = topFrame
 
 	local searchCorner = Instance.new("UICorner")
 	searchCorner.CornerRadius = UDim.new(0, 10)
 	searchCorner.Parent = searchFrame
 
+	-- Search frame stroke
+	local searchStroke = Instance.new("UIStroke")
+	searchStroke.Color = Color3.fromRGB(60, 60, 80)
+	searchStroke.Thickness = 1
+	searchStroke.Transparency = 0.6
+	searchStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	searchStroke.Parent = searchFrame
+
 	local searchIcon = Instance.new("TextLabel")
 	searchIcon.Size = UDim2.new(0, 30, 1, 0)
 	searchIcon.Position = UDim2.new(0, 10, 0, 0)
 	searchIcon.BackgroundTransparency = 1
 	searchIcon.Text = "🔍"
-	searchIcon.TextSize = 18
-	searchIcon.ZIndex = 5
+	searchIcon.TextSize = 16
+	searchIcon.ZIndex = 9
 	searchIcon.Parent = searchFrame
 
 	local searchBox = Instance.new("TextBox")
@@ -163,23 +172,23 @@ function module.LOAD(MODULE_INFO)
 	searchBox.PlaceholderText = "Search..."
 	searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 	searchBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
-	searchBox.TextSize = 14
+	searchBox.TextSize = 13
 	searchBox.Font = Enum.Font.Gotham
 	searchBox.TextXAlignment = Enum.TextXAlignment.Left
 	searchBox.ClearTextOnFocus = false
-	searchBox.ZIndex = 5
+	searchBox.ZIndex = 9
 	searchBox.Parent = searchFrame
 
 	local clearButton = Instance.new("TextButton")
-	clearButton.Size = UDim2.new(0, 30, 0, 30)
-	clearButton.Position = UDim2.new(1, -35, 0.5, -15)
+	clearButton.Size = UDim2.new(0, 28, 0, 28)
+	clearButton.Position = UDim2.new(1, -32, 0.5, -14)
 	clearButton.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
 	clearButton.Text = "X"
 	clearButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-	clearButton.TextSize = 16
+	clearButton.TextSize = 14
 	clearButton.Font = Enum.Font.GothamBold
 	clearButton.Visible = false
-	clearButton.ZIndex = 5
+	clearButton.ZIndex = 9
 	clearButton.Parent = searchFrame
 
 	local clearCorner = Instance.new("UICorner")
@@ -190,12 +199,12 @@ function module.LOAD(MODULE_INFO)
 		searchBox.Text = ""
 	end)
 
-	-- Category buttons container
+	-- Category buttons container (all in one row)
 	local categoryFrame = Instance.new("Frame")
-	categoryFrame.Size = UDim2.new(1, 0, 0, 40)
-	categoryFrame.Position = UDim2.new(0, 0, 0, 50)
+	categoryFrame.Size = UDim2.new(1, 0, 0, 35)
+	categoryFrame.Position = UDim2.new(0, 0, 0, 45)
 	categoryFrame.BackgroundTransparency = 1
-	categoryFrame.ZIndex = 5
+	categoryFrame.ZIndex = 7
 	categoryFrame.Parent = topFrame
 
 	local categoryLayout = Instance.new("UIListLayout")
@@ -204,21 +213,56 @@ function module.LOAD(MODULE_INFO)
 	categoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	categoryLayout.Parent = categoryFrame
 
-	-- Items scroll frame
+	-- "All" button with modern styling (now part of category row)
+	local allButton = Instance.new("TextButton")
+	allButton.Name = "AllTab"
+	allButton.Size = UDim2.new(0, 110, 0, 35)
+	allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
+	allButton.BackgroundTransparency = 0
+	allButton.Text = "📦 All"
+	allButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	allButton.TextSize = 14
+	allButton.Font = Enum.Font.GothamBold
+	allButton.LayoutOrder = 0
+	allButton.ZIndex = 8
+	allButton.Parent = categoryFrame
+
+	local allCorner = Instance.new("UICorner")
+	allCorner.CornerRadius = UDim.new(0, 10)
+	allCorner.Parent = allButton
+
+	-- All button stroke
+	local allStroke = Instance.new("UIStroke")
+	allStroke.Color = Color3.fromRGB(0, 0, 0)
+	allStroke.Thickness = 1
+	allStroke.Transparency = 0.7
+	allStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	allStroke.Parent = allButton
+
+	-- Items scroll frame with modern styling
 	local itemsScroll = Instance.new("ScrollingFrame")
 	itemsScroll.Name = "ItemsScroll"
-	itemsScroll.Size = UDim2.new(1, -40, 1, -390)
-	itemsScroll.Position = UDim2.new(0, 20, 0, 200)
-	itemsScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	itemsScroll.Size = UDim2.new(1, -40, 1, -345)
+	itemsScroll.Position = UDim2.new(0, 20, 0, 155)
+	itemsScroll.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+	itemsScroll.BackgroundTransparency = 0.3
 	itemsScroll.BorderSizePixel = 0
 	itemsScroll.ScrollBarThickness = 10
 	itemsScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 105)
-	itemsScroll.ZIndex = 5
+	itemsScroll.ZIndex = 7
 	itemsScroll.Parent = shopFrame
 
 	local itemsCorner = Instance.new("UICorner")
 	itemsCorner.CornerRadius = UDim.new(0, 12)
 	itemsCorner.Parent = itemsScroll
+
+	-- Items scroll stroke
+	local itemsStroke = Instance.new("UIStroke")
+	itemsStroke.Color = Color3.fromRGB(60, 60, 80)
+	itemsStroke.Thickness = 1
+	itemsStroke.Transparency = 0.6
+	itemsStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	itemsStroke.Parent = itemsScroll
 
 	local itemsGrid = Instance.new("UIGridLayout")
 	itemsGrid.CellSize = UDim2.new(0, 155, 0, 210)
@@ -233,167 +277,218 @@ function module.LOAD(MODULE_INFO)
 	itemsPadding.PaddingRight = UDim.new(0, 15)
 	itemsPadding.Parent = itemsScroll
 
-	-- Selected item panel
+	-- Selected item panel with modern styling
 	local selectedPanel = Instance.new("Frame")
 	selectedPanel.Name = "SelectedPanel"
 	selectedPanel.Size = UDim2.new(1, -40, 0, 170)
 	selectedPanel.Position = UDim2.new(0, 20, 1, -185)
 	selectedPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+	selectedPanel.BackgroundTransparency = 0.2
 	selectedPanel.BorderSizePixel = 0
 	selectedPanel.Visible = false
-	selectedPanel.ZIndex = 5
+	selectedPanel.ZIndex = 7
 	selectedPanel.Parent = shopFrame
 
 	local selectedCorner = Instance.new("UICorner")
 	selectedCorner.CornerRadius = UDim.new(0, 12)
 	selectedCorner.Parent = selectedPanel
 
+	-- Selected panel stroke
+	local selectedStroke = Instance.new("UIStroke")
+	selectedStroke.Color = Color3.fromRGB(60, 60, 80)
+	selectedStroke.Thickness = 2
+	selectedStroke.Transparency = 0.5
+	selectedStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	selectedStroke.Parent = selectedPanel
+
 	-- Selected item icon
 	local selectedIcon = Instance.new("ImageLabel")
-	selectedIcon.Size = UDim2.new(0, 100, 0, 100)
-	selectedIcon.Position = UDim2.new(0, 15, 0, 35)
+	selectedIcon.Size = UDim2.new(0, 150, 0, 150)
+	selectedIcon.Position = UDim2.new(0, 10, 0, 10)
 	selectedIcon.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 	selectedIcon.BorderSizePixel = 0
-	selectedIcon.ZIndex = 6
+	selectedIcon.ZIndex = 8
 	selectedIcon.Parent = selectedPanel
 
 	local selectedIconCorner = Instance.new("UICorner")
 	selectedIconCorner.CornerRadius = UDim.new(0, 12)
 	selectedIconCorner.Parent = selectedIcon
 
-	-- Selected item info container
+	-- Selected item info container (everything to the right of image)
 	local infoContainer = Instance.new("Frame")
-	infoContainer.Size = UDim2.new(1, -135, 1, -20)
-	infoContainer.Position = UDim2.new(0, 125, 0, 10)
+	infoContainer.Size = UDim2.new(1, -180, 1, -20)
+	infoContainer.Position = UDim2.new(0, 170, 0, 10)
 	infoContainer.BackgroundTransparency = 1
-	infoContainer.ZIndex = 6
+	infoContainer.ZIndex = 8
 	infoContainer.Parent = selectedPanel
 
 	-- Selected item name
 	local selectedName = Instance.new("TextLabel")
-	selectedName.Size = UDim2.new(1, -10, 0, 20)
+	selectedName.Size = UDim2.new(1, 0, 0, 22)
 	selectedName.Position = UDim2.new(0, 0, 0, 0)
 	selectedName.BackgroundTransparency = 1
 	selectedName.Text = "Item Name"
 	selectedName.TextColor3 = Color3.fromRGB(255, 255, 255)
-	selectedName.TextSize = 15
+	selectedName.TextSize = 16
 	selectedName.Font = Enum.Font.GothamBold
 	selectedName.TextXAlignment = Enum.TextXAlignment.Left
 	selectedName.TextTruncate = Enum.TextTruncate.AtEnd
-	selectedName.ZIndex = 6
+	selectedName.ZIndex = 9
 	selectedName.Parent = infoContainer
 
 	-- Selected item tier
 	local selectedTier = Instance.new("TextLabel")
-	selectedTier.Size = UDim2.new(1, 0, 0, 15)
-	selectedTier.Position = UDim2.new(0, 0, 0, 22)
+	selectedTier.Size = UDim2.new(1, 0, 0, 16)
+	selectedTier.Position = UDim2.new(0, 0, 0, 24)
 	selectedTier.BackgroundTransparency = 1
-	selectedTier.Text = "Regular"
-	selectedTier.TextColor3 = Color3.fromRGB(150, 150, 150)
-	selectedTier.TextSize = 11
-	selectedTier.Font = Enum.Font.GothamBold
+	selectedTier.Text = "First Age"
+	selectedTier.TextColor3 = Color3.fromRGB(150, 150, 200)
+	selectedTier.TextSize = 12
+	selectedTier.Font = Enum.Font.Gotham
 	selectedTier.TextXAlignment = Enum.TextXAlignment.Left
-	selectedTier.ZIndex = 6
+	selectedTier.ZIndex = 9
 	selectedTier.Parent = infoContainer
 
 	-- Selected item description
 	local selectedDesc = Instance.new("TextLabel")
-	selectedDesc.Size = UDim2.new(1, -10, 0, 30)
-	selectedDesc.Position = UDim2.new(0, 0, 0, 40)
+	selectedDesc.Size = UDim2.new(1, 0, 0, 35)
+	selectedDesc.Position = UDim2.new(0, 0, 0, 43)
 	selectedDesc.BackgroundTransparency = 1
-	selectedDesc.Text = "Description"
-	selectedDesc.TextColor3 = Color3.fromRGB(180, 180, 180)
-	selectedDesc.TextSize = 10
+	selectedDesc.Text = "Smelts 5 clean ores into valuable ingots!\nMix ores = impure ingot"
+	selectedDesc.TextColor3 = Color3.fromRGB(180, 180, 190)
+	selectedDesc.TextSize = 11
 	selectedDesc.Font = Enum.Font.Gotham
 	selectedDesc.TextWrapped = true
 	selectedDesc.TextXAlignment = Enum.TextXAlignment.Left
 	selectedDesc.TextYAlignment = Enum.TextYAlignment.Top
-	selectedDesc.ZIndex = 6
+	selectedDesc.ZIndex = 9
 	selectedDesc.Parent = infoContainer
 
-	-- Amount controls
+	-- Bottom controls row (amount + buttons side by side)
+	local controlsRow = Instance.new("Frame")
+	controlsRow.Size = UDim2.new(1, 0, 0, 70)
+	controlsRow.Position = UDim2.new(0, 0, 1, -70)
+	controlsRow.BackgroundTransparency = 1
+	controlsRow.ZIndex = 9
+	controlsRow.Parent = infoContainer
+
+	-- Amount controls with modern styling (left side of controls row)
 	local amountFrame = Instance.new("Frame")
-	amountFrame.Size = UDim2.new(0.4, -5, 0, 70)
-	amountFrame.Position = UDim2.new(0, 0, 0, 75)
+	amountFrame.Size = UDim2.new(0, 110, 1, 0)
+	amountFrame.Position = UDim2.new(0, 0, 0, 0)
 	amountFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+	amountFrame.BackgroundTransparency = 0.3
 	amountFrame.BorderSizePixel = 0
-	amountFrame.ZIndex = 6
-	amountFrame.Parent = infoContainer
+	amountFrame.ZIndex = 10
+	amountFrame.Parent = controlsRow
 
 	local amountCorner = Instance.new("UICorner")
 	amountCorner.CornerRadius = UDim.new(0, 10)
 	amountCorner.Parent = amountFrame
 
+	-- Amount frame stroke
+	local amountStroke = Instance.new("UIStroke")
+	amountStroke.Color = Color3.fromRGB(60, 60, 80)
+	amountStroke.Thickness = 1
+	amountStroke.Transparency = 0.6
+	amountStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	amountStroke.Parent = amountFrame
+
 	local decreaseBtn = Instance.new("TextButton")
-	decreaseBtn.Size = UDim2.new(0, 35, 1, 0)
+	decreaseBtn.Size = UDim2.new(0, 30, 1, 0)
 	decreaseBtn.Position = UDim2.new(0, 0, 0, 0)
 	decreaseBtn.BackgroundTransparency = 1
 	decreaseBtn.Text = "−"
 	decreaseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	decreaseBtn.TextSize = 20
 	decreaseBtn.Font = Enum.Font.GothamBold
-	decreaseBtn.ZIndex = 6
+	decreaseBtn.ZIndex = 11
 	decreaseBtn.Parent = amountFrame
 
 	local amountLabel = Instance.new("TextLabel")
-	amountLabel.Size = UDim2.new(1, -70, 1, 0)
-	amountLabel.Position = UDim2.new(0, 35, 0, 0)
+	amountLabel.Size = UDim2.new(1, -60, 1, 0)
+	amountLabel.Position = UDim2.new(0, 30, 0, 0)
 	amountLabel.BackgroundTransparency = 1
 	amountLabel.Text = "1"
 	amountLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	amountLabel.TextSize = 16
 	amountLabel.Font = Enum.Font.GothamBold
-	amountLabel.ZIndex = 6
+	amountLabel.ZIndex = 11
 	amountLabel.Parent = amountFrame
 
 	local increaseBtn = Instance.new("TextButton")
-	increaseBtn.Size = UDim2.new(0, 35, 1, 0)
-	increaseBtn.Position = UDim2.new(1, -35, 0, 0)
+	increaseBtn.Size = UDim2.new(0, 30, 1, 0)
+	increaseBtn.Position = UDim2.new(1, -30, 0, 0)
 	increaseBtn.BackgroundTransparency = 1
 	increaseBtn.Text = "+"
 	increaseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	increaseBtn.TextSize = 20
 	increaseBtn.Font = Enum.Font.GothamBold
-	increaseBtn.ZIndex = 6
+	increaseBtn.ZIndex = 11
 	increaseBtn.Parent = amountFrame
 
-	-- Buy button
+	-- Buttons container (right side of controls row)
+	local buttonsContainer = Instance.new("Frame")
+	buttonsContainer.Size = UDim2.new(1, -120, 1, 0)
+	buttonsContainer.Position = UDim2.new(0, 120, 0, 0)
+	buttonsContainer.BackgroundTransparency = 1
+	buttonsContainer.ZIndex = 10
+	buttonsContainer.Parent = controlsRow
+
+	-- Buy button with modern styling
 	local buyButton = Instance.new("TextButton")
-	buyButton.Size = UDim2.new(0.6, -5, 0, 33)
-	buyButton.Position = UDim2.new(0.4, 5, 0, 75)
+	buyButton.Size = UDim2.new(1, 0, 0, 33)
+	buyButton.Position = UDim2.new(0, 0, 0, 0)
 	buyButton.BackgroundColor3 = Color3.fromRGB(70, 130, 70)
-	buyButton.Text = "💰 Buy - 100"
+	buyButton.BackgroundTransparency = 0
+	buyButton.Text = "💰 Buy - 150"
 	buyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	buyButton.TextSize = 14
 	buyButton.Font = Enum.Font.GothamBold
-	buyButton.ZIndex = 6
-	buyButton.Parent = infoContainer
+	buyButton.ZIndex = 11
+	buyButton.Parent = buttonsContainer
 
 	local buyCorner = Instance.new("UICorner")
 	buyCorner.CornerRadius = UDim.new(0, 10)
 	buyCorner.Parent = buyButton
 
-	-- Cancel button
+	-- Buy button stroke
+	local buyStroke = Instance.new("UIStroke")
+	buyStroke.Color = Color3.fromRGB(0, 0, 0)
+	buyStroke.Thickness = 1
+	buyStroke.Transparency = 0.7
+	buyStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	buyStroke.Parent = buyButton
+
+	-- Cancel button with modern styling
 	local cancelButton = Instance.new("TextButton")
-	cancelButton.Size = UDim2.new(0.6, -5, 0, 32)
-	cancelButton.Position = UDim2.new(0.4, 5, 0, 113)
+	cancelButton.Size = UDim2.new(1, 0, 0, 32)
+	cancelButton.Position = UDim2.new(0, 0, 1, -32)
 	cancelButton.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
+	cancelButton.BackgroundTransparency = 0
 	cancelButton.Text = "Cancel"
 	cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	cancelButton.TextSize = 14
 	cancelButton.Font = Enum.Font.GothamBold
-	cancelButton.ZIndex = 6
-	cancelButton.Parent = infoContainer
+	cancelButton.ZIndex = 11
+	cancelButton.Parent = buttonsContainer
 
 	local cancelCorner = Instance.new("UICorner")
 	cancelCorner.CornerRadius = UDim.new(0, 10)
 	cancelCorner.Parent = cancelButton
 
-	-- Category buttons data
+	-- Cancel button stroke
+	local cancelStroke = Instance.new("UIStroke")
+	cancelStroke.Color = Color3.fromRGB(0, 0, 0)
+	cancelStroke.Thickness = 1
+	cancelStroke.Transparency = 0.7
+	cancelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	cancelStroke.Parent = cancelButton
+
+	-- Category buttons data (HARDCODED - DO NOT CHANGE)
 	local categories = {
 		{Name = "MachineTab", Display = "Machines", Icon = "⚙️"},
-		{Name = "MineTab", Display = "Mines", Icon = "⛏️"},
-		{Name = "ProcessorTab", Display = "Processors", Icon = "🔥"},
+		{Name = "MineTab", Display = "Conveyors", Icon = "🚚"},
 		{Name = "DecorTab", Display = "Decor", Icon = "🎨"},
 	}
 
@@ -404,19 +499,28 @@ function module.LOAD(MODULE_INFO)
 	for i, category in pairs(categories) do
 		local tabButton = Instance.new("TextButton")
 		tabButton.Name = category.Name
-		tabButton.Size = UDim2.new(0, 115, 1, 0)
+		tabButton.Size = UDim2.new(0, 125, 0, 35)
 		tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		tabButton.BackgroundTransparency = 0
 		tabButton.Text = category.Icon .. " " .. category.Display
 		tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 		tabButton.TextSize = 14
 		tabButton.Font = Enum.Font.GothamBold
 		tabButton.LayoutOrder = i
-		tabButton.ZIndex = 5
+		tabButton.ZIndex = 8
 		tabButton.Parent = categoryFrame
 
 		local tabCorner = Instance.new("UICorner")
 		tabCorner.CornerRadius = UDim.new(0, 10)
 		tabCorner.Parent = tabButton
+
+		-- Tab button stroke
+		local tabStroke = Instance.new("UIStroke")
+		tabStroke.Color = Color3.fromRGB(0, 0, 0)
+		tabStroke.Thickness = 1
+		tabStroke.Transparency = 0.7
+		tabStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		tabStroke.Parent = tabButton
 
 		table.insert(categoryButtons, tabButton)
 
@@ -424,10 +528,13 @@ function module.LOAD(MODULE_INFO)
 			SoundManager.ButtonClick()
 			CURRENT_TAB = category.Name
 			allButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+			allButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 			for _, btn in pairs(categoryButtons) do
 				btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+				btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 			end
-			tabButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+			tabButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
+			tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 			LOAD_SHOP()
 		end)
 	end
@@ -437,8 +544,10 @@ function module.LOAD(MODULE_INFO)
 		SoundManager.ButtonClick()
 		CURRENT_TAB = "AllTab"
 		allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
+		allButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 		for _, btn in pairs(categoryButtons) do
 			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+			btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 		end
 		LOAD_SHOP()
 	end)
@@ -490,14 +599,15 @@ function module.LOAD(MODULE_INFO)
 			local ITEM_INFO = require(ITEM.ItemStats)
 			local isUnlocked = IS_ITEM_UNLOCKED(ITEM_INFO.ItemId)
 
-			-- Create item card
+			-- Create item card with modern styling
 			local itemCard = Instance.new("Frame")
 			itemCard.Name = "Item" .. ITEM_INFO.ItemId
 			itemCard.Size = UDim2.new(0, 155, 0, 210)
 			itemCard.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+			itemCard.BackgroundTransparency = 0.2
 			itemCard.BorderSizePixel = 0
 			itemCard.LayoutOrder = ITEM_INFO.Cost
-			itemCard.ZIndex = 5
+			itemCard.ZIndex = 8
 			itemCard:SetAttribute("ITEM_NAME", ITEM.Name)
 			itemCard:SetAttribute("ITEM_ID", ITEM_INFO.ItemId)
 			itemCard:SetAttribute("IS_UNLOCKED", isUnlocked)
@@ -505,6 +615,14 @@ function module.LOAD(MODULE_INFO)
 			local cardCorner = Instance.new("UICorner")
 			cardCorner.CornerRadius = UDim.new(0, 12)
 			cardCorner.Parent = itemCard
+
+			-- Card stroke
+			local cardStroke = Instance.new("UIStroke")
+			cardStroke.Color = Color3.fromRGB(60, 60, 80)
+			cardStroke.Thickness = 1
+			cardStroke.Transparency = 0.6
+			cardStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			cardStroke.Parent = itemCard
 
 			-- Item image
 			local itemImage = Instance.new("ImageLabel")
@@ -514,7 +632,7 @@ function module.LOAD(MODULE_INFO)
 			itemImage.BorderSizePixel = 0
 			itemImage.Image = ITEM_INFO.ThumbnailId
 			itemImage.ImageTransparency = isUnlocked and 0 or 0.5
-			itemImage.ZIndex = 6
+			itemImage.ZIndex = 9
 			itemImage.Parent = itemCard
 
 			local imageCorner = Instance.new("UICorner")
@@ -529,7 +647,7 @@ function module.LOAD(MODULE_INFO)
 				lockIcon.BackgroundTransparency = 1
 				lockIcon.Text = "🔒"
 				lockIcon.TextSize = 35
-				lockIcon.ZIndex = 7
+				lockIcon.ZIndex = 10
 				lockIcon.Parent = itemImage
 			end
 
@@ -544,25 +662,34 @@ function module.LOAD(MODULE_INFO)
 			itemName.Font = Enum.Font.GothamBold
 			itemName.TextXAlignment = Enum.TextXAlignment.Center
 			itemName.TextTruncate = Enum.TextTruncate.AtEnd
-			itemName.ZIndex = 6
+			itemName.ZIndex = 9
 			itemName.Parent = itemCard
 
-			-- Price/Lock label
+			-- Price/Lock label with modern styling
 			local priceLabel = Instance.new("TextLabel")
 			priceLabel.Size = UDim2.new(1, -10, 0, 30)
 			priceLabel.Position = UDim2.new(0, 5, 1, -35)
 			priceLabel.BackgroundColor3 = isUnlocked and Color3.fromRGB(70, 130, 70) or Color3.fromRGB(130, 60, 60)
+			priceLabel.BackgroundTransparency = 0
 			priceLabel.BorderSizePixel = 0
 			priceLabel.Text = isUnlocked and ("💰 $" .. CASH_LIB.SUFFIX_NUM(ITEM_INFO.Cost)) or "🔒 Locked"
 			priceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 			priceLabel.TextSize = 14
 			priceLabel.Font = Enum.Font.GothamBold
-			priceLabel.ZIndex = 6
+			priceLabel.ZIndex = 9
 			priceLabel.Parent = itemCard
 
 			local priceCorner = Instance.new("UICorner")
 			priceCorner.CornerRadius = UDim.new(0, 8)
 			priceCorner.Parent = priceLabel
+
+			-- Price label stroke
+			local priceStroke = Instance.new("UIStroke")
+			priceStroke.Color = Color3.fromRGB(0, 0, 0)
+			priceStroke.Thickness = 1
+			priceStroke.Transparency = 0.7
+			priceStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			priceStroke.Parent = priceLabel
 
 			itemCard.Visible = SEARCH_ITEM(itemCard, ITEM_INFO)
 
@@ -571,7 +698,7 @@ function module.LOAD(MODULE_INFO)
 			clickButton.Size = UDim2.new(1, 0, 1, 0)
 			clickButton.BackgroundTransparency = 1
 			clickButton.Text = ""
-			clickButton.ZIndex = 7
+			clickButton.ZIndex = 10
 			clickButton.Parent = itemCard
 
 			-- Click handler
@@ -667,13 +794,13 @@ function module.LOAD(MODULE_INFO)
 			if IS_ITEM_UNLOCKED(ITEM_INFO.ItemId) then
 				local ITEM_BOUGHT = RepStorage.Events.BuyItem:InvokeServer(ITEM_INFO.ItemId, math.floor(AMOUNT))
 				if ITEM_BOUGHT then
-					SoundManager.Purchase()  -- ADD THIS LINE (success)
+					SoundManager.Purchase()
 					LOAD_SHOP()
 				else
-					SoundManager.Error()  -- ADD THIS LINE (failed - not enough money)
+					SoundManager.Error()
 				end
 			else
-				SoundManager.Error()  -- ADD THIS LINE (locked item)
+				SoundManager.Error()
 			end
 
 			wait(0.1)
