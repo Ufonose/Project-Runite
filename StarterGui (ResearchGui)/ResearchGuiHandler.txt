@@ -77,21 +77,15 @@ closeCorner.CornerRadius = UDim.new(0, 10)
 closeCorner.Parent = closeButton
 
 closeButton.MouseButton1Click:Connect(function()
-	-- NEW: Play close sound
 	SoundManager.MenuClose()
-
-	-- EXISTING CODE: Properly close menu like other GUIs do
 	local mainUi = playerGui:FindFirstChild("MainUi")
 	if mainUi then
-		-- Clean up ItemHover
 		if mainUi:FindFirstChild("ItemHover") then
 			local itemHover = mainUi.ItemHover
 			if itemHover.ButtonHovering.Value and itemHover.ButtonHovering.Value:IsDescendantOf(researchGui) then
 				itemHover.Visible = false
 			end
 		end
-
-		-- Remove from OpenedMenus
 		if mainUi:FindFirstChild("Values") and mainUi.Values:FindFirstChild("OpenedMenus") then
 			local menuTag = mainUi.Values.OpenedMenus:FindFirstChild(researchGui.Name)
 			if menuTag then
@@ -99,48 +93,16 @@ closeButton.MouseButton1Click:Connect(function()
 			end
 		end
 	end
-
-	-- Set MenuObject to false (this will hide mainFrame)
 	if researchGui:FindFirstChild("MenuObject") then
 		researchGui.MenuObject.Value = false
-	end
-end)
-
--- Research mode toggle
-local modeToggle = Instance.new("TextButton")
-modeToggle.Size = UDim2.new(0, 220, 0, 45)
-modeToggle.Position = UDim2.new(0, 20, 0, 75)
-modeToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-modeToggle.Text = "💰 Cash Mode"
-modeToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-modeToggle.TextSize = 18
-modeToggle.Font = Enum.Font.GothamBold
-modeToggle.Parent = mainFrame
-
-local modeCorner = Instance.new("UICorner")
-modeCorner.CornerRadius = UDim.new(0, 10)
-modeCorner.Parent = modeToggle
-
-local isResearchMode = false
-
-modeToggle.MouseButton1Click:Connect(function()
-	SoundManager.ButtonClick()
-	isResearchMode = RepStorage.Events.ToggleResearchMode:InvokeServer()
-
-	if isResearchMode then
-		modeToggle.Text = "🔬 Research Mode"
-		modeToggle.BackgroundColor3 = Color3.fromRGB(101, 167, 207)
-	else
-		modeToggle.Text = "💰 Cash Mode"
-		modeToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
 	end
 end)
 
 -- Age tabs container
 local ageTabsFrame = Instance.new("Frame")
 ageTabsFrame.Name = "AgeTabs"
-ageTabsFrame.Size = UDim2.new(0, 200, 1, -135)
-ageTabsFrame.Position = UDim2.new(0, 20, 0, 130)
+ageTabsFrame.Size = UDim2.new(0, 200, 1, -90)  -- Changed from -135 to -90
+ageTabsFrame.Position = UDim2.new(0, 20, 0, 75)  -- Changed from 130 to 75
 ageTabsFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 ageTabsFrame.BorderSizePixel = 0
 ageTabsFrame.Parent = mainFrame
