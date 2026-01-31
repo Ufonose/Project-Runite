@@ -11,7 +11,7 @@ local PLAYER_DATA_INFO = require(ServerStorage.Modules.PlayerDataInfo)
 local CASH_LIB = require(RepStorage.Modules.CashLib)
 local MainLib = require(RepStorage.Modules.MainLib)
 -- Constants
-local data_code = "plr_16"		-- Change this string to reset data
+local data_code = "map_37"		-- Change this string to reset data map_36
 
 if workspace:FindFirstChild("Items") then
 	workspace.Items.Parent = RepStorage
@@ -81,13 +81,7 @@ local function LOAD_DATA(Plr)
 		val_obj.Name = val_name
 		val_obj.Value = plr_data["setting"..val_name] or val_data["DEFAULT"]
 	end
-	-- Research Mode Toggle
-	if not Plr:FindFirstChild("ResearchMode") then
-		local researchMode = Instance.new("BoolValue", Plr)
-		researchMode.Name = "ResearchMode"
-		researchMode.Value = false
-		print("Created ResearchMode for", Plr.Name)
-	end
+	
 	-- Cash Loading
 	local plr_cash = Instance.new("NumberValue", ServerStorage.ServerLockedPlayerInfo.PlayerCash)
 	plr_cash.Name = Plr.Name
@@ -162,16 +156,43 @@ local function LOAD_DATA(Plr)
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
+		[21] = { -- Item ID
+			["Amount"] = 20,
+			["Unlocked"] = true,
+		},
+		[22] = { -- Item ID
+			["Amount"] = 20,
+			["Unlocked"] = true,
+		},
+		[23] = { -- Item ID
+			["Amount"] = 20,
+			["Unlocked"] = true,
+		
+		},
 	}
 	_G["global_data"][Plr.Name]["Items"] = plr_data["InvItemSaveData"] or default_inv
+
+	-- THIS IS THE CHANGED PART - now checks default_inv for missing items
 	for _, item in pairs(RepStorage.Items:GetChildren()) do
 		local item_info = require(item.ItemStats)
 		if _G["global_data"][Plr.Name]["Items"][item_info.ItemId] == nil then
-			_G["global_data"][Plr.Name]["Items"][item_info.ItemId] = {
-				["Unlocked"] = false,  -- CHANGE THIS to false (locked by default)
-				["Amount"] = 0,
-			}
+			-- Check if this item is in default_inv (starting items)
+			if default_inv[item_info.ItemId] then
+				-- It's a starting item, add it with the default values
+				_G["global_data"][Plr.Name]["Items"][item_info.ItemId] = {
+					["Unlocked"] = default_inv[item_info.ItemId]["Unlocked"],
+					["Amount"] = default_inv[item_info.ItemId]["Amount"],
+				}
+				print("Added new starting item to existing player:", item_info.ItemId)
+			else
+				-- It's not a starting item, add as locked with 0 amount
+				_G["global_data"][Plr.Name]["Items"][item_info.ItemId] = {
+					["Unlocked"] = false,
+					["Amount"] = 0,
+				}
+			end
 		else
+			-- Item already exists in player data, just ensure unlocked status
 			if _G["global_data"][Plr.Name]["Items"][item_info.ItemId]["Amount"] > 0 then
 				_G["global_data"][Plr.Name]["Items"][item_info.ItemId]["Unlocked"] = true
 			end
@@ -182,6 +203,10 @@ local function LOAD_DATA(Plr)
 		CompletedObjectives = {},
 		ActiveObjectives = {},
 		ObjectiveProgress = {},
+	}
+	-- Load Furnace Hotspot (ALWAYS UNLOCKED)
+	_G["global_data"][Plr.Name]["FurnaceHotspot"] = plr_data["FurnaceHotspot"] or {
+		Unlocked = true,  -- Always unlocked by default!
 	}
 	-- Load the Player's Plot Items!
 	local plot_data = plr_data["PlotItemPlaced"] or {}
