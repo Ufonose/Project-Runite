@@ -314,7 +314,7 @@ function module.LOAD(MODULE_INFO)
 				-- Raycast from camera to item to check for obstructions
 				local raycastParams = RaycastParams.new()
 
-				-- Build filter list - exclude player, placed items, and hotspot folders
+				-- Build filter list - exclude player, placed items, ores, and hotspot folders
 				local filterList = {Plr.Character, PLR_PLOT.PlacedItems}
 				if PLR_PLOT:FindFirstChild("MinerHotspots") then
 					table.insert(filterList, PLR_PLOT.MinerHotspots)
@@ -324,6 +324,9 @@ function module.LOAD(MODULE_INFO)
 				end
 				if PLR_PLOT:FindFirstChild("Collector") then
 					table.insert(filterList, PLR_PLOT.Collector)
+				end
+				if PLR_PLOT.MiscInfo:FindFirstChild("OresDropped") then
+					table.insert(filterList, PLR_PLOT.MiscInfo.OresDropped)
 				end
 
 				raycastParams.FilterDescendantsInstances = filterList
