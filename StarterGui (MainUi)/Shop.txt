@@ -277,7 +277,7 @@ function module.LOAD(MODULE_INFO)
 	-- "All" button (converted to scale: 110/520 = 0.2115 width, full height)
 	local allButton = Instance.new("TextButton")
 	allButton.Name = "AllTab"
-	allButton.Size = UDim2.new(0.2115, 0, 1, 0)  -- 110/520 width
+	allButton.Size = UDim2.new(0.23845, 0, 1, 0)  -- 110/520 width
 	allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
 	allButton.BackgroundTransparency = 0
 	allButton.Text = "📦 All"
@@ -614,9 +614,9 @@ function module.LOAD(MODULE_INFO)
 
 	-- Category buttons data (HARDCODED - DO NOT CHANGE)
 	local categories = {
-		{Name = "MineTab", Display = "Conveyors", Icon = "🚚"},
-		{Name = "MachineTab", Display = "Machines", Icon = "⚙️"},	
-		{Name = "DecorTab", Display = "Decor", Icon = "🎨"},
+		{Name = "MineTab", Display = "Conveyors", Icon = "🚚", Color = Color3.fromRGB(70, 100, 140)},
+		{Name = "MachineTab", Display = "Machines", Icon = "⚙️", Color = Color3.fromRGB(3, 71, 3)},	
+		{Name = "DecorTab", Display = "Decor", Icon = "🎨", Color = Color3.fromRGB(140, 100, 70)},
 	}
 
 	-- Store category buttons for later reference
@@ -626,8 +626,8 @@ function module.LOAD(MODULE_INFO)
 	for i, category in pairs(categories) do
 		local tabButton = Instance.new("TextButton")
 		tabButton.Name = category.Name
-		tabButton.Size = UDim2.new(0.2404, 0, 1, 0)  -- 125/520 = 0.2404 width
-		tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		tabButton.Size = UDim2.new(0.23845, 0, 1, 0)
+		tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)  -- Start gray
 		tabButton.BackgroundTransparency = 0
 		tabButton.Text = category.Icon .. " " .. category.Display
 		tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -660,13 +660,13 @@ function module.LOAD(MODULE_INFO)
 		tabButton.MouseButton1Click:Connect(function()
 			SoundManager.ButtonClick()
 			CURRENT_TAB = category.Name
-			allButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+			allButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)  -- Reset All to gray
 			allButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-			for _, btn in pairs(categoryButtons) do
-				btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+			for j, btn in pairs(categoryButtons) do
+				btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)  -- Reset all to gray
 				btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 			end
-			tabButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
+			tabButton.BackgroundColor3 = category.Color  -- Set THIS button to its color
 			tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 			LOAD_SHOP()
 		end)
@@ -676,10 +676,10 @@ function module.LOAD(MODULE_INFO)
 	allButton.MouseButton1Click:Connect(function()
 		SoundManager.ButtonClick()
 		CURRENT_TAB = "AllTab"
-		allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
+		allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)  -- All button highlight color
 		allButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 		for _, btn in pairs(categoryButtons) do
-			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)  -- Reset all categories to gray
 			btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 		end
 		LOAD_SHOP()
