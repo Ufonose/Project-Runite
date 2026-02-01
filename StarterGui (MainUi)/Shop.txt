@@ -14,6 +14,11 @@ function module.LOAD(MODULE_INFO)
 	local SoundManager = require(RepStorage.Modules.SoundManager)
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
+	-- Services for mobile control management
+	local GuiService = game:GetService("GuiService")
+	local UserInputService = game:GetService("UserInputService")
+	-- Check if player is on mobile device
+	local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 	-- Variables
 	local DB = true
 	local AMOUNT = 1
@@ -23,18 +28,42 @@ function module.LOAD(MODULE_INFO)
 	local INV
 	local LOAD_SHOP  -- Forward declaration
 
-	-- Create main shop frame with modern styling
+	-- Reference screen size for scale calculations: 1920x1080
+	-- Create main shop frame with modern styling - RESPONSIVE (100% BIGGER - DOUBLED SIZE)
 	local shopFrame = Instance.new("Frame")
 	shopFrame.Name = "ShopFrame"
-	shopFrame.Size = UDim2.new(0, 560, 0, 900)
-	shopFrame.Position = UDim2.new(1, -5, 1, -5)
-	shopFrame.AnchorPoint = Vector2.new(1, 1)
+	-- Detect screen size and adjust GUI size for mobile
+	local function updateShopSize()
+		local viewport = workspace.CurrentCamera.ViewportSize
+		local screenWidth = viewport.X
+
+		-- If screen width is less than 800 pixels (mobile/tablet), make GUI bigger
+		if screenWidth < 800 then
+			shopFrame.Size = UDim2.new(1.5, 0, 1.35, 0)  -- 95% on mobile (almost fullscreen)
+		else
+			shopFrame.Size = UDim2.new(1.2, 0, 1.3, 0)  -- 85% on desktop
+		end
+	end
+
+	-- Update on initial load
+	updateShopSize()
+
+	-- Update when screen size changes (device rotation, window resize)
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateShopSize)
+	shopFrame.Position = UDim2.new(1, 0, 1, 0)  -- Bottom right corner
+	shopFrame.AnchorPoint = Vector2.new(1, 1)  -- Bottom right anchor point
 	shopFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 	shopFrame.BackgroundTransparency = 0.1
 	shopFrame.BorderSizePixel = 0
 	shopFrame.Visible = false
 	shopFrame.ZIndex = 5
 	shopFrame.Parent = script.Parent
+
+	-- UIAspectRatioConstraint to maintain original proportions (560/900 = 0.6222)
+	local aspectRatio = Instance.new("UIAspectRatioConstraint")
+	aspectRatio.AspectRatio = 0.6222
+	aspectRatio.DominantAxis = Enum.DominantAxis.Height  -- Scale based on height
+	aspectRatio.Parent = shopFrame
 
 	-- Blur/Glass effect background
 	local blur = Instance.new("Frame")
@@ -61,10 +90,10 @@ function module.LOAD(MODULE_INFO)
 	shopCorner.CornerRadius = UDim.new(0, 15)
 	shopCorner.Parent = shopFrame
 
-	-- Title bar with modern styling
+	-- Title bar with modern styling (converted to scale: 50/900 height)
 	local titleBar = Instance.new("Frame")
 	titleBar.Name = "TitleBar"
-	titleBar.Size = UDim2.new(1, 0, 0, 50)
+	titleBar.Size = UDim2.new(1, 0, 0.0556, 0)  -- Full width, 50/900 = 0.0556
 	titleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	titleBar.BorderSizePixel = 0
 	titleBar.ZIndex = 7
@@ -74,40 +103,53 @@ function module.LOAD(MODULE_INFO)
 	titleCorner.CornerRadius = UDim.new(0, 15)
 	titleCorner.Parent = titleBar
 
-	-- Cover for bottom of title bar
+	-- Cover for bottom of title bar (converted to scale: 15/50 = 0.3 of titleBar height)
 	local titleCover = Instance.new("Frame")
-	titleCover.Size = UDim2.new(1, 0, 0, 15)
-	titleCover.Position = UDim2.new(0, 0, 1, -15)
+	titleCover.Size = UDim2.new(1, 0, 0.3, 0)  -- Full width, 15/50 = 0.3 of titleBar
+	titleCover.Position = UDim2.new(0, 0, 1, 0)  -- Bottom of titleBar
+	titleCover.AnchorPoint = Vector2.new(0, 1)
 	titleCover.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	titleCover.BorderSizePixel = 0
 	titleCover.ZIndex = 7
 	titleCover.Parent = titleBar
 
-	-- Title text (centered)
+	-- Title text (converted to scale: (560-120)/560 = 0.7857 width, 60/560 = 0.1071 position)
 	local titleText = Instance.new("TextLabel")
-	titleText.Size = UDim2.new(1, -120, 1, 0)
-	titleText.Position = UDim2.new(0, 60, 0, 0)
+	titleText.Size = UDim2.new(0.7857, 0, 1, 0)  -- Width minus space for close button
+	titleText.Position = UDim2.new(0.1071, 0, 0, 0)  -- Centered with offset
 	titleText.BackgroundTransparency = 1
 	titleText.Text = "🛒 Shop"
 	titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 	titleText.TextSize = 28
 	titleText.Font = Enum.Font.GothamBold
 	titleText.TextXAlignment = Enum.TextXAlignment.Center
+	titleText.TextScaled = true
 	titleText.ZIndex = 8
 	titleText.Parent = titleBar
 
-	-- Close button with modern styling
+	-- Text size constraint for titleText
+	local titleTextConstraint = Instance.new("UITextSizeConstraint")
+	titleTextConstraint.MaxTextSize = 28
+	titleTextConstraint.Parent = titleText
+
+	-- Close button (converted to scale: 40/560 = 0.0714 width, 40/50 = 0.8 height)
 	local closeButton = Instance.new("TextButton")
-	closeButton.Size = UDim2.new(0, 40, 0, 40)
-	closeButton.Position = UDim2.new(1, -45, 0, 5)
+	closeButton.Size = UDim2.new(0.0714, 0, 0.8, 0)  -- Proportional to frame
+	closeButton.Position = UDim2.new(0.9196, 0, 0.1, 0)  -- (560-45)/560 = 0.9196, 5/50 = 0.1
 	closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 	closeButton.BackgroundTransparency = 0
 	closeButton.Text = "X"
 	closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	closeButton.TextSize = 22
 	closeButton.Font = Enum.Font.GothamBold
+	closeButton.TextScaled = true
 	closeButton.ZIndex = 8
 	closeButton.Parent = titleBar
+
+	-- Text size constraint for closeButton
+	local closeTextConstraint = Instance.new("UITextSizeConstraint")
+	closeTextConstraint.MaxTextSize = 22
+	closeTextConstraint.Parent = closeButton
 
 	local closeCorner = Instance.new("UICorner")
 	closeCorner.CornerRadius = UDim.new(0, 10)
@@ -126,17 +168,17 @@ function module.LOAD(MODULE_INFO)
 		shopFrame.Visible = false
 	end)
 
-	-- Category and search bar frame
+	-- Category and search bar frame (converted to scale: 520/560 = 0.9286 width, 80/900 = 0.0889 height)
 	local topFrame = Instance.new("Frame")
-	topFrame.Size = UDim2.new(1, -40, 0, 80)
-	topFrame.Position = UDim2.new(0, 20, 0, 60)
+	topFrame.Size = UDim2.new(0.9286, 0, 0.0889, 0)  -- (560-40)/560 width, 80/900 height
+	topFrame.Position = UDim2.new(0.0357, 0, 0.0667, 0)  -- 20/560 = 0.0357, 60/900 = 0.0667
 	topFrame.BackgroundTransparency = 1
 	topFrame.ZIndex = 7
 	topFrame.Parent = shopFrame
 
-	-- Search bar with modern styling (full width on top)
+	-- Search bar (converted to scale: full width, 35/80 = 0.4375 height)
 	local searchFrame = Instance.new("Frame")
-	searchFrame.Size = UDim2.new(1, 0, 0, 35)
+	searchFrame.Size = UDim2.new(1, 0, 0.4375, 0)  -- Full width of topFrame, 35/80 height
 	searchFrame.Position = UDim2.new(0, 0, 0, 0)
 	searchFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 	searchFrame.BorderSizePixel = 0
@@ -156,17 +198,23 @@ function module.LOAD(MODULE_INFO)
 	searchStroke.Parent = searchFrame
 
 	local searchIcon = Instance.new("TextLabel")
-	searchIcon.Size = UDim2.new(0, 30, 1, 0)
-	searchIcon.Position = UDim2.new(0, 10, 0, 0)
+	searchIcon.Size = UDim2.new(0.0577, 0, 1, 0)  -- 30/520 = 0.0577 (relative to topFrame width)
+	searchIcon.Position = UDim2.new(0.0192, 0, 0, 0)  -- 10/520 = 0.0192
 	searchIcon.BackgroundTransparency = 1
 	searchIcon.Text = "🔍"
 	searchIcon.TextSize = 16
+	searchIcon.TextScaled = true
 	searchIcon.ZIndex = 9
 	searchIcon.Parent = searchFrame
 
+	-- Text size constraint for searchIcon
+	local searchIconConstraint = Instance.new("UITextSizeConstraint")
+	searchIconConstraint.MaxTextSize = 16
+	searchIconConstraint.Parent = searchIcon
+
 	local searchBox = Instance.new("TextBox")
-	searchBox.Size = UDim2.new(1, -80, 1, 0)
-	searchBox.Position = UDim2.new(0, 40, 0, 0)
+	searchBox.Size = UDim2.new(0.8462, 0, 1, 0)  -- (520-80)/520 = 440/520 = 0.8462
+	searchBox.Position = UDim2.new(0.0769, 0, 0, 0)  -- 40/520 = 0.0769
 	searchBox.BackgroundTransparency = 1
 	searchBox.Text = ""
 	searchBox.PlaceholderText = "Search..."
@@ -175,21 +223,34 @@ function module.LOAD(MODULE_INFO)
 	searchBox.TextSize = 13
 	searchBox.Font = Enum.Font.Gotham
 	searchBox.TextXAlignment = Enum.TextXAlignment.Left
+	searchBox.TextScaled = true
 	searchBox.ClearTextOnFocus = false
 	searchBox.ZIndex = 9
 	searchBox.Parent = searchFrame
 
+	-- Text size constraint for searchBox
+	local searchBoxConstraint = Instance.new("UITextSizeConstraint")
+	searchBoxConstraint.MaxTextSize = 13
+	searchBoxConstraint.Parent = searchBox
+
 	local clearButton = Instance.new("TextButton")
-	clearButton.Size = UDim2.new(0, 28, 0, 28)
-	clearButton.Position = UDim2.new(1, -32, 0.5, -14)
+	clearButton.Size = UDim2.new(0.0538, 0, 0.8, 0)  -- 28/520 = 0.0538, 28/35 = 0.8
+	clearButton.Position = UDim2.new(0.9385, 0, 0.1, 0)  -- (520-32)/520 = 0.9385, centered
+	clearButton.AnchorPoint = Vector2.new(0, 0)
 	clearButton.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
 	clearButton.Text = "X"
 	clearButton.TextColor3 = Color3.fromRGB(200, 200, 200)
 	clearButton.TextSize = 14
 	clearButton.Font = Enum.Font.GothamBold
+	clearButton.TextScaled = true
 	clearButton.Visible = false
 	clearButton.ZIndex = 9
 	clearButton.Parent = searchFrame
+
+	-- Text size constraint for clearButton
+	local clearTextConstraint = Instance.new("UITextSizeConstraint")
+	clearTextConstraint.MaxTextSize = 14
+	clearTextConstraint.Parent = clearButton
 
 	local clearCorner = Instance.new("UICorner")
 	clearCorner.CornerRadius = UDim.new(1, 0)
@@ -199,33 +260,39 @@ function module.LOAD(MODULE_INFO)
 		searchBox.Text = ""
 	end)
 
-	-- Category buttons container (all in one row)
+	-- Category buttons container (converted to scale: full width, 35/80 = 0.4375 height)
 	local categoryFrame = Instance.new("Frame")
-	categoryFrame.Size = UDim2.new(1, 0, 0, 35)
-	categoryFrame.Position = UDim2.new(0, 0, 0, 45)
+	categoryFrame.Size = UDim2.new(1, 0, 0.4375, 0)  -- Full width, 35/80 height
+	categoryFrame.Position = UDim2.new(0, 0, 0.5625, 0)  -- 45/80 = 0.5625
 	categoryFrame.BackgroundTransparency = 1
 	categoryFrame.ZIndex = 7
 	categoryFrame.Parent = topFrame
 
 	local categoryLayout = Instance.new("UIListLayout")
 	categoryLayout.FillDirection = Enum.FillDirection.Horizontal
-	categoryLayout.Padding = UDim.new(0, 8)
+	categoryLayout.Padding = UDim.new(0.0154, 0)  -- 8/520 = 0.0154
 	categoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	categoryLayout.Parent = categoryFrame
 
-	-- "All" button with modern styling (now part of category row)
+	-- "All" button (converted to scale: 110/520 = 0.2115 width, full height)
 	local allButton = Instance.new("TextButton")
 	allButton.Name = "AllTab"
-	allButton.Size = UDim2.new(0, 110, 0, 35)
+	allButton.Size = UDim2.new(0.2115, 0, 1, 0)  -- 110/520 width
 	allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
 	allButton.BackgroundTransparency = 0
 	allButton.Text = "📦 All"
 	allButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	allButton.TextSize = 14
 	allButton.Font = Enum.Font.GothamBold
+	allButton.TextScaled = true
 	allButton.LayoutOrder = 0
 	allButton.ZIndex = 8
 	allButton.Parent = categoryFrame
+
+	-- Text size constraint for allButton
+	local allTextConstraint = Instance.new("UITextSizeConstraint")
+	allTextConstraint.MaxTextSize = 14
+	allTextConstraint.Parent = allButton
 
 	local allCorner = Instance.new("UICorner")
 	allCorner.CornerRadius = UDim.new(0, 10)
@@ -239,11 +306,11 @@ function module.LOAD(MODULE_INFO)
 	allStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	allStroke.Parent = allButton
 
-	-- Items scroll frame with modern styling
+	-- Items scroll frame (converted to scale: 520/560 = 0.9286 width, 555/900 = 0.6167 height)
 	local itemsScroll = Instance.new("ScrollingFrame")
 	itemsScroll.Name = "ItemsScroll"
-	itemsScroll.Size = UDim2.new(1, -40, 1, -345)
-	itemsScroll.Position = UDim2.new(0, 20, 0, 155)
+	itemsScroll.Size = UDim2.new(0.9286, 0, 0.6167, 0)  -- (560-40)/560 width, (900-345)/900 height
+	itemsScroll.Position = UDim2.new(0.0357, 0, 0.1722, 0)  -- 20/560 = 0.0357, 155/900 = 0.1722
 	itemsScroll.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 	itemsScroll.BackgroundTransparency = 0.3
 	itemsScroll.BorderSizePixel = 0
@@ -265,23 +332,35 @@ function module.LOAD(MODULE_INFO)
 	itemsStroke.Parent = itemsScroll
 
 	local itemsGrid = Instance.new("UIGridLayout")
-	itemsGrid.CellSize = UDim2.new(0, 155, 0, 210)
-	itemsGrid.CellPadding = UDim2.new(0, 10, 0, 10)
 	itemsGrid.SortOrder = Enum.SortOrder.LayoutOrder
 	itemsGrid.Parent = itemsScroll
 
+	-- Calculate responsive cell size based on scroll frame dimensions
+	local function updateGridSize()
+		local scrollWidth = itemsScroll.AbsoluteSize.X
+		local cellWidth = (scrollWidth - 30) / 3 - 10  -- 3 columns, accounting for padding
+		local cellHeight = cellWidth / 0.7381  -- Maintain 155:210 aspect ratio
+
+		itemsGrid.CellSize = UDim2.new(0, cellWidth, 0, cellHeight)
+		itemsGrid.CellPadding = UDim2.new(0, 10, 0, 10)
+	end
+
+	-- Update on initial load and when screen resizes
+	updateGridSize()
+	itemsScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGridSize)
+
 	local itemsPadding = Instance.new("UIPadding")
-	itemsPadding.PaddingTop = UDim.new(0, 15)
-	itemsPadding.PaddingBottom = UDim.new(0, 15)
-	itemsPadding.PaddingLeft = UDim.new(0, 15)
-	itemsPadding.PaddingRight = UDim.new(0, 15)
+	itemsPadding.PaddingTop = UDim.new(0.027, 0)  -- 15/555 = 0.027 (relative to scroll content height)
+	itemsPadding.PaddingBottom = UDim.new(0.027, 0)
+	itemsPadding.PaddingLeft = UDim.new(0.0288, 0)  -- 15/520 = 0.0288 (relative to scroll content width)
+	itemsPadding.PaddingRight = UDim.new(0.0288, 0)
 	itemsPadding.Parent = itemsScroll
 
-	-- Selected item panel with modern styling
+	-- Selected item panel (converted to scale: 520/560 = 0.9286 width, 170/900 = 0.1889 height)
 	local selectedPanel = Instance.new("Frame")
 	selectedPanel.Name = "SelectedPanel"
-	selectedPanel.Size = UDim2.new(1, -40, 0, 170)
-	selectedPanel.Position = UDim2.new(0, 20, 1, -185)
+	selectedPanel.Size = UDim2.new(0.9286, 0, 0.1889, 0)  -- (560-40)/560 width, 170/900 height
+	selectedPanel.Position = UDim2.new(0.0357, 0, 0.7944, 0)  -- 20/560 = 0.0357, (900-185)/900 = 0.7944
 	selectedPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 	selectedPanel.BackgroundTransparency = 0.2
 	selectedPanel.BorderSizePixel = 0
@@ -301,10 +380,10 @@ function module.LOAD(MODULE_INFO)
 	selectedStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	selectedStroke.Parent = selectedPanel
 
-	-- Selected item icon
+	-- Selected item icon (converted to scale: 150/520 = 0.2885 width, 150/170 = 0.8824 height)
 	local selectedIcon = Instance.new("ImageLabel")
-	selectedIcon.Size = UDim2.new(0, 150, 0, 150)
-	selectedIcon.Position = UDim2.new(0, 10, 0, 10)
+	selectedIcon.Size = UDim2.new(0.2885, 0, 0.8824, 0)  -- 150/520 width, 150/170 height
+	selectedIcon.Position = UDim2.new(0.0192, 0, 0.0588, 0)  -- 10/520 = 0.0192, 10/170 = 0.0588
 	selectedIcon.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 	selectedIcon.BorderSizePixel = 0
 	selectedIcon.ZIndex = 8
@@ -314,17 +393,17 @@ function module.LOAD(MODULE_INFO)
 	selectedIconCorner.CornerRadius = UDim.new(0, 12)
 	selectedIconCorner.Parent = selectedIcon
 
-	-- Selected item info container (everything to the right of image)
+	-- Selected item info container (converted to scale: 340/520 = 0.6538 width, 150/170 = 0.8824 height)
 	local infoContainer = Instance.new("Frame")
-	infoContainer.Size = UDim2.new(1, -180, 1, -20)
-	infoContainer.Position = UDim2.new(0, 170, 0, 10)
+	infoContainer.Size = UDim2.new(0.6538, 0, 0.8824, 0)  -- (520-180)/520 width, (170-20)/170 height
+	infoContainer.Position = UDim2.new(0.3269, 0, 0.0588, 0)  -- 170/520 = 0.3269, 10/170 = 0.0588
 	infoContainer.BackgroundTransparency = 1
 	infoContainer.ZIndex = 8
 	infoContainer.Parent = selectedPanel
 
-	-- Selected item name
+	-- Selected item name (converted to scale: full width, 22/150 = 0.1467 height)
 	local selectedName = Instance.new("TextLabel")
-	selectedName.Size = UDim2.new(1, 0, 0, 22)
+	selectedName.Size = UDim2.new(1, 0, 0.1467, 0)  -- Full width, 22/150 height
 	selectedName.Position = UDim2.new(0, 0, 0, 0)
 	selectedName.BackgroundTransparency = 1
 	selectedName.Text = "Item Name"
@@ -333,26 +412,38 @@ function module.LOAD(MODULE_INFO)
 	selectedName.Font = Enum.Font.GothamBold
 	selectedName.TextXAlignment = Enum.TextXAlignment.Left
 	selectedName.TextTruncate = Enum.TextTruncate.AtEnd
+	selectedName.TextScaled = true
 	selectedName.ZIndex = 9
 	selectedName.Parent = infoContainer
 
-	-- Selected item tier
+	-- Text size constraint for selectedName
+	local selectedNameConstraint = Instance.new("UITextSizeConstraint")
+	selectedNameConstraint.MaxTextSize = 16
+	selectedNameConstraint.Parent = selectedName
+
+	-- Selected item tier (converted to scale: full width, 16/150 = 0.1067 height, 24/150 = 0.16 position)
 	local selectedTier = Instance.new("TextLabel")
-	selectedTier.Size = UDim2.new(1, 0, 0, 16)
-	selectedTier.Position = UDim2.new(0, 0, 0, 24)
+	selectedTier.Size = UDim2.new(1, 0, 0.1067, 0)  -- Full width, 16/150 height
+	selectedTier.Position = UDim2.new(0, 0, 0.16, 0)  -- 24/150 position
 	selectedTier.BackgroundTransparency = 1
 	selectedTier.Text = "First Age"
 	selectedTier.TextColor3 = Color3.fromRGB(150, 150, 200)
 	selectedTier.TextSize = 12
 	selectedTier.Font = Enum.Font.Gotham
 	selectedTier.TextXAlignment = Enum.TextXAlignment.Left
+	selectedTier.TextScaled = true
 	selectedTier.ZIndex = 9
 	selectedTier.Parent = infoContainer
 
-	-- Selected item description
+	-- Text size constraint for selectedTier
+	local selectedTierConstraint = Instance.new("UITextSizeConstraint")
+	selectedTierConstraint.MaxTextSize = 12
+	selectedTierConstraint.Parent = selectedTier
+
+	-- Selected item description (converted to scale: full width, 35/150 = 0.2333 height, 43/150 = 0.2867 position)
 	local selectedDesc = Instance.new("TextLabel")
-	selectedDesc.Size = UDim2.new(1, 0, 0, 35)
-	selectedDesc.Position = UDim2.new(0, 0, 0, 43)
+	selectedDesc.Size = UDim2.new(1, 0, 0.2333, 0)  -- Full width, 35/150 height
+	selectedDesc.Position = UDim2.new(0, 0, 0.2867, 0)  -- 43/150 position
 	selectedDesc.BackgroundTransparency = 1
 	selectedDesc.Text = "Smelts 5 clean ores into valuable ingots!\nMix ores = impure ingot"
 	selectedDesc.TextColor3 = Color3.fromRGB(180, 180, 190)
@@ -361,20 +452,26 @@ function module.LOAD(MODULE_INFO)
 	selectedDesc.TextWrapped = true
 	selectedDesc.TextXAlignment = Enum.TextXAlignment.Left
 	selectedDesc.TextYAlignment = Enum.TextYAlignment.Top
+	selectedDesc.TextScaled = true
 	selectedDesc.ZIndex = 9
 	selectedDesc.Parent = infoContainer
 
-	-- Bottom controls row (amount + buttons side by side)
+	-- Text size constraint for selectedDesc
+	local selectedDescConstraint = Instance.new("UITextSizeConstraint")
+	selectedDescConstraint.MaxTextSize = 11
+	selectedDescConstraint.Parent = selectedDesc
+
+	-- Bottom controls row (converted to scale: full width, 70/150 = 0.4667 height, 80/150 = 0.5333 position)
 	local controlsRow = Instance.new("Frame")
-	controlsRow.Size = UDim2.new(1, 0, 0, 70)
-	controlsRow.Position = UDim2.new(0, 0, 1, -70)
+	controlsRow.Size = UDim2.new(1, 0, 0.4667, 0)  -- Full width, 70/150 height
+	controlsRow.Position = UDim2.new(0, 0, 0.5333, 0)  -- (150-70)/150 = 0.5333
 	controlsRow.BackgroundTransparency = 1
 	controlsRow.ZIndex = 9
 	controlsRow.Parent = infoContainer
 
-	-- Amount controls with modern styling (left side of controls row)
+	-- Amount controls (converted to scale: 110/340 = 0.3235 width, full height)
 	local amountFrame = Instance.new("Frame")
-	amountFrame.Size = UDim2.new(0, 110, 1, 0)
+	amountFrame.Size = UDim2.new(0.3235, 0, 1, 0)  -- 110/340 width
 	amountFrame.Position = UDim2.new(0, 0, 0, 0)
 	amountFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 	amountFrame.BackgroundTransparency = 0.3
@@ -395,49 +492,67 @@ function module.LOAD(MODULE_INFO)
 	amountStroke.Parent = amountFrame
 
 	local decreaseBtn = Instance.new("TextButton")
-	decreaseBtn.Size = UDim2.new(0, 30, 1, 0)
+	decreaseBtn.Size = UDim2.new(0.2727, 0, 1, 0)  -- 30/110 = 0.2727
 	decreaseBtn.Position = UDim2.new(0, 0, 0, 0)
 	decreaseBtn.BackgroundTransparency = 1
 	decreaseBtn.Text = "−"
 	decreaseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	decreaseBtn.TextSize = 20
 	decreaseBtn.Font = Enum.Font.GothamBold
+	decreaseBtn.TextScaled = true
 	decreaseBtn.ZIndex = 11
 	decreaseBtn.Parent = amountFrame
 
+	-- Text size constraint for decreaseBtn
+	local decreaseTextConstraint = Instance.new("UITextSizeConstraint")
+	decreaseTextConstraint.MaxTextSize = 20
+	decreaseTextConstraint.Parent = decreaseBtn
+
 	local amountLabel = Instance.new("TextLabel")
-	amountLabel.Size = UDim2.new(1, -60, 1, 0)
-	amountLabel.Position = UDim2.new(0, 30, 0, 0)
+	amountLabel.Size = UDim2.new(0.4545, 0, 1, 0)  -- (110-60)/110 = 50/110 = 0.4545
+	amountLabel.Position = UDim2.new(0.2727, 0, 0, 0)  -- 30/110 = 0.2727
 	amountLabel.BackgroundTransparency = 1
 	amountLabel.Text = "1"
 	amountLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	amountLabel.TextSize = 16
 	amountLabel.Font = Enum.Font.GothamBold
+	amountLabel.TextScaled = true
 	amountLabel.ZIndex = 11
 	amountLabel.Parent = amountFrame
 
+	-- Text size constraint for amountLabel
+	local amountLabelConstraint = Instance.new("UITextSizeConstraint")
+	amountLabelConstraint.MaxTextSize = 16
+	amountLabelConstraint.Parent = amountLabel
+
 	local increaseBtn = Instance.new("TextButton")
-	increaseBtn.Size = UDim2.new(0, 30, 1, 0)
-	increaseBtn.Position = UDim2.new(1, -30, 0, 0)
+	increaseBtn.Size = UDim2.new(0.2727, 0, 1, 0)  -- 30/110 = 0.2727
+	increaseBtn.Position = UDim2.new(0.7273, 0, 0, 0)  -- (110-30)/110 = 80/110 = 0.7273
 	increaseBtn.BackgroundTransparency = 1
 	increaseBtn.Text = "+"
 	increaseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	increaseBtn.TextSize = 20
 	increaseBtn.Font = Enum.Font.GothamBold
+	increaseBtn.TextScaled = true
 	increaseBtn.ZIndex = 11
 	increaseBtn.Parent = amountFrame
 
-	-- Buttons container (right side of controls row)
+	-- Text size constraint for increaseBtn
+	local increaseTextConstraint = Instance.new("UITextSizeConstraint")
+	increaseTextConstraint.MaxTextSize = 20
+	increaseTextConstraint.Parent = increaseBtn
+
+	-- Buttons container (converted to scale: 220/340 = 0.6471 width, 120/340 = 0.3529 position)
 	local buttonsContainer = Instance.new("Frame")
-	buttonsContainer.Size = UDim2.new(1, -120, 1, 0)
-	buttonsContainer.Position = UDim2.new(0, 120, 0, 0)
+	buttonsContainer.Size = UDim2.new(0.6471, 0, 1, 0)  -- (340-120)/340 width
+	buttonsContainer.Position = UDim2.new(0.3529, 0, 0, 0)  -- 120/340 position
 	buttonsContainer.BackgroundTransparency = 1
 	buttonsContainer.ZIndex = 10
 	buttonsContainer.Parent = controlsRow
 
-	-- Buy button with modern styling
+	-- Buy button (converted to scale: full width, 33/70 = 0.4714 height)
 	local buyButton = Instance.new("TextButton")
-	buyButton.Size = UDim2.new(1, 0, 0, 33)
+	buyButton.Size = UDim2.new(1, 0, 0.4714, 0)  -- Full width, 33/70 height
 	buyButton.Position = UDim2.new(0, 0, 0, 0)
 	buyButton.BackgroundColor3 = Color3.fromRGB(70, 130, 70)
 	buyButton.BackgroundTransparency = 0
@@ -445,8 +560,14 @@ function module.LOAD(MODULE_INFO)
 	buyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	buyButton.TextSize = 14
 	buyButton.Font = Enum.Font.GothamBold
+	buyButton.TextScaled = true
 	buyButton.ZIndex = 11
 	buyButton.Parent = buttonsContainer
+
+	-- Text size constraint for buyButton
+	local buyTextConstraint = Instance.new("UITextSizeConstraint")
+	buyTextConstraint.MaxTextSize = 14
+	buyTextConstraint.Parent = buyButton
 
 	local buyCorner = Instance.new("UICorner")
 	buyCorner.CornerRadius = UDim.new(0, 10)
@@ -460,18 +581,24 @@ function module.LOAD(MODULE_INFO)
 	buyStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	buyStroke.Parent = buyButton
 
-	-- Cancel button with modern styling
+	-- Cancel button (converted to scale: full width, 32/70 = 0.4571 height, 38/70 = 0.5429 position)
 	local cancelButton = Instance.new("TextButton")
-	cancelButton.Size = UDim2.new(1, 0, 0, 32)
-	cancelButton.Position = UDim2.new(0, 0, 1, -32)
+	cancelButton.Size = UDim2.new(1, 0, 0.4571, 0)  -- Full width, 32/70 height
+	cancelButton.Position = UDim2.new(0, 0, 0.5429, 0)  -- (70-32)/70 = 38/70 = 0.5429
 	cancelButton.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
 	cancelButton.BackgroundTransparency = 0
 	cancelButton.Text = "Cancel"
 	cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	cancelButton.TextSize = 14
 	cancelButton.Font = Enum.Font.GothamBold
+	cancelButton.TextScaled = true
 	cancelButton.ZIndex = 11
 	cancelButton.Parent = buttonsContainer
+
+	-- Text size constraint for cancelButton
+	local cancelTextConstraint = Instance.new("UITextSizeConstraint")
+	cancelTextConstraint.MaxTextSize = 14
+	cancelTextConstraint.Parent = cancelButton
 
 	local cancelCorner = Instance.new("UICorner")
 	cancelCorner.CornerRadius = UDim.new(0, 10)
@@ -499,16 +626,22 @@ function module.LOAD(MODULE_INFO)
 	for i, category in pairs(categories) do
 		local tabButton = Instance.new("TextButton")
 		tabButton.Name = category.Name
-		tabButton.Size = UDim2.new(0, 125, 0, 35)
+		tabButton.Size = UDim2.new(0.2404, 0, 1, 0)  -- 125/520 = 0.2404 width
 		tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 		tabButton.BackgroundTransparency = 0
 		tabButton.Text = category.Icon .. " " .. category.Display
 		tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 		tabButton.TextSize = 14
 		tabButton.Font = Enum.Font.GothamBold
+		tabButton.TextScaled = true
 		tabButton.LayoutOrder = i
 		tabButton.ZIndex = 8
 		tabButton.Parent = categoryFrame
+
+		-- Text size constraint for tabButton
+		local tabTextConstraint = Instance.new("UITextSizeConstraint")
+		tabTextConstraint.MaxTextSize = 14
+		tabTextConstraint.Parent = tabButton
 
 		local tabCorner = Instance.new("UICorner")
 		tabCorner.CornerRadius = UDim.new(0, 10)
@@ -599,10 +732,10 @@ function module.LOAD(MODULE_INFO)
 			local ITEM_INFO = require(ITEM.ItemStats)
 			local isUnlocked = IS_ITEM_UNLOCKED(ITEM_INFO.ItemId)
 
-			-- Create item card with modern styling
+			-- Create item card with modern styling - RESPONSIVE
 			local itemCard = Instance.new("Frame")
 			itemCard.Name = "Item" .. ITEM_INFO.ItemId
-			itemCard.Size = UDim2.new(0, 155, 0, 210)
+			itemCard.Size = UDim2.new(1, 0, 1, 0)  -- Sized by GridLayout
 			itemCard.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 			itemCard.BackgroundTransparency = 0.2
 			itemCard.BorderSizePixel = 0
@@ -611,6 +744,8 @@ function module.LOAD(MODULE_INFO)
 			itemCard:SetAttribute("ITEM_NAME", ITEM.Name)
 			itemCard:SetAttribute("ITEM_ID", ITEM_INFO.ItemId)
 			itemCard:SetAttribute("IS_UNLOCKED", isUnlocked)
+
+			
 
 			local cardCorner = Instance.new("UICorner")
 			cardCorner.CornerRadius = UDim.new(0, 12)
@@ -624,10 +759,10 @@ function module.LOAD(MODULE_INFO)
 			cardStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 			cardStroke.Parent = itemCard
 
-			-- Item image
+			-- Item image (converted to scale: 145/155 = 0.9355 width, 140/210 = 0.6667 height)
 			local itemImage = Instance.new("ImageLabel")
-			itemImage.Size = UDim2.new(1, -10, 0, 140)
-			itemImage.Position = UDim2.new(0, 5, 0, 5)
+			itemImage.Size = UDim2.new(0.9355, 0, 0.6667, 0)  -- (155-10)/155 width, 140/210 height
+			itemImage.Position = UDim2.new(0.0323, 0, 0.0238, 0)  -- 5/155 = 0.0323, 5/210 = 0.0238
 			itemImage.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 			itemImage.BorderSizePixel = 0
 			itemImage.Image = ITEM_INFO.ThumbnailId
@@ -639,22 +774,28 @@ function module.LOAD(MODULE_INFO)
 			imageCorner.CornerRadius = UDim.new(0, 10)
 			imageCorner.Parent = itemImage
 
-			-- Lock icon
+			-- Lock icon (converted to scale: 50/145 = 0.3448 of image size)
 			if not isUnlocked then
 				local lockIcon = Instance.new("TextLabel")
-				lockIcon.Size = UDim2.new(0, 50, 0, 50)
-				lockIcon.Position = UDim2.new(0.5, -25, 0.5, -25)
+				lockIcon.Size = UDim2.new(0.3571, 0, 0.3571, 0)  -- 50/140 = 0.3571 (relative to image)
+				lockIcon.Position = UDim2.new(0.3214, 0, 0.3214, 0)  -- Centered: (140-50)/2/140 = 0.3214
 				lockIcon.BackgroundTransparency = 1
 				lockIcon.Text = "🔒"
 				lockIcon.TextSize = 35
+				lockIcon.TextScaled = true
 				lockIcon.ZIndex = 10
 				lockIcon.Parent = itemImage
+
+				-- Text size constraint for lockIcon
+				local lockIconConstraint = Instance.new("UITextSizeConstraint")
+				lockIconConstraint.MaxTextSize = 35
+				lockIconConstraint.Parent = lockIcon
 			end
 
-			-- Item name
+			-- Item name (converted to scale: 145/155 = 0.9355 width, 25/210 = 0.119 height)
 			local itemName = Instance.new("TextLabel")
-			itemName.Size = UDim2.new(1, -10, 0, 25)
-			itemName.Position = UDim2.new(0, 5, 0, 150)
+			itemName.Size = UDim2.new(0.9355, 0, 0.119, 0)  -- (155-10)/155 width, 25/210 height
+			itemName.Position = UDim2.new(0.0323, 0, 0.7143, 0)  -- 5/155 = 0.0323, 150/210 = 0.7143
 			itemName.BackgroundTransparency = 1
 			itemName.Text = ITEM.Name
 			itemName.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -662,13 +803,19 @@ function module.LOAD(MODULE_INFO)
 			itemName.Font = Enum.Font.GothamBold
 			itemName.TextXAlignment = Enum.TextXAlignment.Center
 			itemName.TextTruncate = Enum.TextTruncate.AtEnd
+			itemName.TextScaled = true
 			itemName.ZIndex = 9
 			itemName.Parent = itemCard
 
-			-- Price/Lock label with modern styling
+			-- Text size constraint for itemName
+			local itemNameConstraint = Instance.new("UITextSizeConstraint")
+			itemNameConstraint.MaxTextSize = 13
+			itemNameConstraint.Parent = itemName
+
+			-- Price/Lock label (converted to scale: 145/155 = 0.9355 width, 30/210 = 0.1429 height)
 			local priceLabel = Instance.new("TextLabel")
-			priceLabel.Size = UDim2.new(1, -10, 0, 30)
-			priceLabel.Position = UDim2.new(0, 5, 1, -35)
+			priceLabel.Size = UDim2.new(0.9355, 0, 0.1429, 0)  -- (155-10)/155 width, 30/210 height
+			priceLabel.Position = UDim2.new(0.0323, 0, 0.8333, 0)  -- 5/155 = 0.0323, (210-35)/210 = 0.8333
 			priceLabel.BackgroundColor3 = isUnlocked and Color3.fromRGB(70, 130, 70) or Color3.fromRGB(130, 60, 60)
 			priceLabel.BackgroundTransparency = 0
 			priceLabel.BorderSizePixel = 0
@@ -676,8 +823,14 @@ function module.LOAD(MODULE_INFO)
 			priceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 			priceLabel.TextSize = 14
 			priceLabel.Font = Enum.Font.GothamBold
+			priceLabel.TextScaled = true
 			priceLabel.ZIndex = 9
 			priceLabel.Parent = itemCard
+
+			-- Text size constraint for priceLabel
+			local priceLabelConstraint = Instance.new("UITextSizeConstraint")
+			priceLabelConstraint.MaxTextSize = 14
+			priceLabelConstraint.Parent = priceLabel
 
 			local priceCorner = Instance.new("UICorner")
 			priceCorner.CornerRadius = UDim.new(0, 8)
@@ -820,14 +973,55 @@ function module.LOAD(MODULE_INFO)
 		LOAD_SHOP()
 	end)
 
+	-- Store original jump settings
+	local originalJumpPower = nil
+	local originalJumpHeight = nil
+
 	-- Menu toggle handler
 	script.Parent.MenuObject.Changed:Connect(function()
 		if script.Parent.MenuObject.Value then
 			shopFrame.Visible = true
 			LOAD_SHOP()
+
+			-- Disable jumping when shop opens
+			if Plr.Character and Plr.Character:FindFirstChild("Humanoid") then
+				local humanoid = Plr.Character.Humanoid
+
+				-- Store original values
+				if humanoid.UseJumpPower then
+					originalJumpPower = humanoid.JumpPower
+					humanoid.JumpPower = 0
+				else
+					originalJumpHeight = humanoid.JumpHeight
+					humanoid.JumpHeight = 0
+				end
+			end
+
+			-- Hide mobile controls
+			if isMobile then
+				GuiService:SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
+			end
 		else
 			shopFrame.Visible = false
 			selectedPanel.Visible = false
+
+			-- Restore jumping when shop closes
+			if Plr.Character and Plr.Character:FindFirstChild("Humanoid") then
+				local humanoid = Plr.Character.Humanoid
+
+				-- Restore original values
+				if originalJumpPower then
+					humanoid.JumpPower = originalJumpPower
+				end
+				if originalJumpHeight then
+					humanoid.JumpHeight = originalJumpHeight
+				end
+			end
+
+			-- Restore mobile controls
+			if isMobile then
+				GuiService:SetCoreGuiEnabled(Enum.CoreGuiType.All, true)
+			end
 		end
 	end)
 end
