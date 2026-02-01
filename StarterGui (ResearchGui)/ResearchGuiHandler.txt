@@ -159,7 +159,7 @@ local titleText = Instance.new("TextLabel")
 titleText.Size = UDim2.new(0.5, 0, 1, 0)
 titleText.Position = UDim2.new(0.02, 0, 0, 0)  -- 20/1000 = 0.02
 titleText.BackgroundTransparency = 1
-titleText.Text = "🔬 Research Tree"
+titleText.Text = "Research Tree"
 titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleText.TextSize = 26
 titleText.Font = Enum.Font.GothamBold
@@ -562,13 +562,16 @@ local function createObjectiveCard(objectiveData, researchData, position)
 					iconCorner.CornerRadius = UDim.new(0.15, 0)  -- 6/32 = 0.1875, use 0.15 for slightly less rounding
 					iconCorner.Parent = iconButton
 
-					-- Create tooltip
+					-- Create tooltip (scaled for screen size)
+					local tooltipWidth = math.max(150, 200 * SCALE_FACTOR)
+					local tooltipHeight = math.max(60, 80 * SCALE_FACTOR)
+
 					local tooltip = Instance.new("Frame")
 					tooltip.Name = "Tooltip"
-					tooltip.Size = UDim2.new(0, 200, 0, 80)
-					tooltip.Position = UDim2.new(0.5, 0, 0, -85)
+					tooltip.Size = UDim2.new(0, tooltipWidth, 0, tooltipHeight)
+					tooltip.Position = UDim2.new(0.5, 0, 0, -(tooltipHeight + 5))
 					tooltip.AnchorPoint = Vector2.new(0.5, 0)
-					tooltip.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+					tooltip.BackgroundColor3 = Color3.fromRGB(29, 29, 33)
 					tooltip.BorderSizePixel = 0
 					tooltip.Visible = false
 					tooltip.ZIndex = 10
@@ -585,7 +588,7 @@ local function createObjectiveCard(objectiveData, researchData, position)
 					tooltipName.BackgroundTransparency = 1
 					tooltipName.Text = item.Name
 					tooltipName.TextColor3 = Color3.fromRGB(255, 255, 255)
-					tooltipName.TextSize = 13
+					tooltipName.TextSize = math.max(10, 13 * SCALE_FACTOR)
 					tooltipName.Font = Enum.Font.GothamBold
 					tooltipName.TextXAlignment = Enum.TextXAlignment.Left
 					tooltipName.TextScaled = true
@@ -593,7 +596,7 @@ local function createObjectiveCard(objectiveData, researchData, position)
 					tooltipName.Parent = tooltip
 
 					local tooltipNameConstraint = Instance.new("UITextSizeConstraint")
-					tooltipNameConstraint.MaxTextSize = 13
+					tooltipNameConstraint.MaxTextSize = math.max(10, 13 * SCALE_FACTOR)
 					tooltipNameConstraint.Parent = tooltipName
 
 					-- Get tier info from MainLib
@@ -607,7 +610,7 @@ local function createObjectiveCard(objectiveData, researchData, position)
 					tooltipTier.BackgroundTransparency = 1
 					tooltipTier.Text = tierName or ("Tier " .. itemInfo.TierId)
 					tooltipTier.TextColor3 = tierData and tierData["TIER_COLOR"] or Color3.fromRGB(150, 150, 150)
-					tooltipTier.TextSize = 11
+					tooltipTier.TextSize = math.max(8, 11 * SCALE_FACTOR)
 					tooltipTier.Font = Enum.Font.GothamBold
 					tooltipTier.TextXAlignment = Enum.TextXAlignment.Left
 					tooltipTier.TextScaled = true
@@ -615,7 +618,7 @@ local function createObjectiveCard(objectiveData, researchData, position)
 					tooltipTier.Parent = tooltip
 
 					local tooltipTierConstraint = Instance.new("UITextSizeConstraint")
-					tooltipTierConstraint.MaxTextSize = 11
+					tooltipTierConstraint.MaxTextSize = math.max(8, 11 * SCALE_FACTOR)
 					tooltipTierConstraint.Parent = tooltipTier
 
 					-- Description
@@ -625,7 +628,7 @@ local function createObjectiveCard(objectiveData, researchData, position)
 					tooltipDesc.BackgroundTransparency = 1
 					tooltipDesc.Text = itemInfo.Description
 					tooltipDesc.TextColor3 = Color3.fromRGB(200, 200, 200)
-					tooltipDesc.TextSize = 10
+					tooltipDesc.TextSize = math.max(7, 10 * SCALE_FACTOR)
 					tooltipDesc.Font = Enum.Font.Gotham
 					tooltipDesc.TextWrapped = true
 					tooltipDesc.TextXAlignment = Enum.TextXAlignment.Left
@@ -635,7 +638,7 @@ local function createObjectiveCard(objectiveData, researchData, position)
 					tooltipDesc.Parent = tooltip
 
 					local tooltipDescConstraint = Instance.new("UITextSizeConstraint")
-					tooltipDescConstraint.MaxTextSize = 10
+					tooltipDescConstraint.MaxTextSize = math.max(7, 10 * SCALE_FACTOR)
 					tooltipDescConstraint.Parent = tooltipDesc
 
 					-- Hover events
