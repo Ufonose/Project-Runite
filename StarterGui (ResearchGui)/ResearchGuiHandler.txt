@@ -1,53 +1,177 @@
+-- StarterGui (ResearchGui)/ResearchGuiHandler.txt (MODERNIZED & FULLY RESPONSIVE)
+
 local Players = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local researchGui = script.Parent
 local SoundManager = require(RepStorage.Modules.SoundManager)
+local UserInputService = game:GetService("UserInputService")
 
--- Constants for tree layout
+-- Check if player is on mobile device
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+-- Scale factors based on screen size
 local CARD_WIDTH = 220
 local CARD_HEIGHT = 220
 local HORIZONTAL_SPACING = 80
 local VERTICAL_SPACING = 50
+local SCALE_FACTOR = 1
 
--- Create main frame
+-- Function to update scale factor based on screen size
+local function updateScaleFactor()
+	local viewport = workspace.CurrentCamera.ViewportSize
+	local screenWidth = viewport.X
+
+	-- On smaller screens, scale down more aggressively
+	if screenWidth < 500 then
+		-- Phones: very aggressive scaling (35-42%)
+		SCALE_FACTOR = screenWidth / 1400
+	elseif screenWidth < 800 then
+		-- Tablets: moderate scaling (50-57%)
+		SCALE_FACTOR = screenWidth / 1400
+	else
+		-- Desktop: full size
+		SCALE_FACTOR = 1
+	end
+
+	CARD_WIDTH = 220 * SCALE_FACTOR
+	CARD_HEIGHT = 220 * SCALE_FACTOR
+	HORIZONTAL_SPACING = 80 * SCALE_FACTOR
+	VERTICAL_SPACING = 50 * SCALE_FACTOR
+end
+
+-- Create main frame with modern styling - RESPONSIVE
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 1000, 0, 700)
-mainFrame.Position = UDim2.new(0.5, -500, 0.5, -350)
+
+-- Detect screen size and adjust GUI size for mobile
+local function updateMainFrameSize()
+	local viewport = workspace.CurrentCamera.ViewportSize
+	local screenWidth = viewport.X
+
+	-- Update scale factor for cards
+	updateScaleFactor()
+
+	-- Update scrollbar thickness based on scale factor (only if it exists)
+	if treeContainer then
+		treeContainer.ScrollBarThickness = math.max(6, 10 * SCALE_FACTOR)
+	end
+
+	-- Update corner radii based on scale factor (only if they exist)
+	if blurCorner then blurCorner.CornerRadius = UDim.new(0, math.max(8, 15 * SCALE_FACTOR)) end
+	if mainCorner then mainCorner.CornerRadius = UDim.new(0, math.max(8, 15 * SCALE_FACTOR)) end
+	if titleCorner then titleCorner.CornerRadius = UDim.new(0, math.max(8, 15 * SCALE_FACTOR)) end
+	if ageTabsCorner then ageTabsCorner.CornerRadius = UDim.new(0, math.max(6, 12 * SCALE_FACTOR)) end
+	if treeCorner then treeCorner.CornerRadius = UDim.new(0, math.max(6, 12 * SCALE_FACTOR)) end
+
+	-- Update stroke thickness based on scale factor (only if they exist)
+	if mainStroke then mainStroke.Thickness = math.max(1, 2 * SCALE_FACTOR) end
+	if ageTabsStroke then ageTabsStroke.Thickness = math.max(0.5, 1 * SCALE_FACTOR) end
+	if treeStroke then treeStroke.Thickness = math.max(0.5, 1 * SCALE_FACTOR) end
+
+	-- If screen width is less than 800 pixels (mobile/tablet), make GUI bigger
+	if screenWidth < 800 then
+		mainFrame.Size = UDim2.new(0.95, 0, 0.95, 0)  -- Mobile size (95% of screen)
+	else
+		mainFrame.Size = UDim2.new(0.85, 0, 0.85, 0)  -- Desktop size (85% of screen)
+	end
+
+	-- Refresh tree if it's visible to apply new scaling
+	if mainFrame.Visible and researchData then
+		refreshTree()
+	end
+end
+
+-- Update on initial load
+updateScaleFactor()  -- Initialize scale factor first
+updateMainFrameSize()
+
+-- Update when screen size changes (device rotation, window resize)
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateMainFrameSize)
+
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
 mainFrame.Visible = false
+mainFrame.ZIndex = 5
 mainFrame.Parent = researchGui
 
+-- UIAspectRatioConstraint to maintain proportions (1000/700 = 1.4286)
+local aspectRatio = Instance.new("UIAspectRatioConstraint")
+aspectRatio.AspectRatio = 1.4286
+aspectRatio.DominantAxis = Enum.DominantAxis.Height
+aspectRatio.Parent = mainFrame
+
+-- Blur/Glass effect background
+local blur = Instance.new("Frame")
+blur.Size = UDim2.new(1, 0, 1, 0)
+blur.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+blur.BackgroundTransparency = 0.3
+blur.BorderSizePixel = 0
+blur.ZIndex = 6
+blur.Parent = mainFrame
+
+local blurCorner = Instance.new("UICorner")
+blurCorner.CornerRadius = UDim.new(0, 15)
+blurCorner.Parent = blur
+
+-- Main frame corner
 local mainCorner = Instance.new("UICorner")
 mainCorner.CornerRadius = UDim.new(0, 15)
 mainCorner.Parent = mainFrame
 
--- Create title bar
+-- Main frame stroke
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(60, 60, 80)
+mainStroke.Thickness = 2
+mainStroke.Transparency = 0.5
+mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+mainStroke.Parent = mainFrame
+
+-- Create title bar with modern styling
 local titleBar = Instance.new("Frame")
 titleBar.Name = "TitleBar"
-titleBar.Size = UDim2.new(1, 0, 0, 60)
+titleBar.Size = UDim2.new(1, 0, 0.0857, 0)  -- 60/700 = 0.0857
 titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+titleBar.BackgroundTransparency = 0.2
 titleBar.BorderSizePixel = 0
+titleBar.ZIndex = 7
 titleBar.Parent = mainFrame
 
 local titleCorner = Instance.new("UICorner")
 titleCorner.CornerRadius = UDim.new(0, 15)
 titleCorner.Parent = titleBar
 
+-- Title bar gradient
+local titleGradient = Instance.new("UIGradient")
+titleGradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(45, 45, 50)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 40))
+}
+titleGradient.Rotation = 90
+titleGradient.Parent = titleBar
+
 -- Title text
 local titleText = Instance.new("TextLabel")
 titleText.Size = UDim2.new(0.5, 0, 1, 0)
-titleText.Position = UDim2.new(0, 20, 0, 0)
+titleText.Position = UDim2.new(0.02, 0, 0, 0)  -- 20/1000 = 0.02
 titleText.BackgroundTransparency = 1
 titleText.Text = "🔬 Research Tree"
 titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleText.TextSize = 26
 titleText.Font = Enum.Font.GothamBold
 titleText.TextXAlignment = Enum.TextXAlignment.Left
+titleText.TextScaled = true
+titleText.ZIndex = 8
 titleText.Parent = titleBar
+
+-- Text size constraint for title
+local titleConstraint = Instance.new("UITextSizeConstraint")
+titleConstraint.MaxTextSize = 26
+titleConstraint.Parent = titleText
 
 -- Research tokens display
 local tokensLabel = Instance.new("TextLabel")
@@ -59,22 +183,46 @@ tokensLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
 tokensLabel.TextSize = 20
 tokensLabel.Font = Enum.Font.GothamBold
 tokensLabel.TextXAlignment = Enum.TextXAlignment.Right
+tokensLabel.TextScaled = true
+tokensLabel.ZIndex = 8
 tokensLabel.Parent = titleBar
 
--- Close button
+-- Text size constraint for tokens
+local tokensConstraint = Instance.new("UITextSizeConstraint")
+tokensConstraint.MaxTextSize = 20
+tokensConstraint.Parent = tokensLabel
+
+-- Close button with modern styling (after updateScaleFactor is called)
 local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 45, 0, 45)
-closeButton.Position = UDim2.new(1, -55, 0, 7.5)
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0.04, 0, 0.667, 0)  -- 40/1000 = 0.04 width, 40/60 = 0.667 height (scales with title bar)
+closeButton.Position = UDim2.new(0.95, 0, 0.167, 0)  -- 950/1000 = 0.95, centered in title bar
+closeButton.AnchorPoint = Vector2.new(0, 0)
 closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeButton.Text = "X"
 closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextSize = 24
+closeButton.TextSize = 20
+closeButton.TextScaled = true
 closeButton.Font = Enum.Font.GothamBold
+closeButton.ZIndex = 8
 closeButton.Parent = titleBar
 
+-- Text size constraint for close button
+local closeTextConstraint = Instance.new("UITextSizeConstraint")
+closeTextConstraint.MaxTextSize = 20
+closeTextConstraint.Parent = closeButton
+
 local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 10)
+closeCorner.CornerRadius = UDim.new(0.2, 0)  -- 8/40 = 0.2 for consistent rounding
 closeCorner.Parent = closeButton
+
+-- Close button hover effect
+closeButton.MouseEnter:Connect(function()
+	closeButton.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
+end)
+closeButton.MouseLeave:Connect(function()
+	closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+end)
 
 closeButton.MouseButton1Click:Connect(function()
 	SoundManager.MenuClose()
@@ -98,46 +246,67 @@ closeButton.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Age tabs container
+-- Age tabs container with modern styling
 local ageTabsFrame = Instance.new("Frame")
 ageTabsFrame.Name = "AgeTabs"
-ageTabsFrame.Size = UDim2.new(0, 200, 1, -90)  -- Changed from -135 to -90
-ageTabsFrame.Position = UDim2.new(0, 20, 0, 75)  -- Changed from 130 to 75
+ageTabsFrame.Size = UDim2.new(0.2, 0, 0.8714, 0)  -- 200/1000 = 0.2, (700-90)/700 = 0.8714
+ageTabsFrame.Position = UDim2.new(0.02, 0, 0.1071, 0)  -- 20/1000 = 0.02, 75/700 = 0.1071
 ageTabsFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+ageTabsFrame.BackgroundTransparency = 0.3
 ageTabsFrame.BorderSizePixel = 0
+ageTabsFrame.ZIndex = 7
 ageTabsFrame.Parent = mainFrame
 
 local ageTabsCorner = Instance.new("UICorner")
-ageTabsCorner.CornerRadius = UDim.new(0, 10)
+ageTabsCorner.CornerRadius = UDim.new(0, 12)
 ageTabsCorner.Parent = ageTabsFrame
 
+-- Age tabs stroke
+local ageTabsStroke = Instance.new("UIStroke")
+ageTabsStroke.Color = Color3.fromRGB(60, 60, 80)
+ageTabsStroke.Thickness = 1
+ageTabsStroke.Transparency = 0.6
+ageTabsStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+ageTabsStroke.Parent = ageTabsFrame
+
 local ageTabsLayout = Instance.new("UIListLayout")
-ageTabsLayout.Padding = UDim.new(0, 10)
+ageTabsLayout.Name = "AgeTabsLayout"
+ageTabsLayout.Padding = UDim.new(0.0164, 0)  -- 10/610 = 0.0164 (relative to container height)
 ageTabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 ageTabsLayout.Parent = ageTabsFrame
 
 local ageTabsPadding = Instance.new("UIPadding")
-ageTabsPadding.PaddingTop = UDim.new(0, 10)
-ageTabsPadding.PaddingBottom = UDim.new(0, 10)
-ageTabsPadding.PaddingLeft = UDim.new(0, 10)
-ageTabsPadding.PaddingRight = UDim.new(0, 10)
+ageTabsPadding.PaddingTop = UDim.new(0.0164, 0)  -- 10/610
+ageTabsPadding.PaddingBottom = UDim.new(0.0164, 0)
+ageTabsPadding.PaddingLeft = UDim.new(0.05, 0)  -- 10/200
+ageTabsPadding.PaddingRight = UDim.new(0.05, 0)
 ageTabsPadding.Parent = ageTabsFrame
 
--- Tree container (scrollable)
+-- Tree container (scrollable) with modern styling
 local treeContainer = Instance.new("ScrollingFrame")
 treeContainer.Name = "TreeContainer"
-treeContainer.Size = UDim2.new(1, -250, 1, -135)
-treeContainer.Position = UDim2.new(0, 230, 0, 130)
+treeContainer.Size = UDim2.new(0.75, 0, 0.88, 0)  -- (1000-250)/1000 = 0.75, extended height to fill space
+treeContainer.Position = UDim2.new(0.23, 0, 0.1071, 0)  -- 230/1000 = 0.23, 75/700 = 0.1071 (right after title bar)
 treeContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+treeContainer.BackgroundTransparency = 0.3
 treeContainer.BorderSizePixel = 0
-treeContainer.ScrollBarThickness = 10
+treeContainer.ScrollBarThickness = 10  -- Will be updated dynamically
 treeContainer.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 105)
 treeContainer.CanvasSize = UDim2.new(0, 2000, 0, 2000)
+treeContainer.ZIndex = 7
 treeContainer.Parent = mainFrame
 
 local treeCorner = Instance.new("UICorner")
-treeCorner.CornerRadius = UDim.new(0, 10)
+treeCorner.CornerRadius = UDim.new(0, 12)
 treeCorner.Parent = treeContainer
+
+-- Tree container stroke
+local treeStroke = Instance.new("UIStroke")
+treeStroke.Color = Color3.fromRGB(60, 60, 80)
+treeStroke.Thickness = 1
+treeStroke.Transparency = 0.6
+treeStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+treeStroke.Parent = treeContainer
 
 -- Connection lines frame (behind cards)
 local connectionsFrame = Instance.new("Frame")
@@ -169,10 +338,13 @@ local function drawConnection(fromPos, toPos, isCompleted)
 	-- Calculate midpoint for curved line
 	local midX = (startX + endX) / 2
 
+	-- Scale line thickness
+	local lineThickness = math.max(2, 3 * SCALE_FACTOR)
+
 	-- Draw horizontal line from start to midpoint
 	local line1 = Instance.new("Frame")
-	line1.Size = UDim2.new(0, midX - startX, 0, 3)
-	line1.Position = UDim2.new(0, startX, 0, startY - 1.5)
+	line1.Size = UDim2.new(0, midX - startX, 0, lineThickness)
+	line1.Position = UDim2.new(0, startX, 0, startY - lineThickness/2)
 	line1.BackgroundColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
 	line1.BorderSizePixel = 0
 	line1.ZIndex = 1
@@ -181,8 +353,8 @@ local function drawConnection(fromPos, toPos, isCompleted)
 	-- Draw vertical line
 	local verticalLength = math.abs(endY - startY)
 	local line2 = Instance.new("Frame")
-	line2.Size = UDim2.new(0, 3, 0, verticalLength)
-	line2.Position = UDim2.new(0, midX - 1.5, 0, math.min(startY, endY))
+	line2.Size = UDim2.new(0, lineThickness, 0, verticalLength)
+	line2.Position = UDim2.new(0, midX - lineThickness/2, 0, math.min(startY, endY))
 	line2.BackgroundColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
 	line2.BorderSizePixel = 0
 	line2.ZIndex = 1
@@ -190,17 +362,18 @@ local function drawConnection(fromPos, toPos, isCompleted)
 
 	-- Draw horizontal line from midpoint to end
 	local line3 = Instance.new("Frame")
-	line3.Size = UDim2.new(0, endX - midX, 0, 3)
-	line3.Position = UDim2.new(0, midX, 0, endY - 1.5)
+	line3.Size = UDim2.new(0, endX - midX, 0, lineThickness)
+	line3.Position = UDim2.new(0, midX, 0, endY - lineThickness/2)
 	line3.BackgroundColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
 	line3.BorderSizePixel = 0
 	line3.ZIndex = 1
 	line3.Parent = connectionsFrame
 
-	-- Add arrow at end
+	-- Add arrow at end (scaled)
+	local arrowSize = math.max(8, 12 * SCALE_FACTOR)
 	local arrow = Instance.new("ImageLabel")
-	arrow.Size = UDim2.new(0, 12, 0, 12)
-	arrow.Position = UDim2.new(0, endX - 6, 0, endY - 6)
+	arrow.Size = UDim2.new(0, arrowSize, 0, arrowSize)
+	arrow.Position = UDim2.new(0, endX - arrowSize/2, 0, endY - arrowSize/2)
 	arrow.BackgroundTransparency = 1
 	arrow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
 	arrow.Rotation = 0
@@ -233,25 +406,38 @@ local function createObjectiveCard(objectiveData, researchData, position)
 	card.Parent = cardsFrame
 
 	local cardCorner = Instance.new("UICorner")
-	cardCorner.CornerRadius = UDim.new(0, 12)
+	cardCorner.CornerRadius = UDim.new(0.0545, 0)  -- 12/220 = 0.0545
 	cardCorner.Parent = card
+
+	-- Card stroke
+	local cardStroke = Instance.new("UIStroke")
+	cardStroke.Color = Color3.fromRGB(60, 60, 80)
+	cardStroke.Thickness = 1
+	cardStroke.Transparency = 0.6
+	cardStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	cardStroke.Parent = card
 
 	-- Status icon
 	local statusIcon = Instance.new("TextLabel")
-	statusIcon.Size = UDim2.new(0, 30, 0, 30)
-	statusIcon.Position = UDim2.new(1, -38, 0, 5)
+	statusIcon.Size = UDim2.new(0.1364, 0, 0.1364, 0)  -- 30/220 = 0.1364
+	statusIcon.Position = UDim2.new(0.8273, 0, 0.0227, 0)  -- (220-38)/220 = 0.8273, 5/220 = 0.0227
 	statusIcon.BackgroundTransparency = 1
 	statusIcon.Text = isCompleted and "✓" or (isActive and "⏳" or "")
 	statusIcon.TextColor3 = isCompleted and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 200, 100)
 	statusIcon.TextSize = 20
 	statusIcon.Font = Enum.Font.GothamBold
+	statusIcon.TextScaled = true
 	statusIcon.ZIndex = 3
 	statusIcon.Parent = card
 
+	local statusConstraint = Instance.new("UITextSizeConstraint")
+	statusConstraint.MaxTextSize = 20
+	statusConstraint.Parent = statusIcon
+
 	-- Title
 	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -50, 0, 30)
-	title.Position = UDim2.new(0, 8, 0, 8)
+	title.Size = UDim2.new(0.7727, 0, 0.1364, 0)  -- (220-50)/220 = 0.7727, 30/220 = 0.1364
+	title.Position = UDim2.new(0.0364, 0, 0.0364, 0)  -- 8/220 = 0.0364
 	title.BackgroundTransparency = 1
 	title.Text = objectiveData.Name
 	title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -260,13 +446,18 @@ local function createObjectiveCard(objectiveData, researchData, position)
 	title.TextWrapped = true
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.TextYAlignment = Enum.TextYAlignment.Top
+	title.TextScaled = true
 	title.ZIndex = 3
 	title.Parent = card
 
+	local titleConstraint = Instance.new("UITextSizeConstraint")
+	titleConstraint.MaxTextSize = 18
+	titleConstraint.Parent = title
+
 	-- Description
 	local desc = Instance.new("TextLabel")
-	desc.Size = UDim2.new(1, -16, 0, 30)
-	desc.Position = UDim2.new(0, 8, 0, 43)
+	desc.Size = UDim2.new(0.9273, 0, 0.1364, 0)  -- (220-16)/220 = 0.9273, 30/220 = 0.1364
+	desc.Position = UDim2.new(0.0364, 0, 0.1955, 0)  -- 8/220 = 0.0364, 43/220 = 0.1955
 	desc.BackgroundTransparency = 1
 	desc.Text = objectiveData.Description
 	desc.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -275,8 +466,13 @@ local function createObjectiveCard(objectiveData, researchData, position)
 	desc.TextWrapped = true
 	desc.TextXAlignment = Enum.TextXAlignment.Left
 	desc.TextYAlignment = Enum.TextYAlignment.Top
+	desc.TextScaled = true
 	desc.ZIndex = 3
 	desc.Parent = card
+
+	local descConstraint = Instance.new("UITextSizeConstraint")
+	descConstraint.MaxTextSize = 13
+	descConstraint.Parent = desc
 
 	-- Requirements
 	local reqY = 78
@@ -288,8 +484,8 @@ local function createObjectiveCard(objectiveData, researchData, position)
 		end
 
 		local reqText = Instance.new("TextLabel")
-		reqText.Size = UDim2.new(1, -16, 0, 15)
-		reqText.Position = UDim2.new(0, 8, 0, reqY)
+		reqText.Size = UDim2.new(0.9273, 0, 0.0682, 0)  -- (220-16)/220 = 0.9273, 15/220 = 0.0682
+		reqText.Position = UDim2.new(0.0364, 0, reqY/220, 0)  -- 8/220 = 0.0364
 		reqText.BackgroundTransparency = 1
 		reqText.Text = string.format("• %s: %d/%d", requirement.ItemName:gsub("OreModel", ""):gsub("_", " "), progress, requirement.Amount)
 		reqText.TextColor3 = progress >= requirement.Amount and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(200, 200, 200)
@@ -297,8 +493,13 @@ local function createObjectiveCard(objectiveData, researchData, position)
 		reqText.Font = Enum.Font.Gotham
 		reqText.TextXAlignment = Enum.TextXAlignment.Left
 		reqText.TextTruncate = Enum.TextTruncate.AtEnd
+		reqText.TextScaled = true
 		reqText.ZIndex = 3
 		reqText.Parent = card
+
+		local reqConstraint = Instance.new("UITextSizeConstraint")
+		reqConstraint.MaxTextSize = 12
+		reqConstraint.Parent = reqText
 
 		-- Store reference for updating
 		requirementLabels[requirement.ItemName] = {label = reqText, amount = requirement.Amount}
@@ -317,8 +518,8 @@ local function createObjectiveCard(objectiveData, researchData, position)
 	local unlocksY = reqY + 5
 	if objectiveData.Rewards.UnlockMachines and #objectiveData.Rewards.UnlockMachines > 0 then
 		local unlocksLabel = Instance.new("TextLabel")
-		unlocksLabel.Size = UDim2.new(0, 60, 0, 32)
-		unlocksLabel.Position = UDim2.new(0, 8, 0, unlocksY)
+		unlocksLabel.Size = UDim2.new(0.2727, 0, 0.1455, 0)  -- 60/220 = 0.2727, 32/220 = 0.1455
+		unlocksLabel.Position = UDim2.new(0.0364, 0, unlocksY/220, 0)
 		unlocksLabel.BackgroundTransparency = 1
 		unlocksLabel.Text = "🔓 Unlocks:"
 		unlocksLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
@@ -326,11 +527,21 @@ local function createObjectiveCard(objectiveData, researchData, position)
 		unlocksLabel.Font = Enum.Font.GothamBold
 		unlocksLabel.TextXAlignment = Enum.TextXAlignment.Left
 		unlocksLabel.TextYAlignment = Enum.TextYAlignment.Center
+		unlocksLabel.TextScaled = true
 		unlocksLabel.ZIndex = 3
 		unlocksLabel.Parent = card
 
+		local unlocksConstraint = Instance.new("UITextSizeConstraint")
+		unlocksConstraint.MaxTextSize = 11
+		unlocksConstraint.Parent = unlocksLabel
+
 		-- Display unlocked machines (next to the label)
-		local iconX = 73
+		-- Use relative positioning based on card size
+		local iconStartX = 0.3318  -- 73/220 = 0.3318
+		local iconSpacing = 0.1682  -- 37/220 = 0.1682
+		local iconSize = 0.1455  -- 32/220 = 0.1455
+		local currentIconX = iconStartX
+
 		for _, machineId in pairs(objectiveData.Rewards.UnlockMachines) do
 			-- Find the machine in RepStorage.Items
 			for _, item in pairs(RepStorage.Items:GetChildren()) do
@@ -338,8 +549,8 @@ local function createObjectiveCard(objectiveData, researchData, position)
 				if itemInfo.ItemId == machineId then
 					-- Create icon button for hover detection
 					local iconButton = Instance.new("ImageButton")
-					iconButton.Size = UDim2.new(0, 32, 0, 32)
-					iconButton.Position = UDim2.new(0, iconX, 0, unlocksY)
+					iconButton.Size = UDim2.new(iconSize, 0, iconSize, 0)
+					iconButton.Position = UDim2.new(currentIconX, 0, unlocksY/220, 0)
 					iconButton.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
 					iconButton.BorderSizePixel = 0
 					iconButton.Image = itemInfo.ThumbnailId
@@ -348,7 +559,7 @@ local function createObjectiveCard(objectiveData, researchData, position)
 					iconButton.Parent = card
 
 					local iconCorner = Instance.new("UICorner")
-					iconCorner.CornerRadius = UDim.new(0, 6)
+					iconCorner.CornerRadius = UDim.new(0.15, 0)  -- 6/32 = 0.1875, use 0.15 for slightly less rounding
 					iconCorner.Parent = iconButton
 
 					-- Create tooltip
@@ -364,21 +575,26 @@ local function createObjectiveCard(objectiveData, researchData, position)
 					tooltip.Parent = iconButton
 
 					local tooltipCorner = Instance.new("UICorner")
-					tooltipCorner.CornerRadius = UDim.new(0, 8)
+					tooltipCorner.CornerRadius = UDim.new(0.04, 0)  -- 8/200 = 0.04
 					tooltipCorner.Parent = tooltip
 
 					-- Item name
 					local tooltipName = Instance.new("TextLabel")
-					tooltipName.Size = UDim2.new(1, -10, 0, 20)
-					tooltipName.Position = UDim2.new(0, 5, 0, 5)
+					tooltipName.Size = UDim2.new(0.95, 0, 0.25, 0)  -- (200-10)/200 = 0.95, 20/80 = 0.25
+					tooltipName.Position = UDim2.new(0.025, 0, 0.0625, 0)  -- 5/200 = 0.025, 5/80 = 0.0625
 					tooltipName.BackgroundTransparency = 1
 					tooltipName.Text = item.Name
 					tooltipName.TextColor3 = Color3.fromRGB(255, 255, 255)
 					tooltipName.TextSize = 13
 					tooltipName.Font = Enum.Font.GothamBold
 					tooltipName.TextXAlignment = Enum.TextXAlignment.Left
+					tooltipName.TextScaled = true
 					tooltipName.ZIndex = 10
 					tooltipName.Parent = tooltip
+
+					local tooltipNameConstraint = Instance.new("UITextSizeConstraint")
+					tooltipNameConstraint.MaxTextSize = 13
+					tooltipNameConstraint.Parent = tooltipName
 
 					-- Get tier info from MainLib
 					local MainLib = require(RepStorage.Modules.MainLib)
@@ -386,21 +602,26 @@ local function createObjectiveCard(objectiveData, researchData, position)
 
 					-- Tier info
 					local tooltipTier = Instance.new("TextLabel")
-					tooltipTier.Size = UDim2.new(1, -10, 0, 15)
-					tooltipTier.Position = UDim2.new(0, 5, 0, 27)
+					tooltipTier.Size = UDim2.new(0.95, 0, 0.1875, 0)  -- 15/80 = 0.1875
+					tooltipTier.Position = UDim2.new(0.025, 0, 0.3375, 0)  -- 27/80 = 0.3375
 					tooltipTier.BackgroundTransparency = 1
 					tooltipTier.Text = tierName or ("Tier " .. itemInfo.TierId)
 					tooltipTier.TextColor3 = tierData and tierData["TIER_COLOR"] or Color3.fromRGB(150, 150, 150)
 					tooltipTier.TextSize = 11
 					tooltipTier.Font = Enum.Font.GothamBold
 					tooltipTier.TextXAlignment = Enum.TextXAlignment.Left
+					tooltipTier.TextScaled = true
 					tooltipTier.ZIndex = 10
 					tooltipTier.Parent = tooltip
 
+					local tooltipTierConstraint = Instance.new("UITextSizeConstraint")
+					tooltipTierConstraint.MaxTextSize = 11
+					tooltipTierConstraint.Parent = tooltipTier
+
 					-- Description
 					local tooltipDesc = Instance.new("TextLabel")
-					tooltipDesc.Size = UDim2.new(1, -10, 0, 35)
-					tooltipDesc.Position = UDim2.new(0, 5, 0, 42)
+					tooltipDesc.Size = UDim2.new(0.95, 0, 0.4375, 0)  -- 35/80 = 0.4375
+					tooltipDesc.Position = UDim2.new(0.025, 0, 0.525, 0)  -- 42/80 = 0.525
 					tooltipDesc.BackgroundTransparency = 1
 					tooltipDesc.Text = itemInfo.Description
 					tooltipDesc.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -409,8 +630,13 @@ local function createObjectiveCard(objectiveData, researchData, position)
 					tooltipDesc.TextWrapped = true
 					tooltipDesc.TextXAlignment = Enum.TextXAlignment.Left
 					tooltipDesc.TextYAlignment = Enum.TextYAlignment.Top
+					tooltipDesc.TextScaled = true
 					tooltipDesc.ZIndex = 10
 					tooltipDesc.Parent = tooltip
+
+					local tooltipDescConstraint = Instance.new("UITextSizeConstraint")
+					tooltipDescConstraint.MaxTextSize = 10
+					tooltipDescConstraint.Parent = tooltipDesc
 
 					-- Hover events
 					iconButton.MouseEnter:Connect(function()
@@ -421,7 +647,7 @@ local function createObjectiveCard(objectiveData, researchData, position)
 						tooltip.Visible = false
 					end)
 
-					iconX = iconX + 37
+					currentIconX = currentIconX + iconSpacing
 					break
 				end
 			end
@@ -431,30 +657,34 @@ local function createObjectiveCard(objectiveData, researchData, position)
 	-- Action button
 	if not isCompleted then
 		local actionButton = Instance.new("TextButton")
-		actionButton.Size = UDim2.new(1, -16, 0, 30)
-		actionButton.Position = UDim2.new(0, 8, 1, -38)
+		actionButton.Size = UDim2.new(0.9273, 0, 0.1364, 0)  -- (220-16)/220 = 0.9273, 30/220 = 0.1364
+		actionButton.Position = UDim2.new(0.0364, 0, 0.8273, 0)  -- 8/220 = 0.0364, (220-38)/220 = 0.8273
 		actionButton.BackgroundColor3 = isActive and Color3.fromRGB(70, 70, 75) or (prereqsMet and Color3.fromRGB(80, 140, 80) or Color3.fromRGB(100, 50, 50))
 		actionButton.Text = isActive and "Active" or (prereqsMet and "Start Research" or "🔒 Locked")
 		actionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 		actionButton.TextSize = 13
 		actionButton.Font = Enum.Font.GothamBold
+		actionButton.TextScaled = true
 		actionButton.ZIndex = 3
 		actionButton.Parent = card
 
+		local actionConstraint = Instance.new("UITextSizeConstraint")
+		actionConstraint.MaxTextSize = 13
+		actionConstraint.Parent = actionButton
+
 		local btnCorner = Instance.new("UICorner")
-		btnCorner.CornerRadius = UDim.new(0, 8)
+		btnCorner.CornerRadius = UDim.new(0.0364, 0)  -- 8/220 = 0.0364
 		btnCorner.Parent = actionButton
 
 		if canStart and prereqsMet then
 			actionButton.MouseButton1Click:Connect(function()
-				SoundManager.ButtonClick()  -- ADD THIS LINE
+				SoundManager.ButtonClick()
 				local success = RepStorage.Events.StartObjective:InvokeServer(objectiveData.Id)
 				if success then
 					refreshTree() -- Rebuild tree when objective starts
 				end
 			end)
 		else
-			-- ADD THIS SECTION for locked research clicks
 			actionButton.MouseButton1Click:Connect(function()
 				SoundManager.Error()  -- Play error sound for locked research
 			end)
@@ -573,43 +803,64 @@ local function createAgeTab(ageData, completedObjectives)
 
 	local button = Instance.new("TextButton")
 	button.Name = "AgeTab_" .. ageData.Id
-	button.Size = UDim2.new(1, 0, 0, 80)
+	button.Size = UDim2.new(1, 0, 0, 80 * SCALE_FACTOR)  -- Scale the height
 	button.BackgroundColor3 = isSelected and ageData.Color or Color3.fromRGB(40, 40, 45)
 	button.BorderSizePixel = 0
 	button.LayoutOrder = ageData.Id
 	button.AutoButtonColor = false
 	button.Text = "" -- Remove default "Button" text
+	button.ZIndex = 8
 	button.Parent = ageTabsFrame
 
 	local btnCorner = Instance.new("UICorner")
-	btnCorner.CornerRadius = UDim.new(0, 10)
+	btnCorner.CornerRadius = UDim.new(0.125, 0)  -- 10/80 = 0.125
 	btnCorner.Parent = button
+
+	-- Button stroke
+	local btnStroke = Instance.new("UIStroke")
+	btnStroke.Color = Color3.fromRGB(60, 60, 80)
+	btnStroke.Thickness = 1
+	btnStroke.Transparency = 0.6
+	btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	btnStroke.Parent = button
 
 	-- Icon
 	local icon = Instance.new("TextLabel")
-	icon.Size = UDim2.new(0, 40, 0, 40)
-	icon.Position = UDim2.new(0, 10, 0, 10)
+	icon.Size = UDim2.new(0.2, 0, 0.5, 0)  -- 40/200 = 0.2, 40/80 = 0.5
+	icon.Position = UDim2.new(0.05, 0, 0.125, 0)  -- 10/200 = 0.05, 10/80 = 0.125
 	icon.BackgroundTransparency = 1
 	icon.Text = ageData.Icon
 	icon.TextSize = 30
+	icon.TextScaled = true
+	icon.ZIndex = 9
 	icon.Parent = button
+
+	local iconConstraint = Instance.new("UITextSizeConstraint")
+	iconConstraint.MaxTextSize = 30
+	iconConstraint.Parent = icon
 
 	-- Name
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, -60, 0, 25)
-	nameLabel.Position = UDim2.new(0, 55, 0, 8)
+	nameLabel.Size = UDim2.new(0.7, 0, 0.3125, 0)  -- (200-60)/200 = 0.7, 25/80 = 0.3125
+	nameLabel.Position = UDim2.new(0.275, 0, 0.1, 0)  -- 55/200 = 0.275, 8/80 = 0.1
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Text = ageData.Name
 	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	nameLabel.TextSize = 16
 	nameLabel.Font = Enum.Font.GothamBold
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.TextScaled = true
+	nameLabel.ZIndex = 9
 	nameLabel.Parent = button
+
+	local nameConstraint = Instance.new("UITextSizeConstraint")
+	nameConstraint.MaxTextSize = 16
+	nameConstraint.Parent = nameLabel
 
 	-- Description
 	local descLabel = Instance.new("TextLabel")
-	descLabel.Size = UDim2.new(1, -60, 0, 40)
-	descLabel.Position = UDim2.new(0, 55, 0, 35)
+	descLabel.Size = UDim2.new(0.7, 0, 0.5, 0)  -- 40/80 = 0.5
+	descLabel.Position = UDim2.new(0.275, 0, 0.4375, 0)  -- 35/80 = 0.4375
 	descLabel.BackgroundTransparency = 1
 	descLabel.Text = ageData.Description
 	descLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -618,15 +869,21 @@ local function createAgeTab(ageData, completedObjectives)
 	descLabel.TextWrapped = true
 	descLabel.TextXAlignment = Enum.TextXAlignment.Left
 	descLabel.TextYAlignment = Enum.TextYAlignment.Top
+	descLabel.TextScaled = true
+	descLabel.ZIndex = 9
 	descLabel.Parent = button
+
+	local descConstraint = Instance.new("UITextSizeConstraint")
+	descConstraint.MaxTextSize = 11
+	descConstraint.Parent = descLabel
 
 	button.MouseButton1Click:Connect(function()
 		if isUnlocked then
-			SoundManager.ButtonClick()  -- ADD THIS LINE
+			SoundManager.ButtonClick()
 			currentAge = ageData.Id
 			refreshAgeTabsAndTree()
 		else
-			SoundManager.Error()  -- ADD THIS LINE (for locked age)
+			SoundManager.Error()
 		end
 	end)
 
@@ -660,8 +917,6 @@ function refreshAgeTabsAndTree()
 	refreshTree()
 end
 
--- Remove the standalone button creation code and replace with:
-
 -- Make the GUI compatible with the menu system
 local menuObject = Instance.new("BoolValue")
 menuObject.Name = "MenuObject"
@@ -673,8 +928,8 @@ menuObject.Changed:Connect(function()
 	print("ResearchGui MenuObject changed to:", menuObject.Value)  -- DEBUG
 	mainFrame.Visible = menuObject.Value
 	if mainFrame.Visible then
-		-- NEW: Play open sound when opening
 		SoundManager.MenuOpen()
+		updateScaleFactor()  -- Update scale factor when opening
 		refreshAgeTabsAndTree()
 	end
 end)
