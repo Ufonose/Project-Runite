@@ -298,7 +298,7 @@ function module.LOAD(MODULE_INFO)
 	local categoryButtons = {}
 	local categories = {
 		{Name = "Conveyors", Icon = "🚚", Color = Color3.fromRGB(70, 100, 140)},
-		{Name = "Machines", Icon = "⚙️", Color = Color3.fromRGB(3, 71, 3)},
+		{Name = "Machines", Icon = "⚙️", Color = Color3.fromRGB(16, 71, 60)},
 		{Name = "Decor", Icon = "🎨", Color = Color3.fromRGB(140, 100, 70)}
 	}
 
@@ -601,7 +601,7 @@ function module.LOAD(MODULE_INFO)
 		end
 
 		-- Update canvas size
-		itemsScroll.CanvasSize = UDim2.new(0, 0, 0, itemsGrid.AbsoluteContentSize.Y + 20)
+		itemsScroll.CanvasSize = UDim2.new(0, 0, 0, itemsGrid.AbsoluteContentSize.Y + 60)
 	end
 
 	-- Search handlers
