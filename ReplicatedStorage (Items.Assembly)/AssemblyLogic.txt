@@ -58,8 +58,8 @@ local function assembleItem(ITEM)
 	if processedItems[ITEM] then return end
 	processedItems[ITEM] = true
 
-	print("=== ASSEMBLY MACHINE ===")
-	print("Item Name:", ITEM.Name)
+	--print("=== ASSEMBLY MACHINE ===")
+	--print("Item Name:", ITEM.Name)
 
 	-- Get the item model name
 	local itemModelTag = ITEM:FindFirstChild("OreModelName")
@@ -70,22 +70,22 @@ local function assembleItem(ITEM)
 	end
 
 	local itemModelName = itemModelTag.Value
-	print("Item model name:", itemModelName)
+	--print("Item model name:", itemModelName)
 
 	-- Check if it's a plate
 	if not isPlate(itemModelName) then
-		print("Not a plate, passing through")
+		--print("Not a plate, passing through")
 		processedItems[ITEM] = nil
 		return false -- Let it pass through
 	end
 
 	-- Extract the metal type (e.g., "Gold" from "Gold Plate")
 	local metalType = string.gsub(itemModelName, " Plate", "")
-	print("Metal type:", metalType)
+	--print("Metal type:", metalType)
 
 	-- Get current output type from config
 	local outputType = ASSEMBLY_CONFIG.Value
-	print("Output type:", outputType)
+	--print("Output type:", outputType)
 
 	-- Build the output model name (e.g., "Gold Gear")
 	local outputModelName = metalType .. " " .. outputType
@@ -112,7 +112,7 @@ local function assembleItem(ITEM)
 		return true
 	end
 
-	print("Found output model! Creating...")
+	--print("Found output model! Creating...")
 
 	-- Clone the output model
 	local newItem = outputModel:Clone()
@@ -129,7 +129,7 @@ local function assembleItem(ITEM)
 		local cashValue = Instance.new("NumberValue", newItem)
 		cashValue.Name = "Cash"
 		cashValue.Value = ITEM.Cash.Value
-		print("Cash value copied:", cashValue.Value)
+		--print("Cash value copied:", cashValue.Value)
 	end
 
 	-- Copy upgrade tags
@@ -153,7 +153,7 @@ local function assembleItem(ITEM)
 	-- Parent to plot
 	newItem.Parent = ITEM.Parent
 
-	print("Assembly complete! Created:", outputModelName)
+	--print("Assembly complete! Created:", outputModelName)
 
 	-- Clean up tracking after a delay
 	task.delay(0.5, function()
@@ -207,8 +207,8 @@ local function createDisplayOnScreen(screen)
 	local titleLabel = Instance.new("TextLabel")
 	titleLabel.Size = UDim2.new(1, 0, 0.3, 0)
 	titleLabel.BackgroundTransparency = 1
-	titleLabel.Text = "⚙️ ASSEMBLY"
-	titleLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+	titleLabel.Text = "PLATE PROCESSOR"
+	titleLabel.TextColor3 = Color3.fromRGB(207, 207, 207)
 	titleLabel.TextSize = 60
 	titleLabel.Font = Enum.Font.GothamBold
 	titleLabel.Parent = mainFrame
@@ -241,7 +241,7 @@ local function updateDisplay()
 		createDisplayOnScreen(DISPLAY_SCREEN_2)
 	end
 
-	print("Display updated - Current output:", ASSEMBLY_CONFIG.Value)
+	--print("Display updated - Current output:", ASSEMBLY_CONFIG.Value)
 end
 
 -- Update display when config changes
