@@ -1,4 +1,4 @@
--- StarterPlayerScripts/AssemblyGui.txt
+-- StarterPlayerScripts/AssemblyGui (MODERN RESPONSIVE VERSION)
 
 local Players = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
@@ -11,94 +11,177 @@ local configGui = Instance.new("ScreenGui")
 configGui.Name = "AssemblyConfigGui"
 configGui.ResetOnSpawn = false
 configGui.Enabled = false
+configGui.ScreenInsets = Enum.ScreenInsets.None  -- Disable safe insets
 configGui.Parent = playerGui
 
+-- Main frame with responsive sizing
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 450, 0, 480)
-mainFrame.Position = UDim2.new(0.5, -225, 0.5, -240)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
+mainFrame.ZIndex = 10
 mainFrame.Parent = configGui
 
+-- Function to update GUI size based on screen size
+local function updateGuiSize()
+	local viewport = workspace.CurrentCamera.ViewportSize
+	local screenWidth = viewport.X
+
+	-- If screen width is less than 900 pixels (mobile/small tablet), make GUI bigger
+	if screenWidth < 900 then
+		mainFrame.Size = UDim2.new(0.7, 0, 0.7, 0)  -- 90% width, 70% height on mobile
+	else
+		mainFrame.Size = UDim2.new(.4, 0, .4, 0)  -- 35% width, 55% height on desktop
+	end
+end
+
+-- Update on initial load
+updateGuiSize()
+
+-- Update when screen size changes (device rotation, window resize)
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateGuiSize)
+
+-- Aspect ratio constraint
+local aspectRatio = Instance.new("UIAspectRatioConstraint")
+aspectRatio.AspectRatio = 0.95  -- Nearly square
+aspectRatio.DominantAxis = Enum.DominantAxis.Height
+aspectRatio.Parent = mainFrame
+
+-- Blur/Glass effect background
+local blur = Instance.new("Frame")
+blur.Size = UDim2.new(1, 0, 1, 0)
+blur.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+blur.BackgroundTransparency = 0.3
+blur.BorderSizePixel = 0
+blur.ZIndex = 11
+blur.Parent = mainFrame
+
+local blurCorner = Instance.new("UICorner")
+blurCorner.CornerRadius = UDim.new(0, 14)
+blurCorner.Parent = blur
+
+-- Outer glow/shadow
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(60, 60, 80)
+stroke.Thickness = 2
+stroke.Transparency = 0.5
+stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+stroke.Parent = mainFrame
+
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 15)
+corner.CornerRadius = UDim.new(0, 14)
 corner.Parent = mainFrame
 
 -- Title bar
 local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 60)
-titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+titleBar.Size = UDim2.new(1, 0, 0.15, 0)
+titleBar.Position = UDim2.new(0, 0, 0, 0)
+titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+titleBar.BackgroundTransparency = 0.3
 titleBar.BorderSizePixel = 0
+titleBar.ZIndex = 12
 titleBar.Parent = mainFrame
 
 local titleCorner = Instance.new("UICorner")
-titleCorner.CornerRadius = UDim.new(0, 15)
+titleCorner.CornerRadius = UDim.new(0, 14)
 titleCorner.Parent = titleBar
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -60, 1, 0)
-title.Position = UDim2.new(0, 20, 0, 0)
+title.Size = UDim2.new(0.8, 0, 1, 0)
+title.Position = UDim2.new(0.05, 0, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "⚙️ Configure Assembly Machine"
+title.Text = "⚙️ Configure Plate Processor"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextSize = 20
+title.TextScaled = true
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
+title.ZIndex = 13
 title.Parent = titleBar
 
+local titleConstraint = Instance.new("UITextSizeConstraint")
+titleConstraint.MaxTextSize = 20
+titleConstraint.MinTextSize = 12
+titleConstraint.Parent = title
+
 local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 45, 0, 45)
-closeButton.Position = UDim2.new(1, -52, 0, 7.5)
+closeButton.Size = UDim2.new(0.11, 0, 1, 0)
+closeButton.Position = UDim2.new(0.97, 0, 0.15, 0)
+closeButton.AnchorPoint = Vector2.new(1, 0)
 closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeButton.Text = "✕"
+closeButton.Text = "X"
 closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextSize = 24
+closeButton.TextScaled = true
 closeButton.Font = Enum.Font.GothamBold
+closeButton.ZIndex = 13
 closeButton.Parent = titleBar
 
+local closeSizeConstraint = Instance.new("UITextSizeConstraint")
+closeSizeConstraint.MaxTextSize = 24
+closeSizeConstraint.MinTextSize = 8
+closeSizeConstraint.Parent = closeButton
+
+local closeAspect = Instance.new("UIAspectRatioConstraint")
+closeAspect.AspectRatio = 1
+closeAspect.Parent = closeButton
+
 local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 10)
+closeCorner.CornerRadius = UDim.new(0.25, 0)
 closeCorner.Parent = closeButton
 
 -- Description
 local descLabel = Instance.new("TextLabel")
-descLabel.Size = UDim2.new(1, -40, 0, 50)
-descLabel.Position = UDim2.new(0, 20, 0, 75)
+descLabel.Size = UDim2.new(0.9, 0, 0.1, 0)
+descLabel.Position = UDim2.new(0.05, 0, 0.14, 0)
 descLabel.BackgroundTransparency = 1
 descLabel.Text = "Choose what to produce from plates:"
 descLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-descLabel.TextSize = 16
+descLabel.TextScaled = true
 descLabel.Font = Enum.Font.Gotham
 descLabel.TextXAlignment = Enum.TextXAlignment.Left
 descLabel.TextWrapped = true
+descLabel.ZIndex = 12
 descLabel.Parent = mainFrame
+
+local descConstraint = Instance.new("UITextSizeConstraint")
+descConstraint.MaxTextSize = 16
+descConstraint.MinTextSize = 10
+descConstraint.Parent = descLabel
 
 -- Options container
 local optionsFrame = Instance.new("Frame")
-optionsFrame.Size = UDim2.new(1, -40, 0, 210)
-optionsFrame.Position = UDim2.new(0, 20, 0, 135)
+optionsFrame.Size = UDim2.new(0.9, 0, 0.6, 0)
+optionsFrame.Position = UDim2.new(0.05, 0, 0.24, 0)
 optionsFrame.BackgroundTransparency = 1
+optionsFrame.ZIndex = 12
 optionsFrame.Parent = mainFrame
 
 local optionsLayout = Instance.new("UIListLayout")
-optionsLayout.Padding = UDim.new(0, 15)
+optionsLayout.Padding = UDim.new(0.03, 0)
 optionsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 optionsLayout.Parent = optionsFrame
 
 -- Apply button
 local applyButton = Instance.new("TextButton")
-applyButton.Size = UDim2.new(1, -40, 0, 50)
-applyButton.Position = UDim2.new(0, 20, 1, -65)
+applyButton.Size = UDim2.new(0.9, 0, 0.16, 0)
+applyButton.Position = UDim2.new(0.05, 0, 0.82, 0)
 applyButton.BackgroundColor3 = Color3.fromRGB(70, 130, 70)
 applyButton.Text = "✓ Apply Settings"
 applyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-applyButton.TextSize = 18
+applyButton.TextScaled = true
 applyButton.Font = Enum.Font.GothamBold
+applyButton.ZIndex = 13
 applyButton.Parent = mainFrame
 
+local applyTextConstraint = Instance.new("UITextSizeConstraint")
+applyTextConstraint.MaxTextSize = 18
+applyTextConstraint.MinTextSize = 12
+applyTextConstraint.Parent = applyButton
+
 local applyCorner = Instance.new("UICorner")
-applyCorner.CornerRadius = UDim.new(0, 10)
+applyCorner.CornerRadius = UDim.new(0.2, 0)
 applyCorner.Parent = applyButton
 
 -- Current machine reference
@@ -108,20 +191,21 @@ local pendingSelection = nil
 
 -- Output options
 local outputOptions = {
-	{Name = "Gear", Icon = "⚙️", Color = Color3.fromRGB(100, 200, 255)},
-	{Name = "Coil", Icon = "🔄", Color = Color3.fromRGB(255, 200, 100)},
-	{Name = "Pipe", Icon = "🔧", Color = Color3.fromRGB(150, 255, 150)},
+	{Name = "Gear", Icon = "⚙️", Color = Color3.fromRGB(31, 35, 126)},
+	{Name = "Coil", Icon = "🔄", Color = Color3.fromRGB(31, 35, 126)},
+	{Name = "Pipe", Icon = "🔧", Color = Color3.fromRGB(31, 35, 126)},
 }
 
 -- Function to create option button
 local function createOptionButton(optionData)
 	local button = Instance.new("TextButton")
 	button.Name = optionData.Name .. "Button"
-	button.Size = UDim2.new(1, 0, 0, 60)
+	button.Size = UDim2.new(1, 0, 0.28, 0)  -- Takes up about 1/3 of options space
 	button.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 	button.BorderSizePixel = 0
 	button.Text = ""
 	button.LayoutOrder = optionData.LayoutOrder or 1
+	button.ZIndex = 13
 	button.Parent = optionsFrame
 
 	local btnCorner = Instance.new("UICorner")
@@ -130,37 +214,55 @@ local function createOptionButton(optionData)
 
 	-- Icon
 	local icon = Instance.new("TextLabel")
-	icon.Size = UDim2.new(0, 50, 1, 0)
-	icon.Position = UDim2.new(0, 10, 0, 0)
+	icon.Size = UDim2.new(0.15, 0, 0.8, 0)
+	icon.Position = UDim2.new(0.05, 0, 0.1, 0)
 	icon.BackgroundTransparency = 1
 	icon.Text = optionData.Icon
-	icon.TextSize = 35
+	icon.TextScaled = true
+	icon.ZIndex = 14
 	icon.Parent = button
+
+	local iconConstraint = Instance.new("UITextSizeConstraint")
+	iconConstraint.MaxTextSize = 35
+	iconConstraint.MinTextSize = 20
+	iconConstraint.Parent = icon
 
 	-- Name
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, -120, 1, 0)
-	nameLabel.Position = UDim2.new(0, 70, 0, 0)
+	nameLabel.Size = UDim2.new(0.6, 0, 0.8, 0)
+	nameLabel.Position = UDim2.new(0.22, 0, 0.1, 0)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Text = optionData.Name
 	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	nameLabel.TextSize = 22
+	nameLabel.TextScaled = true
 	nameLabel.Font = Enum.Font.GothamBold
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.ZIndex = 14
 	nameLabel.Parent = button
+
+	local nameConstraint = Instance.new("UITextSizeConstraint")
+	nameConstraint.MaxTextSize = 22
+	nameConstraint.MinTextSize = 14
+	nameConstraint.Parent = nameLabel
 
 	-- Selected indicator
 	local selectedIcon = Instance.new("TextLabel")
 	selectedIcon.Name = "SelectedIcon"
-	selectedIcon.Size = UDim2.new(0, 40, 0, 40)
-	selectedIcon.Position = UDim2.new(1, -50, 0.5, -20)
+	selectedIcon.Size = UDim2.new(0.12, 0, 0.6, 0)
+	selectedIcon.Position = UDim2.new(0.86, 0, 0.2, 0)
 	selectedIcon.BackgroundTransparency = 1
 	selectedIcon.Text = "✓"
 	selectedIcon.TextColor3 = Color3.fromRGB(100, 255, 100)
-	selectedIcon.TextSize = 30
+	selectedIcon.TextScaled = true
 	selectedIcon.Font = Enum.Font.GothamBold
 	selectedIcon.Visible = false
+	selectedIcon.ZIndex = 14
 	selectedIcon.Parent = button
+
+	local selectedConstraint = Instance.new("UITextSizeConstraint")
+	selectedConstraint.MaxTextSize = 30
+	selectedConstraint.MinTextSize = 18
+	selectedConstraint.Parent = selectedIcon
 
 	-- Click handler - just update UI, don't save yet
 	button.MouseButton1Click:Connect(function()
