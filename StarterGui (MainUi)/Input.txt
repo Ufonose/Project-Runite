@@ -99,6 +99,16 @@ function module.LOAD(MODULE_INFO)
 					module.TAP_ACTIVE = true
 					module.TAP_POSITION = module.TOUCH_POSITION
 
+					-- If we're placing items, also set MOUSE_DOWN to trigger placement
+					if PLACEMENT.PLACING_ITEMS then
+						module.MOUSE_DOWN = true
+						-- Clear MOUSE_DOWN quickly after placement is triggered
+						task.spawn(function()
+							task.wait(0.1)
+							module.MOUSE_DOWN = false
+						end)
+					end
+
 					-- Clear tap flag after a short delay (but position stays)
 					task.spawn(function()
 						task.wait(0.2)
