@@ -3,7 +3,7 @@
 local RepStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ITEM_INFO = require(script.Parent.ItemStats)
-local PLOT = script.Parent.Parent.Parent.Parent
+local PLOT = script.Parent.Parent.Parent
 
 local SORTER = script.Parent
 local SORT_DETECTOR = SORTER:WaitForChild("SortDetector")
@@ -101,7 +101,7 @@ SORT_DETECTOR.Touched:Connect(function(hit)
 			showedMessage = false
 		}
 
-		print("Ore entered sorter:", oreModelName, "->", direction)
+		--print("Ore entered sorter:", oreModelName, "->", direction)
 	end
 end)
 
@@ -129,26 +129,7 @@ RunService.Heartbeat:Connect(function()
 			-- Keep moving if still on sorter
 		elseif isOreOnSorter(ore) then
 			local velocity = getSortVelocity(data.direction)
-			ore.AssemblyLinearVelocity = velocity
-
-			-- Show visual feedback once
-			if not data.showedMessage then
-				data.showedMessage = true
-
-				local plotOwner = game.Players:FindFirstChild(PLOT.Owner.Value)
-				if plotOwner then
-					RepStorage.Events.MessageClient:FireClient(
-						plotOwner,
-						"visual",
-						{
-							["visual_part"] = SORT_DETECTOR,
-							["message"] = data.direction == "Straight" and "↑" or (data.direction == "Left" and "←" or "→"),
-							["message_color"] = data.direction == "Straight" and Color3.fromRGB(200, 200, 200) or (data.direction == "Left" and Color3.fromRGB(255, 150, 150) or Color3.fromRGB(150, 150, 255)),
-							["message_time"] = 0.5
-						}
-					)
-				end
-			end
+			ore.AssemblyLinearVelocity = velocity			
 		else
 			-- Ore left the sorter
 			trackedOres[ore] = nil
@@ -208,7 +189,7 @@ local function updateDisplay()
 	local titleLabel = Instance.new("TextLabel")
 	titleLabel.Size = UDim2.new(1, 0, 1, 0)
 	titleLabel.BackgroundTransparency = 1
-	titleLabel.Text = "📦 SORTER CONFIG"
+	titleLabel.Text = "ITEM SORTER CONFIGURATION"
 	titleLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
 	titleLabel.TextSize = 8
 	titleLabel.Font = Enum.Font.GothamBold
@@ -369,15 +350,15 @@ local function updateDisplay()
 	leftScroll.CanvasSize = UDim2.new(0, 0, 0, leftLayout.AbsoluteContentSize.Y + 10)
 	rightScroll.CanvasSize = UDim2.new(0, 0, 0, rightLayout.AbsoluteContentSize.Y + 10)
 
-	print("=== SCREEN UPDATE (TWO COLUMN) ===")
-	print("Left items:", #leftItems, "| Right items:", #rightItems)
+	-- Update display--print("=== SCREEN UPDATE (TWO COLUMN) ===")
+	--print("Left items:", #leftItems, "| Right items:", #rightItems)
 end
 
 -- FIX: Connect the Changed event to newly added configs
 local function connectConfigChanged(config)
 	if config:IsA("StringValue") then
 		config.Changed:Connect(function()
-			print("Config changed:", config.Name, "->", config.Value)
+			--print("Config changed:", config.Name, "->", config.Value)
 			updateDisplay()
 		end)
 	end
