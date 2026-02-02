@@ -1,4 +1,4 @@
--- StarterPlayerScripts/SorterGui (COMPACT VERSION)
+-- StarterPlayerScripts/SorterGui (MODERN RESPONSIVE VERSION)
 
 local Players = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
@@ -10,66 +10,137 @@ local configGui = Instance.new("ScreenGui")
 configGui.Name = "SorterConfigGui"
 configGui.ResetOnSpawn = false
 configGui.Enabled = false
+configGui.ScreenInsets = Enum.ScreenInsets.None  -- Disable safe insets
 configGui.Parent = playerGui
 
+-- Main frame with responsive sizing
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 500, 0, 600)
-mainFrame.Position = UDim2.new(0.5, -250, 0.5, -300)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
+mainFrame.ZIndex = 10
 mainFrame.Parent = configGui
 
+-- Function to update GUI size based on screen size
+local function updateGuiSize()
+	local viewport = workspace.CurrentCamera.ViewportSize
+	local screenWidth = viewport.X
+
+	-- If screen width is less than 900 pixels (mobile/small tablet), make GUI bigger
+	if screenWidth < 900 then
+		mainFrame.Size = UDim2.new(.9, 0, .9, 0)  -- 90% width, 80% height on mobile
+	else
+		mainFrame.Size = UDim2.new(0.4, 0, 0.65, 0)  -- 40% width, 65% height on desktop
+	end
+end
+
+-- Update on initial load
+updateGuiSize()
+
+-- Update when screen size changes (device rotation, window resize)
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateGuiSize)
+
+-- Aspect ratio constraint
+local aspectRatio = Instance.new("UIAspectRatioConstraint")
+aspectRatio.AspectRatio = 0.85  -- Slightly wider than tall
+aspectRatio.DominantAxis = Enum.DominantAxis.Height
+aspectRatio.Parent = mainFrame
+
+-- Blur/Glass effect background
+local blur = Instance.new("Frame")
+blur.Size = UDim2.new(1, 0, 1, 0)
+blur.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+blur.BackgroundTransparency = 0.3
+blur.BorderSizePixel = 0
+blur.ZIndex = 11
+blur.Parent = mainFrame
+
+local blurCorner = Instance.new("UICorner")
+blurCorner.CornerRadius = UDim.new(0, 14)
+blurCorner.Parent = blur
+
+-- Outer glow/shadow
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(60, 60, 80)
+stroke.Thickness = 2
+stroke.Transparency = 0.5
+stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+stroke.Parent = mainFrame
+
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 15)
+corner.CornerRadius = UDim.new(0, 14)
 corner.Parent = mainFrame
 
 -- Title bar
 local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 60)
-titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+titleBar.Size = UDim2.new(1, 0, 0.1, 0)
+titleBar.Position = UDim2.new(0, 0, 0, 0)
+titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+titleBar.BackgroundTransparency = 0.3
 titleBar.BorderSizePixel = 0
+titleBar.ZIndex = 12
 titleBar.Parent = mainFrame
 
 local titleCorner = Instance.new("UICorner")
-titleCorner.CornerRadius = UDim.new(0, 15)
+titleCorner.CornerRadius = UDim.new(0, 14)
 titleCorner.Parent = titleBar
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -60, 1, 0)
-title.Position = UDim2.new(0, 20, 0, 0)
+title.Size = UDim2.new(0.8, 0, 1, 0)
+title.Position = UDim2.new(0.05, 0, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "⚙️ Configure Sorter"
+title.Text = "⚙️ Configure Item Sorter"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextSize = 24
+title.TextScaled = true
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
+title.ZIndex = 13
 title.Parent = titleBar
 
+local titleConstraint = Instance.new("UITextSizeConstraint")
+titleConstraint.MaxTextSize = 24
+titleConstraint.MinTextSize = 14
+titleConstraint.Parent = title
+
 local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 45, 0, 45)
-closeButton.Position = UDim2.new(1, -52, 0, 7.5)
+closeButton.Size = UDim2.new(0.15, 0, 0.65, 0)
+closeButton.Position = UDim2.new(0.97, 0, 0.175, 0)
+closeButton.AnchorPoint = Vector2.new(1, 0)
 closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeButton.Text = "X"
 closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextSize = 22
+closeButton.TextScaled = true
 closeButton.Font = Enum.Font.GothamBold
+closeButton.ZIndex = 13
 closeButton.Parent = titleBar
 
+local closeSizeConstraint = Instance.new("UITextSizeConstraint")
+closeSizeConstraint.MaxTextSize = 24
+closeSizeConstraint.MinTextSize = 8
+closeSizeConstraint.Parent = closeButton
+
+local closeAspect = Instance.new("UIAspectRatioConstraint")
+closeAspect.AspectRatio = 1
+closeAspect.Parent = closeButton
+
 local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 10)
+closeCorner.CornerRadius = UDim.new(0.25, 0)
 closeCorner.Parent = closeButton
 
--- Category filter buttons
+-- Category filter buttons container
 local categoryFrame = Instance.new("Frame")
-categoryFrame.Size = UDim2.new(1, -40, 0, 40)
-categoryFrame.Position = UDim2.new(0, 20, 0, 75)
+categoryFrame.Size = UDim2.new(0.92, 0, 0.06, 0)
+categoryFrame.Position = UDim2.new(0.04, 0, 0.12, 0)
 categoryFrame.BackgroundTransparency = 1
+categoryFrame.ZIndex = 12
 categoryFrame.Parent = mainFrame
 
 local categoryLayout = Instance.new("UIListLayout")
 categoryLayout.FillDirection = Enum.FillDirection.Horizontal
-categoryLayout.Padding = UDim.new(0, 6)
+categoryLayout.Padding = UDim.new(0.01, 0)
 categoryLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 categoryLayout.Parent = categoryFrame
 
@@ -78,16 +149,22 @@ local currentFilter = "All"
 local function createCategoryButton(categoryName)
 	local button = Instance.new("TextButton")
 	button.Name = categoryName .. "Button"
-	button.Size = UDim2.new(0, 65, 0, 35)  -- Reduced from 80 to 65
-	button.BackgroundColor3 = categoryName == "All" and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(45, 45, 50)
+	button.Size = UDim2.new(0.15, 0, 0.9, 0)
+	button.BackgroundColor3 = categoryName == "All" and Color3.fromRGB(100, 70, 140) or Color3.fromRGB(40, 40, 45)
 	button.Text = categoryName
 	button.TextColor3 = Color3.fromRGB(255, 255, 255)
-	button.TextSize = 14  -- Reduced from 13 to 12
+	button.TextScaled = true
 	button.Font = Enum.Font.GothamBold
+	button.ZIndex = 13
 	button.Parent = categoryFrame
 
+	local textConstraint = Instance.new("UITextSizeConstraint")
+	textConstraint.MaxTextSize = 14
+	textConstraint.MinTextSize = 8
+	textConstraint.Parent = button
+
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
+	corner.CornerRadius = UDim.new(0.2, 0)
 	corner.Parent = button
 
 	return button
@@ -103,43 +180,58 @@ end
 
 -- Scroll frame for ore list
 local scrollFrame = Instance.new("ScrollingFrame")
-scrollFrame.Size = UDim2.new(1, -40, 1, -185)
-scrollFrame.Position = UDim2.new(0, 20, 0, 125)
-scrollFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+scrollFrame.Size = UDim2.new(0.92, 0, 0.7, 0)
+scrollFrame.Position = UDim2.new(0.04, 0, 0.19, 0)
+scrollFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+scrollFrame.BackgroundTransparency = 0.3
 scrollFrame.BorderSizePixel = 0
 scrollFrame.ScrollBarThickness = 10
 scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 105)
+scrollFrame.ZIndex = 12
 scrollFrame.Parent = mainFrame
 
 local scrollCorner = Instance.new("UICorner")
 scrollCorner.CornerRadius = UDim.new(0, 12)
 scrollCorner.Parent = scrollFrame
 
+local scrollStroke = Instance.new("UIStroke")
+scrollStroke.Color = Color3.fromRGB(60, 60, 80)
+scrollStroke.Thickness = 1
+scrollStroke.Transparency = 0.6
+scrollStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+scrollStroke.Parent = scrollFrame
+
 local listLayout = Instance.new("UIListLayout")
-listLayout.Padding = UDim.new(0, 5)
+listLayout.Padding = UDim.new(0.01, 0)
 listLayout.SortOrder = Enum.SortOrder.Name
 listLayout.Parent = scrollFrame
 
 local listPadding = Instance.new("UIPadding")
-listPadding.PaddingTop = UDim.new(0, 10)
-listPadding.PaddingBottom = UDim.new(0, 10)
-listPadding.PaddingLeft = UDim.new(0, 10)
-listPadding.PaddingRight = UDim.new(0, 10)
+listPadding.PaddingTop = UDim.new(0.02, 0)
+listPadding.PaddingBottom = UDim.new(0.02, 0)
+listPadding.PaddingLeft = UDim.new(0.02, 0)
+listPadding.PaddingRight = UDim.new(0.02, 0)
 listPadding.Parent = scrollFrame
 
 -- Apply button
 local applyButton = Instance.new("TextButton")
-applyButton.Size = UDim2.new(1, -40, 0, 45)
-applyButton.Position = UDim2.new(0, 20, 1, -60)
+applyButton.Size = UDim2.new(0.92, 0, 0.08, 0)
+applyButton.Position = UDim2.new(0.04, 0, 0.91, 0)
 applyButton.BackgroundColor3 = Color3.fromRGB(70, 130, 70)
 applyButton.Text = "✓ Apply Settings"
 applyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-applyButton.TextSize = 18
+applyButton.TextScaled = true
 applyButton.Font = Enum.Font.GothamBold
+applyButton.ZIndex = 13
 applyButton.Parent = mainFrame
 
+local applyTextConstraint = Instance.new("UITextSizeConstraint")
+applyTextConstraint.MaxTextSize = 18
+applyTextConstraint.MinTextSize = 10
+applyTextConstraint.Parent = applyButton
+
 local applyCorner = Instance.new("UICorner")
-applyCorner.CornerRadius = UDim.new(0, 10)
+applyCorner.CornerRadius = UDim.new(0.2, 0)
 applyCorner.Parent = applyButton
 
 -- Current sorter reference
@@ -171,7 +263,7 @@ local function filterByCategory(category)
 
 	-- Update button colors
 	for catName, btn in pairs(categoryButtons) do
-		btn.BackgroundColor3 = catName == category and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(45, 45, 50)
+		btn.BackgroundColor3 = catName == category and Color3.fromRGB(100, 70, 140) or Color3.fromRGB(40, 40, 45)
 	end
 
 	-- Show/hide rows based on filter
@@ -183,7 +275,8 @@ local function filterByCategory(category)
 	end
 
 	-- Update canvas size
-	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 30)
+	task.wait(0.05)  -- Small delay for layout to update
+	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 20)
 end
 
 -- Connect category button clicks
@@ -193,51 +286,64 @@ for category, btn in pairs(categoryButtons) do
 	end)
 end
 
--- Function to create ore config row (COMPACT VERSION)
+-- Function to create ore config row (MODERN RESPONSIVE VERSION)
 local function createOreRow(oreName, currentDirection)
 	local row = Instance.new("Frame")
 	row.Name = oreName
-	row.Size = UDim2.new(1, -20, 0, 45)  -- Reduced from 70 to 45
+	row.Size = UDim2.new(1, -10, 0, 45)  -- Fixed height for consistency
 	row.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 	row.BorderSizePixel = 0
+	row.ZIndex = 13
 	row.Parent = scrollFrame
 
 	local rowCorner = Instance.new("UICorner")
 	rowCorner.CornerRadius = UDim.new(0, 8)
 	rowCorner.Parent = row
 
-	-- Ore name label (more compact)
+	-- Ore name label
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(0.48, -5, 1, 0)  -- Increased from 0.38 to 0.48
-	nameLabel.Position = UDim2.new(0, 8, 0, 0)
+	nameLabel.Size = UDim2.new(0.45, 0, 1, 0)
+	nameLabel.Position = UDim2.new(0.02, 0, 0, 0)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Text = oreName:gsub("OreModel", ""):gsub("_", " ")
 	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	nameLabel.TextSize = 18  -- Reduced from 16
+	nameLabel.TextScaled = true
 	nameLabel.Font = Enum.Font.GothamBold
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+	nameLabel.ZIndex = 14
 	nameLabel.Parent = row
 
-	-- Direction buttons (narrower)
+	local nameConstraint = Instance.new("UITextSizeConstraint")
+	nameConstraint.MaxTextSize = 18
+	nameConstraint.MinTextSize = 10
+	nameConstraint.Parent = nameLabel
+
+	-- Direction buttons
 	local directions = {"Left", "Straight", "Right"}
-	local buttonWidth = 0.14  -- Reduced from 0.18 to 0.14
-	local startX = 0.50  -- Adjusted from 0.42 to 0.50
+	local buttonWidth = 0.15
+	local startX = 0.50
 
 	for i, direction in ipairs(directions) do
 		local button = Instance.new("TextButton")
 		button.Name = direction .. "Button"
-		button.Size = UDim2.new(buttonWidth, -5, 0, 35)  -- Reduced from 50 to 35
-		button.Position = UDim2.new(startX + (i-1) * (buttonWidth + 0.02), 0, 0, 5)
-		button.BackgroundColor3 = currentDirection == direction and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(50, 50, 55)
+		button.Size = UDim2.new(buttonWidth, 0, 0.75, 0)
+		button.Position = UDim2.new(startX + (i-1) * (buttonWidth + 0.02), 0, 0.125, 0)
+		button.BackgroundColor3 = currentDirection == direction and Color3.fromRGB(100, 150, 255) or Color3.fromRGB(50, 50, 55)
 		button.Text = direction == "Left" and "←" or (direction == "Right" and "→" or "↑")
 		button.TextColor3 = Color3.fromRGB(255, 255, 255)
-		button.TextSize = 20  -- Reduced from 24
+		button.TextScaled = true
 		button.Font = Enum.Font.GothamBold
+		button.ZIndex = 14
 		button.Parent = row
 
+		local btnTextConstraint = Instance.new("UITextSizeConstraint")
+		btnTextConstraint.MaxTextSize = 20
+		btnTextConstraint.MinTextSize = 12
+		btnTextConstraint.Parent = button
+
 		local btnCorner = Instance.new("UICorner")
-		btnCorner.CornerRadius = UDim.new(0, 6)
+		btnCorner.CornerRadius = UDim.new(0.2, 0)
 		btnCorner.Parent = button
 
 		button.MouseButton1Click:Connect(function()
@@ -245,7 +351,7 @@ local function createOreRow(oreName, currentDirection)
 			for _, dir in ipairs(directions) do
 				local btn = row:FindFirstChild(dir .. "Button")
 				if btn then
-					btn.BackgroundColor3 = dir == direction and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(50, 50, 55)
+					btn.BackgroundColor3 = dir == direction and Color3.fromRGB(100, 150, 255) or Color3.fromRGB(50, 50, 55)
 				end
 			end
 
@@ -312,7 +418,7 @@ closeButton.MouseButton1Click:Connect(function()
 	configGui.Enabled = false
 	currentSorter = nil
 	pendingChanges = {}
-	filterByCategory("All")  -- Reset filter
+	filterByCategory("All")
 end)
 
 -- Apply button
@@ -324,7 +430,7 @@ applyButton.MouseButton1Click:Connect(function()
 		configGui.Enabled = false
 		currentSorter = nil
 		pendingChanges = {}
-		filterByCategory("All")  -- Reset filter
+		filterByCategory("All")
 	end
 end)
 
