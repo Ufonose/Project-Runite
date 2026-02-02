@@ -250,9 +250,9 @@ function module.LOAD(MODULE_INFO)
 
 					-- Show expanded or compact view based on whether we have drop data
 					if showDropTable then
-						ITEM_HOVER.ModernHover.ShowExpanded(dropTableText)
+						ITEM_HOVER.ModernHover.ShowExpanded(dropTableText,true)
 					else
-						ITEM_HOVER.ModernHover.ShowCompact()
+						ITEM_HOVER.ModernHover.ShowCompact(true)
 					end
 
 					ITEM_HOVER.ModernHover.Show()
