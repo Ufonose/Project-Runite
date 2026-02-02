@@ -4,35 +4,154 @@ function module.LOAD(MODULE_INFO)
 	-- Basic Needs
 	local MODULES = MODULE_INFO["MODULES"]
 	local SERVICES = MODULE_INFO["SERVICES"]
+
 	-- Services
 	local RepStorage = SERVICES["ReplicatedStorage"]
 	local Plrs = SERVICES["Players"]
+	local TweenService = SERVICES["TweenService"]
+
 	-- Modules
 	local CashLib = MODULES["CashLib"]
 	local Main = MODULES["Main"]
+
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
-	local Mouse = Plr:GetMouse()
-	-- Variables
-		-- Booleans
-	local DB = true
+	local PlayerGui = Plr:WaitForChild("PlayerGui")
 
+	-- Clear existing CurrencyBar if it exists
+	if PlayerGui:FindFirstChild("CurrencyBar") then
+		PlayerGui.CurrencyBar:Destroy()
+	end
+
+	-- Create ScreenGui
+	local CurrencyBar = Instance.new("ScreenGui")
+	CurrencyBar.Name = "CurrencyBar"
+	CurrencyBar.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	CurrencyBar.ResetOnSpawn = false
+	CurrencyBar.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+	CurrencyBar.Parent = PlayerGui
+
+	-- Create Main Container
+	local MainContainer = Instance.new("Frame")
+	MainContainer.Name = "MainContainer"
+	MainContainer.Size = UDim2.new(0.1, 0, 0.03, 0)
+	MainContainer.Position = UDim2.new(0.5, 0, 0.01, 0)
+	MainContainer.AnchorPoint = Vector2.new(0.5, 0)
+	MainContainer.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	MainContainer.BackgroundTransparency = 0.2
+	MainContainer.BorderSizePixel = 0
+	MainContainer.AutomaticSize = Enum.AutomaticSize.X
+	MainContainer.Parent = CurrencyBar
+
+	local MainCorner = Instance.new("UICorner")
+	MainCorner.CornerRadius = UDim.new(0.35, 0)
+	MainCorner.Parent = MainContainer
+
+	local MainStroke = Instance.new("UIStroke")
+	MainStroke.Color = Color3.fromRGB(40, 40, 50)
+	MainStroke.Transparency = 0.5
+	MainStroke.Thickness = 2
+	MainStroke.Parent = MainContainer
+
+	-- Container padding
+	local ContainerPadding = Instance.new("UIPadding")
+	ContainerPadding.PaddingLeft = UDim.new(0.01, 0)
+	ContainerPadding.PaddingRight = UDim.new(0.01, 0)
+	ContainerPadding.PaddingTop = UDim.new(0.15, 0)
+	ContainerPadding.PaddingBottom = UDim.new(0.15, 0)
+	ContainerPadding.Parent = MainContainer
+
+	-- List layout
+	local ListLayout = Instance.new("UIListLayout")
+	ListLayout.FillDirection = Enum.FillDirection.Horizontal
+	ListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	ListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	ListLayout.Padding = UDim.new(0.03, 0)
+	ListLayout.Parent = MainContainer
+
+	-- Function to create currency item
+	local function createCurrencyItem(name, iconId, textColor)
+		local Container = Instance.new("Frame")
+		Container.Name = name
+		Container.Size = UDim2.new(0, 0, 1, 0)
+		Container.BackgroundTransparency = 1
+		Container.AutomaticSize = Enum.AutomaticSize.X
+		Container.Parent = MainContainer
+
+		local ItemLayout = Instance.new("UIListLayout")
+		ItemLayout.FillDirection = Enum.FillDirection.Horizontal
+		ItemLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+		ItemLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+		ItemLayout.Padding = UDim.new(0.015, 0)
+		ItemLayout.Parent = Container
+
+		-- Icon
+		local Icon = Instance.new("ImageLabel")
+		Icon.Name = "Icon"
+		Icon.Size = UDim2.new(0.8, 0, 0.8, 0)
+		Icon.SizeConstraint = Enum.SizeConstraint.RelativeYY
+		Icon.BackgroundTransparency = 1
+		Icon.Image = iconId
+		Icon.ScaleType = Enum.ScaleType.Fit
+		Icon.Parent = Container
+
+		-- Amount text
+		local Amount = Instance.new("TextLabel")
+		Amount.Name = "Amount"
+		Amount.Size = UDim2.new(0, 0, 1, 0)
+		Amount.BackgroundTransparency = 1
+		Amount.Font = Enum.Font.GothamBold
+		Amount.Text = "0"
+		Amount.TextColor3 = textColor
+		Amount.TextScaled = true
+		Amount.TextXAlignment = Enum.TextXAlignment.Left
+		Amount.AutomaticSize = Enum.AutomaticSize.X
+		Amount.Parent = Container
+
+		-- Text size constraint
+		local TextSizeConstraint = Instance.new("UITextSizeConstraint")
+		TextSizeConstraint.MaxTextSize = 32
+		TextSizeConstraint.MinTextSize = 4
+		TextSizeConstraint.Parent = Amount
+
+		-- Add text stroke for better visibility
+		local TextStroke = Instance.new("UIStroke")
+		TextStroke.Color = Color3.fromRGB(0, 0, 0)
+		TextStroke.Thickness = 1.5
+		TextStroke.Transparency = 0.5
+		TextStroke.Parent = Amount
+
+		return Container
+	end
+
+	-- Create currency displays
+	local CashDisplay = createCurrencyItem("Cash", "rbxassetid://108344576813204", Color3.fromRGB(85, 255, 127))
+	local ResearchDisplay = createCurrencyItem("ResearchTokens", "rbxassetid://78275915130351", Color3.fromRGB(138, 180, 255))
+
+	-- Cash Setup
 	Plr:WaitForChild("leaderstats")
 	Plr.leaderstats:WaitForChild("Cash")
-	Plr.leaderstats.Cash.Changed:Connect(function()
-		script.Parent.Currency.Cash.Title.Text = Plr.leaderstats.Cash.Value
-	end)
-	script.Parent.Currency.Cash.Title.Text = Plr.leaderstats.Cash.Value
 
-	Plr.Citrine.Changed:Connect(function()
-		script.Parent.Currency.Citrine.Title.Text = CashLib.SUFFIX_NUM(Plr.Citrine.Value)
+	local function updateCash()
+		CashDisplay.Amount.Text = tostring(Plr.leaderstats.Cash.Value)
+	end
+
+	Plr.leaderstats.Cash.Changed:Connect(function()
+		updateCash()
 	end)
-	script.Parent.Currency.Citrine.Title.Text = CashLib.SUFFIX_NUM(Plr.Citrine.Value)
-	
-	Plr.KnowledgePoints.Changed:Connect(function()
-		script.Parent.Currency.KnowledgePoints.Title.Text = CashLib.SUFFIX_NUM(Plr.KnowledgePoints.Value)
+	updateCash()
+
+	-- Research Tokens Setup
+	Plr:WaitForChild("ResearchTokens")
+
+	local function updateResearch()
+		ResearchDisplay.Amount.Text = CashLib.SUFFIX_NUM(Plr.ResearchTokens.Value) .. " RT"
+	end
+
+	Plr.ResearchTokens.Changed:Connect(function()
+		updateResearch()
 	end)
-	script.Parent.Currency.KnowledgePoints.Title.Text = CashLib.SUFFIX_NUM(Plr.KnowledgePoints.Value)
+	updateResearch()
 end
 
 return module
