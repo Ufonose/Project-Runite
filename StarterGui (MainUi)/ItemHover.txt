@@ -76,7 +76,7 @@ function module.LOAD(MODULE_INFO)
 
 				if onScreen then
 					local tooltipX = screenPos.X - modernHover.Container.AbsoluteSize.X/2
-					local tooltipY = screenPos.Y - modernHover.Container.AbsoluteSize.Y - 5
+					local tooltipY = screenPos.Y - modernHover.Container.AbsoluteSize.Y + 100
 					modernHover.Container.Position = UDim2.new(0, tooltipX, 0, tooltipY)
 				end
 				return -- Don't use mouse positioning
