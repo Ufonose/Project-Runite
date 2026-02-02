@@ -24,14 +24,55 @@ function module.LOAD(MODULE_INFO)
 	-- Booleans
 	local DB = true
 	module.MOUSE_DOWN = false
+	-- NEW: Track touch position for mobile AND track if actively touching
+	module.TOUCH_POSITION = nil
+	module.IS_TOUCHING = false
+	module.IS_MOBILE = InputService.TouchEnabled and not InputService.KeyboardEnabled
+	-- NEW: Track touch movement to detect swipe vs tap
+	local touchStartPosition = nil
+	local touchStartTime = 0
+	local SWIPE_THRESHOLD = 10  -- pixels moved before considered a swipe
+	-- NEW: Simple tap tracking - tap stays active for a short time
+	module.TAP_ACTIVE = false
+	module.TAP_POSITION = nil
 
 	InputService.InputBegan:Connect(function(KEY_INPUT, PROCESSED)
 		if PROCESSED then
 			return false
 		end
-		-- Safer Mouse Input Detection
+		-- Detect Mouse Click
 		if KEY_INPUT.UserInputType == Enum.UserInputType.MouseButton1 then
 			module.MOUSE_DOWN = true
+		end
+		-- Detect Touch Input and store position
+		if KEY_INPUT.UserInputType == Enum.UserInputType.Touch then
+			-- Store initial touch position to detect swipes
+			touchStartPosition = KEY_INPUT.Position
+			touchStartTime = tick()
+			module.TOUCH_POSITION = KEY_INPUT.Position
+			module.IS_TOUCHING = true
+		end
+	end)
+
+	-- NEW: Track touch movement to detect swipe vs tap
+	InputService.InputChanged:Connect(function(KEY_INPUT, PROCESSED)
+		if PROCESSED then
+			return
+		end
+		-- Update touch position while moving finger
+		if KEY_INPUT.UserInputType == Enum.UserInputType.Touch and module.IS_TOUCHING then
+			module.TOUCH_POSITION = KEY_INPUT.Position
+
+			-- Check if finger moved significantly (swipe)
+			if touchStartPosition then
+				local movementDistance = (KEY_INPUT.Position - touchStartPosition).Magnitude
+
+				-- If moved more than threshold, it's a swipe (camera movement)
+				if movementDistance > SWIPE_THRESHOLD then
+					module.MOUSE_DOWN = false  -- NOT a tap, it's a swipe
+					touchStartPosition = nil  -- Clear start position
+				end
+			end
 		end
 	end)
 
@@ -39,9 +80,37 @@ function module.LOAD(MODULE_INFO)
 		if PROCESSED then
 			return false
 		end
-		-- Safer Mouse Input Detection
+		-- Detect Mouse Release
 		if KEY_INPUT.UserInputType == Enum.UserInputType.MouseButton1 then
 			module.MOUSE_DOWN = false
+		end
+		-- Detect Touch End
+		if KEY_INPUT.UserInputType == Enum.UserInputType.Touch then
+			local currentTime = tick()
+
+			-- Check if it was a tap (minimal movement and quick)
+			if touchStartPosition and module.TOUCH_POSITION then
+				local movementDistance = (module.TOUCH_POSITION - touchStartPosition).Magnitude
+				local touchDuration = currentTime - touchStartTime
+
+				-- If movement was small and quick, it's a TAP
+				if movementDistance <= SWIPE_THRESHOLD and touchDuration < 0.5 then
+					-- TAP detected - save position and activate flag
+					module.TAP_ACTIVE = true
+					module.TAP_POSITION = module.TOUCH_POSITION
+
+					-- Clear tap flag after a short delay (but position stays)
+					task.spawn(function()
+						task.wait(0.2)
+						module.TAP_ACTIVE = false
+					end)
+				end
+			end
+
+			-- Clear touch data
+			module.TOUCH_POSITION = nil
+			module.IS_TOUCHING = false
+			touchStartPosition = nil
 		end
 		-- Regular Input
 		if KEY_INPUT.KeyCode == Enum.KeyCode.R then
@@ -52,25 +121,17 @@ function module.LOAD(MODULE_INFO)
 				ItemSelection.MOVE_ITEMS()
 			end
 		elseif KEY_INPUT.KeyCode == Enum.KeyCode.F then
-			print("F key pressed! PLACING_ITEMS:", PLACEMENT.PLACING_ITEMS)
 			if PLACEMENT.PLACING_ITEMS then
-				print("Attempting to flip conveyor...")
 				if PLACEMENT.FLIP_CONVEYOR_DIRECTION then
 					PLACEMENT.FLIP_CONVEYOR_DIRECTION()
-					print("Flip function called!")
-				else
-					warn("FLIP_CONVEYOR_DIRECTION function not found!")
 				end
 			elseif not PLACEMENT.PLACING_ITEMS then
-				print("Opening shop instead...")
 				Main.OPEN_MENU(script.Parent.Parent.Shop)
 			end
 		elseif KEY_INPUT.KeyCode == Enum.KeyCode.T then
 			if not PLACEMENT.PLACING_ITEMS and not module.SELECTING_ITEMS then
 				if ResearchGui then
 					Main.OPEN_MENU(ResearchGui)
-				else
-					warn("ResearchGui not found!")
 				end
 			end
 		elseif KEY_INPUT.KeyCode == Enum.KeyCode.Q then
@@ -128,12 +189,8 @@ function module.LOAD(MODULE_INFO)
 		-- Flip button (F key)
 		modernMenu.FlipButton.MouseButton1Click:Connect(function()
 			if PLACEMENT.PLACING_ITEMS then
-				print("Flip button clicked! Attempting to flip conveyor...")
 				if PLACEMENT.FLIP_CONVEYOR_DIRECTION then
 					PLACEMENT.FLIP_CONVEYOR_DIRECTION()
-					print("Flip function called!")
-				else
-					warn("FLIP_CONVEYOR_DIRECTION function not found!")
 				end
 			end
 		end)
@@ -144,10 +201,6 @@ function module.LOAD(MODULE_INFO)
 				PLACEMENT.DESTROY_PLACING()
 			end
 		end)
-
-		print("Modern Placement Menu buttons connected!")
-	else
-		warn("ModernMenu not found in PlacementMenu!")
 	end
 end
 
