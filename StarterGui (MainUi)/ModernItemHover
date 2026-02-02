@@ -1,26 +1,46 @@
 local module = {}
 
 function module.CREATE_MODERN_HOVER_UI(parent)
-	-- Main container - compact tooltip
+	local Camera = workspace.CurrentCamera
+
+	-- Main container - compact tooltip with responsive sizing
 	local container = Instance.new("Frame")
 	container.Name = "ModernHover"
-	container.Size = UDim2.new(0, 250, 0, 80)
 	container.Position = UDim2.new(0, 0, 0, 0)
 	container.AnchorPoint = Vector2.new(0, 0)
 	container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-	container.BackgroundTransparency = 0.05  -- Changed from 0.1 to 0.05 (less transparent)
+	container.BackgroundTransparency = 0.05
 	container.BorderSizePixel = 0
 	container.Visible = false
-	container.ZIndex = 5
+	container.ZIndex = 9
 	container.Parent = parent
+
+	-- Function to update container size based on screen size
+	local function updateContainerSize()
+		local viewport = Camera.ViewportSize
+		local screenWidth = viewport.X
+
+		-- If screen width is less than 900 pixels (mobile), make tooltip bigger
+		if screenWidth < 900 then
+			container.Size = UDim2.new(0.2, 0, 0.09, 0)  -- 50% width, 20% height on mobile
+		else
+			container.Size = UDim2.new(0.25, 0, 0.12, 0)  -- 18% width, 10% height on desktop
+		end
+	end
+
+	-- Update on initial load
+	updateContainerSize()
+
+	-- Update when screen size changes
+	Camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateContainerSize)
 
 	-- Blur/Glass effect background
 	local blur = Instance.new("Frame")
 	blur.Size = UDim2.new(1, 0, 1, 0)
 	blur.BackgroundColor3 = Color3.fromRGB(25, 25, 33)
-	blur.BackgroundTransparency = 0  -- Changed from 0.3 to 0.15 (less transparent)
+	blur.BackgroundTransparency = 0.9
 	blur.BorderSizePixel = 0
-	blur.ZIndex = 6
+	blur.ZIndex = 10
 	blur.Parent = container
 
 	local blurCorner = Instance.new("UICorner")
@@ -39,85 +59,132 @@ function module.CREATE_MODERN_HOVER_UI(parent)
 	corner.CornerRadius = UDim.new(0, 10)
 	corner.Parent = container
 
-	-- Content container
+	-- Content container with scale-based padding
 	local content = Instance.new("Frame")
 	content.Name = "Content"
-	content.Size = UDim2.new(1, -16, 1, -16)
-	content.Position = UDim2.new(0, 8, 0, 8)
+	content.Size = UDim2.new(0.94, 0, 0.85, 0)  -- 94% width, 85% height (equivalent to -16 padding)
+	content.Position = UDim2.new(0.03, 0, 0.075, 0)  -- 3% from left, 7.5% from top (equivalent to 8px on 250px width)
 	content.BackgroundTransparency = 1
-	content.ZIndex = 7
+	content.ZIndex = 11
 	content.Parent = container
 
 	-- Item name
 	local itemName = Instance.new("TextLabel")
 	itemName.Name = "ItemName"
-	itemName.Size = UDim2.new(1, 0, 0, 20)
+	itemName.Size = UDim2.new(1, 0, 0.25, 0)  -- 31% of content height (20/64)
 	itemName.Position = UDim2.new(0, 0, 0, 0)
 	itemName.BackgroundTransparency = 1
 	itemName.Text = "Item Name"
 	itemName.TextColor3 = Color3.fromRGB(255, 255, 255)
-	itemName.TextSize = 15
+	itemName.TextScaled = true
 	itemName.Font = Enum.Font.GothamBold
 	itemName.TextXAlignment = Enum.TextXAlignment.Left
 	itemName.TextTruncate = Enum.TextTruncate.AtEnd
-	itemName.ZIndex = 8
+	itemName.ZIndex = 12
 	itemName.Parent = content
+
+	local nameConstraint = Instance.new("UITextSizeConstraint")
+	nameConstraint.MaxTextSize = 24
+	nameConstraint.MinTextSize = 12
+	nameConstraint.Parent = itemName
 
 	-- Item tier
 	local itemTier = Instance.new("TextLabel")
 	itemTier.Name = "ItemTier"
-	itemTier.Size = UDim2.new(1, 0, 0, 16)
-	itemTier.Position = UDim2.new(0, 0, 0, 22)
+	itemTier.Size = UDim2.new(1, 0, 0.25, 0)  -- 25% of content height (16/64)
+	itemTier.Position = UDim2.new(0, 0, 0.25, 0)  -- 34% from top (22/64)
 	itemTier.BackgroundTransparency = 1
 	itemTier.Text = "First Age"
 	itemTier.TextColor3 = Color3.fromRGB(150, 150, 200)
-	itemTier.TextSize = 12
+	itemTier.TextScaled = true
 	itemTier.Font = Enum.Font.Gotham
 	itemTier.TextXAlignment = Enum.TextXAlignment.Left
-	itemTier.ZIndex = 8
+	itemTier.ZIndex = 12
 	itemTier.Parent = content
+
+	local tierConstraint = Instance.new("UITextSizeConstraint")
+	tierConstraint.MaxTextSize = 16
+	tierConstraint.MinTextSize = 8
+	tierConstraint.Parent = itemTier
 
 	-- Divider line (optional, shown for expanded view)
 	local divider = Instance.new("Frame")
 	divider.Name = "Divider"
-	divider.Size = UDim2.new(1, 0, 0, 1)
-	divider.Position = UDim2.new(0, 0, 0, 42)
+	divider.Size = UDim2.new(1, 0, 0.015, 0)  -- 1.5% height (1px on 64px content)
+	divider.Position = UDim2.new(0, 0, 0.47, 0)  -- 66% from top (42/64)
 	divider.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
 	divider.BackgroundTransparency = 0.5
 	divider.BorderSizePixel = 0
 	divider.Visible = false
-	divider.ZIndex = 7
+	divider.ZIndex = 11
 	divider.Parent = content
 
 	-- Item description (optional)
 	local itemDesc = Instance.new("TextLabel")
 	itemDesc.Name = "ItemDesc"
-	itemDesc.Size = UDim2.new(1, 0, 1, -48)
-	itemDesc.Position = UDim2.new(0, 0, 0, 48)
+	itemDesc.Size = UDim2.new(1, 0, 0.5, 0)  -- Will be adjusted in ShowExpanded
+	itemDesc.Position = UDim2.new(0, 0, 0.5, 0)  -- 75% from top (48/64)
 	itemDesc.BackgroundTransparency = 1
 	itemDesc.Text = "Description text here"
 	itemDesc.TextColor3 = Color3.fromRGB(255, 255, 255)
-	itemDesc.TextSize = 12
+	itemDesc.TextScaled = true
 	itemDesc.Font = Enum.Font.Gotham
 	itemDesc.TextWrapped = true
 	itemDesc.TextXAlignment = Enum.TextXAlignment.Left
 	itemDesc.TextYAlignment = Enum.TextYAlignment.Top
-	itemDesc.RichText = true  -- ← ADD THIS LINE HERE!
+	itemDesc.RichText = true
 	itemDesc.Visible = false
-	itemDesc.ZIndex = 8
+	itemDesc.ZIndex = 12
 	itemDesc.Parent = content
 
+	local descConstraint = Instance.new("UITextSizeConstraint")
+	descConstraint.MaxTextSize = 16
+	descConstraint.MinTextSize = 8
+	descConstraint.Parent = itemDesc
+
 	-- Functions to show compact or expanded view
-	function module.SHOW_COMPACT()
-		container.Size = UDim2.new(0, 250, 0, 50)
+	function module.SHOW_COMPACT(isHotspotMiner)
+		local viewport = Camera.ViewportSize
+		local screenWidth = viewport.X
+
+		-- Adjust size based on screen size and whether it's a hotspot miner
+		if screenWidth < 900 then
+			if isHotspotMiner then
+				container.Size = UDim2.new(0.25, 0, 0.08, 0)  -- Mobile hotspot (smaller)
+			else
+				container.Size = UDim2.new(0.2, 0, 0.09, 0)  -- Mobile regular
+			end
+		else
+			if isHotspotMiner then
+				container.Size = UDim2.new(0.13, 0, 0.05, 0)  -- Desktop hotspot (smaller)
+			else
+				container.Size = UDim2.new(0.1, 0, 0.05, 0)  -- Desktop regular
+			end
+		end
+
 		divider.Visible = false
 		itemDesc.Visible = false
 	end
 
-	function module.SHOW_EXPANDED(descriptionText)
-		-- Calculate height based on description length
-		local descHeight = math.min(100, math.max(40, #descriptionText / 3))
-		container.Size = UDim2.new(0, 250, 0, 50 + descHeight)
+	function module.SHOW_EXPANDED(descriptionText, isHotspotMiner)
+		local viewport = Camera.ViewportSize
+		local screenWidth = viewport.X
+
+		-- Adjust size based on screen size and whether it's a hotspot miner
+		if screenWidth < 900 then
+			if isHotspotMiner then
+				container.Size = UDim2.new(0.2, 0, 0.24, 0)  -- Mobile hotspot expanded (smaller)
+			else
+				container.Size = UDim2.new(0.4, 0, 0.2, 0)  -- Mobile regular expanded
+			end
+		else
+			if isHotspotMiner then
+				container.Size = UDim2.new(0.1, 0, 0.12, 0)  -- Desktop hotspot expanded (smaller)
+			else
+				container.Size = UDim2.new(0.25, 0, 0.12, 0)  -- Desktop regular expanded
+			end
+		end
+
 		divider.Visible = true
 		itemDesc.Visible = true
 		itemDesc.Text = descriptionText
