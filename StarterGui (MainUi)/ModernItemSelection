@@ -3,11 +3,10 @@ local module = {}
 function module.CREATE_MODERN_SELECTION_UI(parent)
 	local Camera = workspace.CurrentCamera
 
-	-- Main container - slightly wider to fit price text
+	-- Main container - using scale for responsive sizing
 	local container = Instance.new("Frame")
 	container.Name = "ModernSelected"
-	container.Size = UDim2.new(0, 220, 0, 180)  -- Increased width from 200 to 220
-	container.Position = UDim2.new(0.5, -110, 0.5, -87.5)
+	container.Position = UDim2.new(0.5, 0, 0.5, 0)
 	container.AnchorPoint = Vector2.new(0.5, 0.5)
 	container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 	container.BackgroundTransparency = 0.1
@@ -15,6 +14,25 @@ function module.CREATE_MODERN_SELECTION_UI(parent)
 	container.Visible = false
 	container.ZIndex = 10
 	container.Parent = parent
+
+	-- Function to update container size based on screen size
+	local function updateContainerSize()
+		local viewport = Camera.ViewportSize
+		local screenWidth = viewport.X
+
+		-- If screen width is less than 900 pixels (mobile), make GUI bigger
+		if screenWidth < 900 then
+			container.Size = UDim2.new(0.35, 0, 0.4, 0)  -- 35% width, 40% height on mobile
+		else
+			container.Size = UDim2.new(0.115, 0, 0.167, 0)  -- ~11.5% width, ~16.7% height on desktop (220px/1920px, 180px/1080px)
+		end
+	end
+
+	-- Update on initial load
+	updateContainerSize()
+
+	-- Update when screen size changes
+	Camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateContainerSize)
 
 	-- Blur/Glass effect background
 	local blur = Instance.new("Frame")
@@ -41,11 +59,11 @@ function module.CREATE_MODERN_SELECTION_UI(parent)
 	corner.CornerRadius = UDim.new(0, 10)
 	corner.Parent = container
 
-	-- Header section - very compact
+	-- Header section - very compact (using scale-based sizing)
 	local header = Instance.new("Frame")
 	header.Name = "Header"
-	header.Size = UDim2.new(1, -12, 0, 38)
-	header.Position = UDim2.new(0, 6, 0, 6)
+	header.Size = UDim2.new(0.945, 0, 0.211, 0)  -- 94.5% width, 21.1% height (equivalent to 208px/220px width, 38px/180px height)
+	header.Position = UDim2.new(0.027, 0, 0.033, 0)  -- 2.7% from left, 3.3% from top (6px/220px, 6px/180px)
 	header.BackgroundTransparency = 1
 	header.ZIndex = 12
 	header.Parent = container
@@ -53,62 +71,72 @@ function module.CREATE_MODERN_SELECTION_UI(parent)
 	-- Item name
 	local itemName = Instance.new("TextLabel")
 	itemName.Name = "ItemName"
-	itemName.Size = UDim2.new(1, 0, 0, 17)
-	itemName.Position = UDim2.new(0, 0, 0, 2)
+	itemName.Size = UDim2.new(1, 0, 0.447, 0)  -- 44.7% of header height (17px/38px)
+	itemName.Position = UDim2.new(0, 0, 0.053, 0)  -- 5.3% from top (2px/38px)
 	itemName.BackgroundTransparency = 1
 	itemName.Text = "Item Name"
 	itemName.TextColor3 = Color3.fromRGB(255, 255, 255)
-	itemName.TextSize = 15
+	itemName.TextScaled = true
 	itemName.Font = Enum.Font.GothamBold
 	itemName.TextXAlignment = Enum.TextXAlignment.Center
 	itemName.TextTruncate = Enum.TextTruncate.AtEnd
 	itemName.ZIndex = 13
 	itemName.Parent = header
 
+	local nameConstraint = Instance.new("UITextSizeConstraint")
+	nameConstraint.MaxTextSize = 24
+	nameConstraint.MinTextSize = 12
+	nameConstraint.Parent = itemName
+
 	-- Item tier
 	local itemTier = Instance.new("TextLabel")
 	itemTier.Name = "ItemTier"
-	itemTier.Size = UDim2.new(1, 0, 0, 13)
-	itemTier.Position = UDim2.new(0, 0, 0, 21)
+	itemTier.Size = UDim2.new(1, 0, 0.342, 0)  -- 34.2% of header height (13px/38px)
+	itemTier.Position = UDim2.new(0, 0, 0.553, 0)  -- 55.3% from top (21px/38px)
 	itemTier.BackgroundTransparency = 1
 	itemTier.Text = "First Age"
 	itemTier.TextColor3 = Color3.fromRGB(150, 150, 200)
-	itemTier.TextSize = 10
+	itemTier.TextScaled = true
 	itemTier.Font = Enum.Font.Gotham
 	itemTier.TextXAlignment = Enum.TextXAlignment.Center
 	itemTier.ZIndex = 13
 	itemTier.Parent = header
 
+	local tierConstraint = Instance.new("UITextSizeConstraint")
+	tierConstraint.MaxTextSize = 16
+	tierConstraint.MinTextSize = 10
+	tierConstraint.Parent = itemTier
+
 	-- Divider line
 	local divider = Instance.new("Frame")
-	divider.Size = UDim2.new(1, -20, 0, 1)
-	divider.Position = UDim2.new(0, 10, 0, 48)
+	divider.Size = UDim2.new(0.909, 0, 0.0056, 0)  -- 90.9% width, 0.56% height (200px/220px width, 1px/180px height)
+	divider.Position = UDim2.new(0.045, 0, 0.267, 0)  -- 4.5% from left, 26.7% from top (10px/220px, 48px/180px)
 	divider.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
 	divider.BackgroundTransparency = 0.5
 	divider.BorderSizePixel = 0
 	divider.ZIndex = 12
 	divider.Parent = container
 
-	-- Buttons container - tight fit
+	-- Buttons container - tight fit (using scale-based sizing)
 	local buttonsContainer = Instance.new("Frame")
 	buttonsContainer.Name = "ButtonsContainer"
-	buttonsContainer.Size = UDim2.new(1, -12, 0, 120)
-	buttonsContainer.Position = UDim2.new(0, 6, 0, 52)
+	buttonsContainer.Size = UDim2.new(0.945, 0, 0.667, 0)  -- 94.5% width, 66.7% height (208px/220px width, 120px/180px height)
+	buttonsContainer.Position = UDim2.new(0.027, 0, 0.289, 0)  -- 2.7% from left, 28.9% from top (6px/220px, 52px/180px)
 	buttonsContainer.BackgroundTransparency = 1
 	buttonsContainer.ZIndex = 12
 	buttonsContainer.Parent = container
 
 	local listLayout = Instance.new("UIListLayout")
-	listLayout.Padding = UDim.new(0, 3)
+	listLayout.Padding = UDim.new(0.025, 0)  -- 2.5% padding (3px on 120px height)
 	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	listLayout.Parent = buttonsContainer
 
-	-- Button creation function - with optional price label
-	local function createButton(name, icon, color, hotkey, layoutOrder, pricePrefix)
+	-- Button creation function - with optional price label (NO ICONS)
+	local function createButton(name, color, hotkey, layoutOrder, pricePrefix)
 		local button = Instance.new("TextButton")
 		button.Name = name
-		button.Size = UDim2.new(1, 0, 0, 28)
+		button.Size = UDim2.new(1, 0, 0.233, 0)  -- 23.3% of container height (28px/120px)
 		button.BackgroundColor3 = color
 		button.BorderSizePixel = 0
 		button.AutoButtonColor = false
@@ -129,25 +157,13 @@ function module.CREATE_MODERN_SELECTION_UI(parent)
 		btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		btnStroke.Parent = button
 
-		-- Button content container
+		-- Button content container (using scale)
 		local content = Instance.new("Frame")
-		content.Size = UDim2.new(1, -12, 1, 0)
-		content.Position = UDim2.new(0, 6, 0, 0)
+		content.Size = UDim2.new(0.942, 0, 1, 0)  -- 94.2% width
+		content.Position = UDim2.new(0.029, 0, 0, 0)  -- 2.9% from left
 		content.BackgroundTransparency = 1
 		content.ZIndex = 14
 		content.Parent = button
-
-		-- Icon
-		local iconLabel = Instance.new("TextLabel")
-		iconLabel.Size = UDim2.new(0, 20, 1, 0)
-		iconLabel.Position = UDim2.new(0, 0, 0, 0)
-		iconLabel.BackgroundTransparency = 1
-		iconLabel.Text = icon
-		iconLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-		iconLabel.TextSize = 14
-		iconLabel.Font = Enum.Font.GothamBold
-		iconLabel.ZIndex = 15
-		iconLabel.Parent = content
 
 		-- Button text OR Price label (if has price, use price label instead)
 		local label
@@ -157,45 +173,60 @@ function module.CREATE_MODERN_SELECTION_UI(parent)
 			-- For Buy/Sell buttons, create price label that includes button name
 			priceLabel = Instance.new("TextLabel")
 			priceLabel.Name = "PriceLabel"
-			priceLabel.Size = UDim2.new(1, -100, 1, 0)
-			priceLabel.Position = UDim2.new(0, 24, 0, 0)
+			priceLabel.Size = UDim2.new(0.75, 0, 1, 0)  -- 75% of content width (leave room for hotkey)
+			priceLabel.Position = UDim2.new(0, 0, 0, 0)
 			priceLabel.BackgroundTransparency = 1
-			priceLabel.Text = name .. " - 100"  -- "Buy - 100" or "Sell - 100"
+			priceLabel.Text = name .. " - $100"  -- "Buy - $100" or "Sell - $100"
 			priceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-			priceLabel.TextSize = 12
+			priceLabel.TextScaled = true
 			priceLabel.Font = Enum.Font.GothamBold
 			priceLabel.TextXAlignment = Enum.TextXAlignment.Left
 			priceLabel.ZIndex = 15
 			priceLabel.Parent = content
+
+			local priceLabelConstraint = Instance.new("UITextSizeConstraint")
+			priceLabelConstraint.MaxTextSize = 16
+			priceLabelConstraint.MinTextSize = 10
+			priceLabelConstraint.Parent = priceLabel
 		else
 			-- For Move/Withdraw buttons, just show name
 			label = Instance.new("TextLabel")
 			label.Name = "ButtonLabel"
-			label.Size = UDim2.new(1, -50, 1, 0)
-			label.Position = UDim2.new(0, 24, 0, 0)
+			label.Size = UDim2.new(0.75, 0, 1, 0)  -- 75% of content width (leave room for hotkey)
+			label.Position = UDim2.new(0, 0, 0, 0)
 			label.BackgroundTransparency = 1
 			label.Text = name
 			label.TextColor3 = Color3.fromRGB(255, 255, 255)
-			label.TextSize = 12
+			label.TextScaled = true
 			label.Font = Enum.Font.GothamBold
 			label.TextXAlignment = Enum.TextXAlignment.Left
 			label.ZIndex = 15
 			label.Parent = content
+
+			local labelConstraint = Instance.new("UITextSizeConstraint")
+			labelConstraint.MaxTextSize = 16
+			labelConstraint.MinTextSize = 10
+			labelConstraint.Parent = label
 		end
 
 		-- Hotkey indicator - positioned at far right
 		local hotkeyLabel = Instance.new("TextLabel")
-		hotkeyLabel.Size = UDim2.new(0, 24, 0, 18)
-		hotkeyLabel.Position = UDim2.new(1, -24, 0.5, -9)
+		hotkeyLabel.Size = UDim2.new(0.115, 0, 0.643, 0)  -- 11.5% width, 64.3% height
+		hotkeyLabel.Position = UDim2.new(0.885, 0, 0.179, 0)  -- 88.5% from left, 17.9% from top
 		hotkeyLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 		hotkeyLabel.BackgroundTransparency = 0.3
 		hotkeyLabel.BorderSizePixel = 0
 		hotkeyLabel.Text = hotkey
 		hotkeyLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-		hotkeyLabel.TextSize = 10
+		hotkeyLabel.TextScaled = true
 		hotkeyLabel.Font = Enum.Font.GothamBold
 		hotkeyLabel.ZIndex = 15
 		hotkeyLabel.Parent = content
+
+		local hotkeyConstraint = Instance.new("UITextSizeConstraint")
+		hotkeyConstraint.MaxTextSize = 12
+		hotkeyConstraint.MinTextSize = 8
+		hotkeyConstraint.Parent = hotkeyLabel
 
 		local hotkeyCorner = Instance.new("UICorner")
 		hotkeyCorner.CornerRadius = UDim.new(0, 4)
@@ -222,12 +253,12 @@ function module.CREATE_MODERN_SELECTION_UI(parent)
 		return {Button = button, PriceLabel = priceLabel, PricePrefix = pricePrefix}
 	end
 
-	-- Create buttons with uniform color - sleek dark gray-blue
+	-- Create buttons with uniform color - sleek dark gray-blue (NO ICONS)
 	local buttonColor = Color3.fromRGB(50, 55, 65)
-	local moveBtn = createButton("Move", "🔄", buttonColor, "R", 1, nil)
-	local withdrawBtn = createButton("Withdraw", "📦", buttonColor, "Z", 2, nil)
-	local buyBtn = createButton("Buy", "🛒", buttonColor, "C", 3, "Buy -")
-	local sellBtn = createButton("Sell", "💰", buttonColor, "X", 4, "Sell -")
+	local moveBtn = createButton("Move", buttonColor, "R", 1, nil)
+	local withdrawBtn = createButton("Withdraw", buttonColor, "Z", 2, nil)
+	local buyBtn = createButton("Buy", buttonColor, "C", 3, "Buy -")
+	local sellBtn = createButton("Sell", buttonColor, "X", 4, "Sell -")
 
 	-- Store reference to selected item for anchoring
 	local selectedItemRef = nil
