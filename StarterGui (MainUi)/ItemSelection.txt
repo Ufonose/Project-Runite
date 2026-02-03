@@ -73,10 +73,10 @@ function module.LOAD(MODULE_INFO)
 
 					-- Update price labels (includes button name in text)
 					if modernUI.BuyPrice then
-						modernUI.BuyPrice.Text = "Buy - " .. CASH_LIB.SUFFIX_NUM(buyPrice)
+						modernUI.BuyPrice.Text = "Buy - $" .. CASH_LIB.SUFFIX_NUM(buyPrice)
 					end
 					if modernUI.SellPrice then
-						modernUI.SellPrice.Text = "Sell - " .. CASH_LIB.SUFFIX_NUM(sellPrice)
+						modernUI.SellPrice.Text = "Sell - $" .. CASH_LIB.SUFFIX_NUM(sellPrice)
 					end
 				end
 			end
