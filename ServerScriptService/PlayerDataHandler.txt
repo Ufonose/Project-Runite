@@ -11,7 +11,7 @@ local PLAYER_DATA_INFO = require(ServerStorage.Modules.PlayerDataInfo)
 local CASH_LIB = require(RepStorage.Modules.CashLib)
 local MainLib = require(RepStorage.Modules.MainLib)
 -- Constants
-local data_code = "map_37"		-- Change this string to reset data map_36
+local data_code = "map_v1"		-- Change this string to reset data map_36
 
 if workspace:FindFirstChild("Items") then
 	workspace.Items.Parent = RepStorage
@@ -46,6 +46,8 @@ local function SAVE_DATA(Plr)
 	plr_data["PlotItemPlaced"] = base_data
 	-- Save Miner Hotspots
 	plr_data["MinerHotspots"] = _G["global_data"][Plr.Name]["MinerHotspots"]
+	-- Save Cave Barriers
+	plr_data["UnlockedBarriers"] = _G["global_data"][Plr.Name]["UnlockedBarriers"]
 	-- Saved stuff now and return it's done!
 	DATA_HANDLING(data_code, Plr):Set(plr_data)
 	return true
@@ -208,6 +210,8 @@ local function LOAD_DATA(Plr)
 	_G["global_data"][Plr.Name]["FurnaceHotspot"] = plr_data["FurnaceHotspot"] or {
 		Unlocked = true,  -- Always unlocked by default!
 	}
+	-- Load Cave Barriers
+	_G["global_data"][Plr.Name]["UnlockedBarriers"] = plr_data["UnlockedBarriers"] or {}
 	-- Load the Player's Plot Items!
 	local plot_data = plr_data["PlotItemPlaced"] or {}
 	if plot_data ~= {} then
