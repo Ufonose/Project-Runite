@@ -1,0 +1,286 @@
+-- StarterPlayer/StarterPlayerScripts/CaveBarrierClient
+-- Client-side GUI for cave barriers
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local RemoteEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("CaveBarrierEvent", 10)
+if not RemoteEvent then return end
+
+-- ============================================================================
+-- VARIABLES
+-- ============================================================================
+
+local barrierGUIs = {}
+local playerPlot = nil
+
+-- ============================================================================
+-- HELPER FUNCTIONS
+-- ============================================================================
+
+local function getBarrierValue(barrier, valueName)
+	local attr = barrier:GetAttribute(valueName)
+	if attr then return attr end
+
+	local valueObj = barrier:FindFirstChild(valueName)
+	if valueObj and valueObj:IsA("ValueBase") then
+		return valueObj.Value
+	end
+
+	return nil
+end
+
+local function getPlayerPlot()
+	if playerPlot then return playerPlot end
+
+	local setPlot = player:FindFirstChild("SetPlot")
+	if setPlot and setPlot:IsA("ObjectValue") and setPlot.Value then
+		playerPlot = setPlot.Value
+		return setPlot.Value
+	end
+
+	return nil
+end
+
+-- ============================================================================
+-- GUI CREATION
+-- ============================================================================
+
+local function createBarrierGUI(barrier)
+	local barrierID = getBarrierValue(barrier, "BarrierID")
+	local unlockCost = getBarrierValue(barrier, "UnlockCost")
+
+	if not barrierID or not unlockCost then return nil end
+
+	local buyButton = barrier:WaitForChild("BuyButton", 10)
+	if not buyButton then return nil end
+
+	if not buyButton:IsA("BasePart") then
+		buyButton = buyButton:FindFirstChildWhichIsA("BasePart", true)
+	end
+
+	if not buyButton then return nil end
+
+	local billboardGui = Instance.new("BillboardGui")
+	billboardGui.Name = "BarrierInfoGUI"
+	billboardGui.Size = UDim2.new(0, 200, 0, 85)
+	billboardGui.StudsOffset = Vector3.new(0, 5, 0)
+	billboardGui.AlwaysOnTop = true
+	billboardGui.MaxDistance = 35
+	billboardGui.Adornee = buyButton
+	billboardGui.Parent = barrier
+
+	local container = Instance.new("Frame")
+	container.Name = "Frame"
+	container.Size = UDim2.new(1, 0, 1, 0)
+	container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	container.BackgroundTransparency = 0.1
+	container.BorderSizePixel = 0
+	container.ZIndex = 10
+	container.Parent = billboardGui
+
+	local containerCorner = Instance.new("UICorner")
+	containerCorner.CornerRadius = UDim.new(0, 12)
+	containerCorner.Parent = container
+
+	local blur = Instance.new("Frame")
+	blur.Size = UDim2.new(1, 0, 1, 0)
+	blur.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	blur.BackgroundTransparency = 0.3
+	blur.BorderSizePixel = 0
+	blur.ZIndex = 11
+	blur.Parent = container
+
+	local blurCorner = Instance.new("UICorner")
+	blurCorner.CornerRadius = UDim.new(0, 12)
+	blurCorner.Parent = blur
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Name = "MainStroke"
+	stroke.Color = Color3.fromRGB(60, 60, 80)
+	stroke.Thickness = 2
+	stroke.Transparency = 0.5
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = container
+
+	local content = Instance.new("Frame")
+	content.Name = "Content"
+	content.Size = UDim2.new(1, -16, 1, -16)
+	content.Position = UDim2.new(0, 8, 0, 8)
+	content.BackgroundTransparency = 1
+	content.ZIndex = 12
+	content.Parent = container
+
+	local titleLabel = Instance.new("TextLabel")
+	titleLabel.Name = "TitleLabel"
+	titleLabel.Size = UDim2.new(1, 0, 0, 20)
+	titleLabel.Position = UDim2.new(0, 0, 0, 0)
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Text = "🔒 Cave Locked"
+	titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	titleLabel.TextSize = 14
+	titleLabel.Font = Enum.Font.GothamBold
+	titleLabel.TextXAlignment = Enum.TextXAlignment.Center
+	titleLabel.ZIndex = 13
+	titleLabel.Parent = content
+
+	local divider = Instance.new("Frame")
+	divider.Size = UDim2.new(1, -10, 0, 1)
+	divider.Position = UDim2.new(0, 5, 0, 24)
+	divider.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+	divider.BackgroundTransparency = 0.5
+	divider.BorderSizePixel = 0
+	divider.ZIndex = 12
+	divider.Parent = content
+
+	local costContainer = Instance.new("Frame")
+	costContainer.Name = "CostContainer"
+	costContainer.Size = UDim2.new(1, -10, 0, 32)
+	costContainer.Position = UDim2.new(0, 5, 0, 30)
+	costContainer.BackgroundColor3 = Color3.fromRGB(50, 55, 65)
+	costContainer.BorderSizePixel = 0
+	costContainer.ZIndex = 12
+	costContainer.Parent = content
+
+	local costCorner = Instance.new("UICorner")
+	costCorner.CornerRadius = UDim.new(0, 8)
+	costCorner.Parent = costContainer
+
+	local costStroke = Instance.new("UIStroke")
+	costStroke.Name = "CostStroke"
+	costStroke.Color = Color3.fromRGB(0, 0, 0)
+	costStroke.Thickness = 1
+	costStroke.Transparency = 0.7
+	costStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	costStroke.Parent = costContainer
+
+	local costLabel = Instance.new("TextLabel")
+	costLabel.Name = "CostLabel"
+	costLabel.Size = UDim2.new(1, -10, 1, 0)
+	costLabel.Position = UDim2.new(0, 5, 0, 0)
+	costLabel.BackgroundTransparency = 1
+	costLabel.Text = "🔬 " .. unlockCost .. " Tokens"
+	costLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
+	costLabel.TextSize = 14
+	costLabel.Font = Enum.Font.GothamBold
+	costLabel.TextXAlignment = Enum.TextXAlignment.Center
+	costLabel.ZIndex = 13
+	costLabel.Parent = costContainer
+
+	return billboardGui
+end
+
+local function setupBarrierGUIs()
+	local plot = getPlayerPlot()
+	if not plot then return end
+
+	local caveUnlocksFolder = plot:FindFirstChild("CaveUnlocks")
+	if not caveUnlocksFolder then return end
+
+	for _, barrier in ipairs(caveUnlocksFolder:GetChildren()) do
+		if barrier:IsA("Model") then
+			local barrierID = getBarrierValue(barrier, "BarrierID")
+
+			if barrierID then
+				local gui = createBarrierGUI(barrier)
+				if gui then
+					barrierGUIs[barrierID] = gui
+				end
+			end
+		end
+	end
+end
+
+-- ============================================================================
+-- REMOTE EVENT HANDLER
+-- ============================================================================
+
+RemoteEvent.OnClientEvent:Connect(function(eventType, ...)
+	if eventType == "UnlockSuccess" then
+		local barrierID = ...
+
+		if barrierGUIs[barrierID] then
+			barrierGUIs[barrierID] = nil
+		end
+
+	elseif eventType == "InsufficientTokens" then
+		local required, current = ...
+
+		for barrierID, gui in pairs(barrierGUIs) do
+			local container = gui:FindFirstChild("Frame")
+			if container then
+				local content = container:FindFirstChild("Content")
+				if content then
+					local costContainer = content:FindFirstChild("CostContainer")
+
+					if costContainer then
+						local costLabel = costContainer:FindFirstChild("CostLabel")
+
+						if costLabel then
+							local originalText = costLabel.Text
+							local originalColor = costLabel.TextColor3
+
+							costLabel.Text = "Not enough tokens!"
+							costLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+
+							task.delay(3, function()
+								if costLabel then
+									costLabel.Text = originalText
+									costLabel.TextColor3 = originalColor
+								end
+							end)
+
+							break
+						end
+					end
+				end
+			end
+		end
+	end
+end)
+
+-- ============================================================================
+-- GUI VISIBILITY OPTIMIZATION
+-- ============================================================================
+
+RunService.Heartbeat:Connect(function()
+	if not playerPlot then return end
+
+	local character = player.Character
+	if not character then return end
+
+	local rootPart = character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then return end
+
+	for barrierID, gui in pairs(barrierGUIs) do
+		if gui.Adornee then
+			local distance = (rootPart.Position - gui.Adornee.Position).Magnitude
+			gui.Enabled = distance <= 50
+		end
+	end
+end)
+
+-- ============================================================================
+-- INITIALIZATION
+-- ============================================================================
+
+task.spawn(function()
+	local maxWait = 30
+	local waited = 0
+	local plot
+
+	while not plot and waited < maxWait do
+		task.wait(0.5)
+		waited = waited + 0.5
+		plot = getPlayerPlot()
+	end
+
+	if plot then
+		setupBarrierGUIs()
+	end
+end)
