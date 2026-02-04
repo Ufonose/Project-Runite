@@ -1,0 +1,177 @@
+-- ServerScriptService/CaveBarrierManager
+-- Handles cave barrier unlocking with research tokens
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+
+local RemoteEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("CaveBarrierEvent")
+
+-- ============================================================================
+-- HELPER FUNCTIONS
+-- ============================================================================
+
+local function getBarrierValue(barrier, valueName)
+	local attr = barrier:GetAttribute(valueName)
+	if attr then return attr end
+
+	local valueObj = barrier:FindFirstChild(valueName)
+	if valueObj and valueObj:IsA("ValueBase") then
+		return valueObj.Value
+	end
+
+	return nil
+end
+
+local function getPlayerPlot(player)
+	local setPlot = player:FindFirstChild("SetPlot")
+	if setPlot and setPlot:IsA("ObjectValue") and setPlot.Value then
+		return setPlot.Value
+	end
+	return nil
+end
+
+local function isBarrierUnlocked(player, barrierID)
+	if not _G["global_data"] then return false end
+	if not _G["global_data"][player.Name] then return false end
+	if not _G["global_data"][player.Name]["UnlockedBarriers"] then return false end
+
+	return _G["global_data"][player.Name]["UnlockedBarriers"][barrierID] == true
+end
+
+-- ============================================================================
+-- BARRIER REMOVAL
+-- ============================================================================
+
+local function removeBarrier(barrier)
+	local parts = {}
+
+	for _, descendant in ipairs(barrier:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			table.insert(parts, descendant)
+		end
+	end
+
+	local proximityPrompt = barrier:FindFirstChildWhichIsA("ProximityPrompt", true)
+	if proximityPrompt then
+		proximityPrompt.Enabled = false
+	end
+
+	local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+	for _, part in ipairs(parts) do
+		local tween = TweenService:Create(part, tweenInfo, {Transparency = 1})
+		tween:Play()
+	end
+
+	task.wait(1)
+	barrier:Destroy()
+end
+
+-- ============================================================================
+-- UNLOCK LOGIC
+-- ============================================================================
+
+local function attemptUnlockBarrier(player, barrier)
+	local barrierID = getBarrierValue(barrier, "BarrierID")
+	local unlockCost = getBarrierValue(barrier, "UnlockCost")
+
+	if not barrierID or not unlockCost then return end
+
+	if isBarrierUnlocked(player, barrierID) then return end
+
+	local researchTokens = player:FindFirstChild("ResearchTokens")
+	if not researchTokens then return end
+
+	if researchTokens.Value < unlockCost then
+		RemoteEvent:FireClient(player, "InsufficientTokens", unlockCost, researchTokens.Value)
+		return
+	end
+
+	researchTokens.Value = researchTokens.Value - unlockCost
+
+	if not _G["global_data"][player.Name]["UnlockedBarriers"] then
+		_G["global_data"][player.Name]["UnlockedBarriers"] = {}
+	end
+	_G["global_data"][player.Name]["UnlockedBarriers"][barrierID] = true
+
+	RemoteEvent:FireClient(player, "UnlockSuccess", barrierID)
+
+	removeBarrier(barrier)
+end
+
+-- ============================================================================
+-- BARRIER SETUP
+-- ============================================================================
+
+local function setupBarriersForPlayer(player)
+	local setPlot = player:WaitForChild("SetPlot", 5)
+	if not setPlot then return end
+
+	local plot = setPlot.Value
+	if not plot then return end
+
+	local caveUnlocks = plot:FindFirstChild("CaveUnlocks")
+	if not caveUnlocks then return end
+
+	-- Connect ProximityPrompts immediately
+	for _, barrier in ipairs(caveUnlocks:GetChildren()) do
+		if not barrier:IsA("Model") then continue end
+
+		local barrierID = getBarrierValue(barrier, "BarrierID")
+		if not barrierID then continue end
+
+		local prompt = barrier:FindFirstChild("ProximityPrompt") or barrier:FindFirstChildWhichIsA("ProximityPrompt", true)
+		if not prompt then continue end
+
+		prompt.Triggered:Connect(function(triggeringPlayer)
+			if triggeringPlayer ~= player then return end
+
+			if not _G["global_data"] or not _G["global_data"][player.Name] then return end
+
+			if isBarrierUnlocked(player, barrierID) then
+				barrier:Destroy()
+				return
+			end
+
+			attemptUnlockBarrier(player, barrier)
+		end)
+	end
+
+	-- Wait for data, then remove unlocked barriers
+	local dataLoaded = player:WaitForChild("DataLoaded", 30)
+	if not dataLoaded then return end
+
+	local waited = 0
+	while (not _G["global_data"] or not _G["global_data"][player.Name]) and waited < 10 do
+		task.wait(0.1)
+		waited = waited + 0.1
+	end
+
+	if not _G["global_data"] or not _G["global_data"][player.Name] then return end
+
+	for _, barrier in ipairs(caveUnlocks:GetChildren()) do
+		if barrier:IsA("Model") then
+			local id = getBarrierValue(barrier, "BarrierID")
+			if id and isBarrierUnlocked(player, id) then
+				barrier:Destroy()
+			end
+		end
+	end
+end
+
+-- ============================================================================
+-- INITIALIZATION
+-- ============================================================================
+
+Players.PlayerAdded:Connect(function(player)
+	task.spawn(function()
+		setupBarriersForPlayer(player)
+	end)
+end)
+
+for _, player in ipairs(Players:GetPlayers()) do
+	task.spawn(function()
+		setupBarriersForPlayer(player)
+	end)
+end
