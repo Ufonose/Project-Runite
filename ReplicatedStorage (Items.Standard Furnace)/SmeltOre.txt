@@ -33,6 +33,7 @@ script.Parent.Smelt.Touched:Connect(function(HIT)
 				if PROCESSED then
 					-- ALSO try to deposit to research (if any active objectives need this item)
 					local ResearchHandler = require(ServerStorage.Modules.ResearchHandler)
+					local ResearchData = require(ServerStorage.Modules.ResearchData)
 
 					-- Get the ore model name from tag or fallback to Name
 					local oreModelName = nil
@@ -49,15 +50,31 @@ script.Parent.Smelt.Touched:Connect(function(HIT)
 					local deposited = false
 
 					for _, objectiveId in pairs(research.ActiveObjectives) do
-						local success, progress = ResearchHandler.DepositItem(plot_owner, objectiveId, oreModelName, 1)
+						local success, currentProgress = ResearchHandler.DepositItem(plot_owner, objectiveId, oreModelName, 1)
 
 						if success then
 							deposited = true
-							-- Show research progress message (subtle, doesn't block view)
+
+							-- Get the objective to find the required amount
+							local objective = ResearchData.GetObjective(objectiveId)
+							local requiredAmount = 0
+
+							-- Find the requirement for this specific item
+							if objective then
+								for _, requirement in pairs(objective.Requirements) do
+									if requirement.ItemName == oreModelName then
+										requiredAmount = requirement.Amount
+										break
+									end
+								end
+							end
+
+							-- Show research progress message WITHOUT emoji, with current/required format
+							local displayName = oreModelName:gsub("OreModel", ""):gsub("_", " ")
 							RepStorage.Events.MessageClient:FireClient(plot_owner, "visual", {
 								["visual_part"] = script.Parent.Smelt, 
-								["message"] = "🔬 " .. oreModelName .. " (" .. progress .. ")", 
-								["message_color"] = Color3.fromRGB(101, 167, 207)
+								["message"] = displayName .. " (" .. currentProgress .. "/" .. requiredAmount .. ")", 
+								["message_color"] = Color3.fromRGB(138, 180, 255)
 							})
 							break  -- Only deposit to one objective
 						end
