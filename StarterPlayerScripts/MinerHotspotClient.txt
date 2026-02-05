@@ -6,10 +6,10 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local SoundManager = require(RepStorage.Modules.SoundManager)
 
-print("Player found:", player.Name)
+--print("Player found:", player.Name)
 
 -- WAIT FOR DATA TO LOAD FIRST
-print("Waiting for DataLoaded...")
+--print("Waiting for DataLoaded...")
 local dataLoaded = player:WaitForChild("DataLoaded", 30)
 
 if not dataLoaded then
@@ -17,7 +17,7 @@ if not dataLoaded then
 	return
 end
 
-print("Data loaded! Now setting up hotspots...")
+--print("Data loaded! Now setting up hotspots...")
 
 -- Wait for SetPlot
 player:WaitForChild("SetPlot", 10)
@@ -28,7 +28,7 @@ if not plot then
 	return
 end
 
-print("Plot assigned:", plot.Name)
+--print("Plot assigned:", plot.Name)
 
 local hotspotFolder = plot:WaitForChild("MinerHotspots", 10)
 
@@ -37,7 +37,7 @@ if not hotspotFolder then
 	return
 end
 
-print("MinerHotspots folder found!")
+--print("MinerHotspots folder found!")
 
 -- Function to create modern UI elements
 local function createModernHotspotUI(parent, info)
@@ -45,7 +45,7 @@ local function createModernHotspotUI(parent, info)
 	billboardGui.Name = "BuyPrompt"
 	billboardGui.Size = UDim2.new(0, 200, 0, 85)
 	billboardGui.StudsOffset = Vector3.new(0, 5, 0)
-	billboardGui.AlwaysOnTop = true
+	billboardGui.AlwaysOnTop = false
 	billboardGui.MaxDistance = 35  -- Only visible within 25 studs
 	billboardGui.Adornee = parent
 	billboardGui.Parent = parent
@@ -185,7 +185,7 @@ end
 
 -- Function to setup a hotspot
 local function setupHotspot(hotspot)
-	print("=== Setting up hotspot:", hotspot.Name, "===")
+	--print("=== Setting up hotspot:", hotspot.Name, "===")
 
 	local hotspotId = hotspot:WaitForChild("HotspotId", 5)
 	if not hotspotId then 
@@ -193,7 +193,7 @@ local function setupHotspot(hotspot)
 		return 
 	end
 
-	print("HotspotId:", hotspotId.Value)
+	--print("HotspotId:", hotspotId.Value)
 
 	local buyButton = hotspot:WaitForChild("BuyButton", 10)
 	if not buyButton then 
@@ -201,14 +201,14 @@ local function setupHotspot(hotspot)
 		return 
 	end
 
-	print("BuyButton found! Type:", buyButton.ClassName)
+	--print("BuyButton found! Type:", buyButton.ClassName)
 
 	if not RepStorage.Events:FindFirstChild("GetHotspotInfo") then
 		warn("GetHotspotInfo RemoteFunction not found!")
 		return
 	end
 
-	print("Calling GetHotspotInfo...")
+	--print("Calling GetHotspotInfo...")
 
 	local success, info = pcall(function()
 		return RepStorage.Events.GetHotspotInfo:InvokeServer(hotspotId.Value)
@@ -224,12 +224,12 @@ local function setupHotspot(hotspot)
 		return
 	end
 
-	print("Got hotspot info - Miner:", info.Config.MinerName, "Cost:", info.Config.Cost, "Unlocked:", info.IsUnlocked)
+	--print("Got hotspot info - Miner:", info.Config.MinerName, "Cost:", info.Config.Cost, "Unlocked:", info.IsUnlocked)
 
 	local ghostMiner = nil
 
 	if not info.IsUnlocked then
-		print("Creating ghost miner...")
+		--print("Creating ghost miner...")
 
 		local minerModel = RepStorage.Items:FindFirstChild(info.Config.MinerName)
 
@@ -254,26 +254,26 @@ local function setupHotspot(hotspot)
 			local positionPart = hotspot:WaitForChild("Position", 5)
 			if positionPart then
 				ghostMiner:SetPrimaryPartCFrame(positionPart.CFrame)
-				print("Ghost miner positioned")
+				--print("Ghost miner positioned")
 			else
 				warn("No Position part in", hotspot.Name)
 			end
 
 			ghostMiner.Parent = hotspot
-			print("Ghost miner created!")
+			--print("Ghost miner created!")
 		end
 
-		print("Creating modern BillboardGui...")
+		--print("Creating modern BillboardGui...")
 
 		-- Create modern UI
 		local billboardGui, costLabel, costContainer, pulseTween, resetCostDisplay = createModernHotspotUI(buyButton, info)
 
-		print("Modern BillboardGui created!")
+		--print("Modern BillboardGui created!")
 
 		-- Wait for or create ProximityPrompt
 		local proximityPrompt = buyButton:FindFirstChild("UnlockPrompt")
 		if not proximityPrompt then
-			print("Creating ProximityPrompt...")
+			--print("Creating ProximityPrompt...")
 			proximityPrompt = Instance.new("ProximityPrompt")
 			proximityPrompt.Name = "UnlockPrompt"
 			proximityPrompt.ActionText = "Unlock Hotspot"
@@ -287,15 +287,15 @@ local function setupHotspot(hotspot)
 
 		-- Handle ProximityPrompt trigger
 		proximityPrompt.Triggered:Connect(function(playerWhoTriggered)
-			print("=== PROXIMITY PROMPT TRIGGERED ===")
-			print("Triggered by:", playerWhoTriggered.Name)
+			--print("=== PROXIMITY PROMPT TRIGGERED ===")
+			--print("Triggered by:", playerWhoTriggered.Name)
 
 			if playerWhoTriggered ~= player then 
-				print("Not the local player, ignoring")
+				--print("Not the local player, ignoring")
 				return 
 			end
 
-			print("Processing unlock for hotspot", hotspotId.Value)
+			--print("Processing unlock for hotspot", hotspotId.Value)
 
 			-- Stop pulse animation
 			pulseTween:Pause()
@@ -314,7 +314,7 @@ local function setupHotspot(hotspot)
 				return
 			end
 
-			print("Server response:", result, errorMsg)
+			--print("Server response:", result, errorMsg)
 
 			if result == true then
 				print("Hotspot unlocked successfully!")
@@ -338,7 +338,7 @@ local function setupHotspot(hotspot)
 					ghostMiner:Destroy()
 				end
 
-				print("Cleanup complete!")
+				--print("Cleanup complete!")
 			else
 				-- Handle failure - check for specific error message
 				warn("Failed to unlock:", errorMsg or result)
@@ -362,14 +362,14 @@ local function setupHotspot(hotspot)
 			end
 		end)
 
-		print("ProximityPrompt handler connected!")
-		print("Setup complete for", hotspot.Name)
+		--print("ProximityPrompt handler connected!")
+		--print("Setup complete for", hotspot.Name)
 	else
-		print("Hotspot already unlocked")
+		--print("Hotspot already unlocked")
 	end
 end
 
-print("Setting up hotspots...")
+--print("Setting up hotspots...")
 
 for _, hotspot in pairs(hotspotFolder:GetChildren()) do
 	task.spawn(function()
