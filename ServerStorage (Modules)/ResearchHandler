@@ -187,9 +187,9 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 		end
 	end
 
-	-- Notify player
+	-- Notify player with research name (no emoji, space before + for proper splitting)
 	RepStorage.Events.MessageClient:FireClient(player, "screen", {
-		["message"] = "Research Complete! +" .. (objective.Rewards.ResearchTokens or 0) .. " Research Tokens!"
+		["message"] = objective.Name .. " completed! +" .. (objective.Rewards.ResearchTokens or 0) .. " Research Tokens"
 	})
 
 	print("Objective completed successfully!")
