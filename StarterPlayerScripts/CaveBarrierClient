@@ -9,6 +9,8 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
+local SoundManager = require(ReplicatedStorage.Modules.SoundManager)
+
 local RemoteEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("CaveBarrierEvent", 10)
 if not RemoteEvent then return end
 
@@ -55,8 +57,12 @@ local function createBarrierGUI(barrier)
 	local barrierID = getBarrierValue(barrier, "BarrierID")
 	local unlockCost = getBarrierValue(barrier, "UnlockCost")
 
+	-- FIX 1: Get barrier name for unique titles
+	local barrierName = getBarrierValue(barrier, "BarrierName") or barrierID
+
 	if not barrierID or not unlockCost then return nil end
 
+	-- ORIGINAL: WaitForChild and handle Model
 	local buyButton = barrier:WaitForChild("BuyButton", 10)
 	if not buyButton then return nil end
 
@@ -68,7 +74,7 @@ local function createBarrierGUI(barrier)
 
 	local billboardGui = Instance.new("BillboardGui")
 	billboardGui.Name = "BarrierInfoGUI"
-	billboardGui.Size = UDim2.new(0, 200, 0, 85)
+	billboardGui.Size = UDim2.new(0, 200, 0, 85)  -- Same size as MinerHotspotClient
 	billboardGui.StudsOffset = Vector3.new(0, 5, 0)
 	billboardGui.AlwaysOnTop = true
 	billboardGui.MaxDistance = 35
@@ -116,12 +122,13 @@ local function createBarrierGUI(barrier)
 	content.ZIndex = 12
 	content.Parent = container
 
+	-- FIX 1: Add title label
 	local titleLabel = Instance.new("TextLabel")
 	titleLabel.Name = "TitleLabel"
 	titleLabel.Size = UDim2.new(1, 0, 0, 20)
 	titleLabel.Position = UDim2.new(0, 0, 0, 0)
 	titleLabel.BackgroundTransparency = 1
-	titleLabel.Text = "🔒 Cave Locked"
+	titleLabel.Text = barrierName
 	titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	titleLabel.TextSize = 14
 	titleLabel.Font = Enum.Font.GothamBold
@@ -129,6 +136,7 @@ local function createBarrierGUI(barrier)
 	titleLabel.ZIndex = 13
 	titleLabel.Parent = content
 
+	-- FIX 1: Add divider
 	local divider = Instance.new("Frame")
 	divider.Size = UDim2.new(1, -10, 0, 1)
 	divider.Position = UDim2.new(0, 5, 0, 24)
@@ -141,7 +149,7 @@ local function createBarrierGUI(barrier)
 	local costContainer = Instance.new("Frame")
 	costContainer.Name = "CostContainer"
 	costContainer.Size = UDim2.new(1, -10, 0, 32)
-	costContainer.Position = UDim2.new(0, 5, 0, 30)
+	costContainer.Position = UDim2.new(0, 5, 0, 30)  -- Moved down for title
 	costContainer.BackgroundColor3 = Color3.fromRGB(50, 55, 65)
 	costContainer.BorderSizePixel = 0
 	costContainer.ZIndex = 12
@@ -152,7 +160,6 @@ local function createBarrierGUI(barrier)
 	costCorner.Parent = costContainer
 
 	local costStroke = Instance.new("UIStroke")
-	costStroke.Name = "CostStroke"
 	costStroke.Color = Color3.fromRGB(0, 0, 0)
 	costStroke.Thickness = 1
 	costStroke.Transparency = 0.7
@@ -209,38 +216,40 @@ RemoteEvent.OnClientEvent:Connect(function(eventType, ...)
 		end
 
 	elseif eventType == "InsufficientTokens" then
-		local required, current = ...
+		-- FIX 2: Now receives barrierID first to target specific barrier
+		local barrierID, required, current = ...
 
-		for barrierID, gui in pairs(barrierGUIs) do
-			local container = gui:FindFirstChild("Frame")
-			if container then
-				local content = container:FindFirstChild("Content")
-				if content then
-					local costContainer = content:FindFirstChild("CostContainer")
+		-- FIX 2: Target specific barrier instead of looping through all
+		local gui = barrierGUIs[barrierID]
+		if not gui then return end
 
-					if costContainer then
-						local costLabel = costContainer:FindFirstChild("CostLabel")
+		local container = gui:FindFirstChild("Frame")
+		if not container then return end
 
-						if costLabel then
-							local originalText = costLabel.Text
-							local originalColor = costLabel.TextColor3
+		local content = container:FindFirstChild("Content")
+		if not content then return end
 
-							costLabel.Text = "Not enough tokens!"
-							costLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+		local costContainer = content:FindFirstChild("CostContainer")
+		if not costContainer then return end
 
-							task.delay(3, function()
-								if costLabel then
-									costLabel.Text = originalText
-									costLabel.TextColor3 = originalColor
-								end
-							end)
+		local costLabel = costContainer:FindFirstChild("CostLabel")
+		if not costLabel then return end
 
-							break
-						end
-					end
-				end
+		local originalText = costLabel.Text
+		local originalColor = costLabel.TextColor3
+
+		-- Play error sound
+		SoundManager.Error()
+
+		costLabel.Text = "Not enough tokens!"
+		costLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+
+		task.delay(3, function()
+			if costLabel then
+				costLabel.Text = originalText
+				costLabel.TextColor3 = originalColor
 			end
-		end
+		end)
 	end
 end)
 
