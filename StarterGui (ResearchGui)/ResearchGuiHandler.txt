@@ -26,10 +26,10 @@ local function updateScaleFactor()
 	-- On smaller screens, scale down more aggressively
 	if screenWidth < 500 then
 		-- Phones: very aggressive scaling (35-42%)
-		SCALE_FACTOR = screenWidth / 1400
-	elseif screenWidth < 800 then
+		SCALE_FACTOR = screenWidth / 1000
+	elseif screenWidth < 900 then
 		-- Tablets: moderate scaling (50-57%)
-		SCALE_FACTOR = screenWidth / 1400
+		SCALE_FACTOR = screenWidth / 1200
 	else
 		-- Desktop: full size
 		SCALE_FACTOR = 1
