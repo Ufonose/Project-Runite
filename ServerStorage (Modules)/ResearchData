@@ -32,15 +32,15 @@ ResearchData.Objectives = {
 	-- ============================================
 	{
 		Id = 1,
-		Name = "Stone Collector",
-		Description = "Collect raw stone ore",
+		Name = "Iron Collector",
+		Description = "Collect raw iron ore",
 		Age = 1,
 		RequiredObjectives = {},
 		Requirements = {
-			{ItemName = "StoneOreModel", Amount = 10},
+			{ItemName = "Iron Ore", Amount = 10},
 		},
 		Rewards = {
-			ResearchTokens = 5,
+			ResearchTokens = 99,
 			UnlockMachines = {4}, -- Standard Refiner
 		},
 		Icon = "rbxassetid://7448167682",
@@ -49,12 +49,12 @@ ResearchData.Objectives = {
 
 	{
 		Id = 2,
-		Name = "Stone Refiner",
+		Name = "Iron Collector 2",
 		Description = "Refine stone into processed ore",
 		Age = 1,
 		RequiredObjectives = {1}, -- Requires Stone Collector
 		Requirements = {
-			{ItemName = "StoneOreModel_Refined", Amount = 10},
+			{ItemName = "Iron Ore", Amount = 10000},
 		},
 		Rewards = {
 			ResearchTokens = 8,
