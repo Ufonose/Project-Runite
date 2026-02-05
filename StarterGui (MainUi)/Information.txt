@@ -412,7 +412,7 @@ function module.LOAD(MODULE_INFO)
 	testStroke.Parent = testButton
 
 	-- Test message (research completion with name and tokens on separate line)
-	local testMessage = {message = "Stone Collector completed! +5 Research Tokens!", message_color = Color3.fromRGB(255, 255, 255)}
+	local testMessage = {message = "Stone Collector completed! +5 Research Tokens", message_color = Color3.fromRGB(255, 255, 255)}
 
 	testButton.MouseButton1Click:Connect(function()
 		print("Test button clicked!")
