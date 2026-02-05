@@ -84,7 +84,8 @@ local function attemptUnlockBarrier(player, barrier)
 	if not researchTokens then return end
 
 	if researchTokens.Value < unlockCost then
-		RemoteEvent:FireClient(player, "InsufficientTokens", unlockCost, researchTokens.Value)
+		-- FIX: Send barrierID as first parameter so client knows which GUI to update
+		RemoteEvent:FireClient(player, "InsufficientTokens", barrierID, unlockCost, researchTokens.Value)
 		return
 	end
 
