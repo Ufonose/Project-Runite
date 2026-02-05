@@ -1,4 +1,4 @@
--- ReplicatedStorage (Modules)/ItemHandler.txt (FIXED - NO COLLISIONFIDELITY)
+-- ReplicatedStorage (Modules)/ItemHandler.txt (MODIFIED FOR RARITY SYSTEM)
 
 -- Services
 local RepStorage = game:GetService("ReplicatedStorage")
@@ -42,12 +42,14 @@ function module.GET_REAL_TIER(ITEM_INFO)
 	return TIER_ID
 end
 
-function module.DROP_ORE(PLOT, MINE, DROP_PART, ORE_SIZE, ORE_COLOR, ORE_MATERIAL, ORE_WORTH)
+-- MODIFIED: Added optional CUSTOM_ORE_NAME parameter for rarity system
+function module.DROP_ORE(PLOT, MINE, DROP_PART, ORE_SIZE, ORE_COLOR, ORE_MATERIAL, ORE_WORTH, CUSTOM_ORE_NAME)
 	local PLOT_OWNER = Plrs:FindFirstChild(PLOT.Owner.Value)
 	if PLOT_OWNER then
 		-- Get the mine info to find the custom model name
 		local MINE_INFO = require(MINE.ItemStats)
-		local modelName = MINE_INFO.OreModelName or "StoneOreModel"
+		-- NEW: Use custom ore name if provided, otherwise fall back to ItemStats
+		local modelName = CUSTOM_ORE_NAME or MINE_INFO.OreModelName or "StoneOreModel"
 
 		-- Look for ore models in the OreModels folder
 		local oreFolder = RepStorage:FindFirstChild("OreModels")
@@ -139,7 +141,7 @@ function module.PROCESS_ORE(PLOT, FURNACE, SMELT_PART, ORE_ADD, ORE_MULTI, ORE)
 			CASH_VAL *= ORE_MULTI
 		end
 		OWNER_CASH.Value += CASH_VAL
-		RepStorage.Events.MessageClient:FireClient(PLOT_OWNER, "visual", {["visual_part"] = SMELT_PART, ["message"] = "+$"..CASH_VAL, ["message_color"] = Color3.fromRGB(134, 207, 101)})
+		RepStorage.Events.MessageClient:FireClient(PLOT_OWNER, "visual", {["visual_part"] = SMELT_PART, ["message"] = "+$"..CASH_VAL, ["message_color"] = Color3.fromRGB(85, 255, 127)})
 		return true
 	end
 	return false
