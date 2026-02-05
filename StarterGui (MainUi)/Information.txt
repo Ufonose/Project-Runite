@@ -7,43 +7,431 @@ function module.LOAD(MODULE_INFO)
 	-- Services
 	local RepStorage = SERVICES["ReplicatedStorage"]
 	local Plrs = SERVICES["Players"]
+	local TweenService = SERVICES["TweenService"] or game:GetService("TweenService")
+	-- Modules - Try to get SoundManager from MODULES or require it directly
+	local SoundManager = MODULES["SoundManager"]
+	if not SoundManager then
+		-- If not in MODULES, try to require it directly from ReplicatedStorage
+		local soundManagerModule = RepStorage:FindFirstChild("Modules") and RepStorage.Modules:FindFirstChild("SoundManager")
+		if soundManagerModule then
+			SoundManager = require(soundManagerModule)
+		else
+			warn("SoundManager module not found in ReplicatedStorage!")
+		end
+	end
 	-- Functions
 	local random = Random.new()
+	local Plr = Plrs.LocalPlayer
 
-	script.Parent.MessageTemplate.Visible = false
+	-- Create modern message template programmatically
+	local function createModernTemplate()
+		-- Create a separate ScreenGui for messages (not affected by UIListLayout)
+		local messageScreenGui = Instance.new("ScreenGui")
+		messageScreenGui.Name = "ModernMessageGui"
+		messageScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+		messageScreenGui.ResetOnSpawn = false
+		messageScreenGui.DisplayOrder = 100  -- Show above other GUIs
+		messageScreenGui.Parent = Plr:WaitForChild("PlayerGui")
+
+		local template = Instance.new("Frame")
+		template.Name = "ModernMessageTemplate"
+		template.AnchorPoint = Vector2.new(0.5, 0)
+		template.Position = UDim2.new(0.5, 0, 0.08, 0)  -- 8% from top - near top with breathing room
+		template.Size = UDim2.new(0, 0, 0, 0)
+		template.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+		template.BackgroundTransparency = 0.2
+		template.BorderSizePixel = 0
+		template.Visible = false
+		template.ZIndex = 100
+		template.Parent = messageScreenGui  -- Parent to separate ScreenGui instead of MainUi
+
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 10)  -- Smaller corners (was 16)
+		corner.Parent = template
+
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Color3.fromRGB(255, 255, 255)
+		stroke.Transparency = 0.85
+		stroke.Thickness = 2
+		stroke.Parent = template
+
+		-- Gradient background for depth
+		local gradient = Instance.new("UIGradient")
+		gradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 40, 45)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 30))
+		})
+		gradient.Rotation = 90
+		gradient.Parent = template
+
+		-- Icon container (scale-based) - more compact
+		local iconContainer = Instance.new("Frame")
+		iconContainer.Name = "IconContainer"
+		iconContainer.AnchorPoint = Vector2.new(0, 0.5)
+		iconContainer.Position = UDim2.new(0.04, 0, 0.5, 0)  -- Slightly more padding
+		iconContainer.Size = UDim2.new(0.11, 0, 0.6, 0)  -- Slightly bigger icon, takes more vertical space
+		iconContainer.BackgroundColor3 = Color3.fromRGB(60, 130, 255)
+		iconContainer.BackgroundTransparency = 0.3
+		iconContainer.BorderSizePixel = 0
+		iconContainer.ZIndex = 101
+		iconContainer.Parent = template
+
+		-- Keep icon square with aspect ratio constraint
+		local aspectRatio = Instance.new("UIAspectRatioConstraint")
+		aspectRatio.AspectRatio = 1
+		aspectRatio.Parent = iconContainer
+
+		local iconCorner = Instance.new("UICorner")
+		iconCorner.CornerRadius = UDim.new(0.2, 0)
+		iconCorner.Parent = iconContainer
+
+		-- Icon
+		local icon = Instance.new("TextLabel")
+		icon.Name = "Icon"
+		icon.Size = UDim2.new(1, 0, 1, 0)
+		icon.BackgroundTransparency = 1
+		icon.Text = "✓"
+		icon.TextColor3 = Color3.fromRGB(255, 255, 255)
+		icon.TextSize = 20  -- Smaller text
+		icon.Font = Enum.Font.GothamBold
+		icon.TextScaled = true
+		icon.ZIndex = 102
+		icon.Parent = iconContainer
+
+		local iconConstraint = Instance.new("UITextSizeConstraint")
+		iconConstraint.MaxTextSize = 20  -- Smaller
+		iconConstraint.Parent = icon
+
+		-- Main message text (scale-based positioning) - bigger text with more padding from icon
+		local message = Instance.new("TextLabel")
+		message.Name = "Message"
+		message.AnchorPoint = Vector2.new(0, 0)
+		message.Position = UDim2.new(0.18, 0, 0.15, 0)  -- More padding from icon (was 0.15)
+		message.Size = UDim2.new(0.80, 0, 0.38, 0)  -- Adjusted width
+		message.BackgroundTransparency = 1
+		message.Text = "Message Text"
+		message.TextColor3 = Color3.fromRGB(255, 255, 255)
+		message.TextSize = 20  -- Bigger (was 16)
+		message.Font = Enum.Font.Gotham
+		message.TextXAlignment = Enum.TextXAlignment.Left
+		message.TextYAlignment = Enum.TextYAlignment.Center
+		message.TextScaled = true
+		message.ZIndex = 101
+		message.Parent = template
+
+		local messageConstraint = Instance.new("UITextSizeConstraint")
+		messageConstraint.MaxTextSize = 20  -- Bigger (was 16)
+		messageConstraint.Parent = message
+
+		-- Secondary message text (for tokens/rewards) - bigger text
+		local submessage = Instance.new("TextLabel")
+		submessage.Name = "Submessage"
+		submessage.AnchorPoint = Vector2.new(0, 0)
+		submessage.Position = UDim2.new(0.18, 0, 0.53, 0)  -- Match main text padding (was 0.15)
+		submessage.Size = UDim2.new(0.80, 0, 0.32, 0)  -- Adjusted width
+		submessage.BackgroundTransparency = 1
+		submessage.Text = ""
+		submessage.TextColor3 = Color3.fromRGB(100, 180, 255)
+		submessage.TextSize = 18  -- Bigger (was 14)
+		submessage.Font = Enum.Font.GothamBold
+		submessage.TextXAlignment = Enum.TextXAlignment.Left
+		submessage.TextYAlignment = Enum.TextYAlignment.Center
+		submessage.TextScaled = true
+		submessage.Visible = false
+		submessage.ZIndex = 101
+		submessage.Parent = template
+
+		local submessageConstraint = Instance.new("UITextSizeConstraint")
+		submessageConstraint.MaxTextSize = 18  -- Bigger (was 14)
+		submessageConstraint.Parent = submessage
+
+		return template, messageScreenGui  -- Return both template and its parent ScreenGui
+	end
+
+	-- Create the template and get the ScreenGui
+	local modernTemplate, messageScreenGui = createModernTemplate()
+
+	-- DEFINE message_render BEFORE the test button uses it
 	function module.message_render(message_type, message_data)
 		local message_type = message_type or "screen"
-		local message_text, message_color = message_data["message"], message_data["message_color"] or Color3.fromRGB(255, 255, 255)
+		local message_text = message_data["message"]
+		local message_color = message_data["message_color"] or Color3.fromRGB(255, 255, 255)
+
 		if message_type == "screen" then
-			local message_menu = script.Parent.MessageTemplate:Clone()
-			message_menu.Message.TextColor3 = message_color
-			message_menu.Message.Text = message_text
-			message_menu.Size = UDim2.new(0, message_menu.Message.TextBounds.X, 0, message_menu.Message.TextBounds.Y)
-			local X_BOUNDS = string.len(message_text)*(message_menu.Message.TextSize/1.53)
-			local Y_BOUNDS = 50 --	MESSAGE_MENU.AbsoluteSize.Y
-			message_menu.Size = UDim2.new(0, 0, 0, 0)
-			message_menu.Visible = true
-			message_menu.Parent = script.Parent
-			message_menu:TweenSize(UDim2.new(0, X_BOUNDS+30, 0, Y_BOUNDS), Enum.EasingDirection.In, Enum.EasingStyle.Sine, .85)
-			wait(5)
-			message_menu:TweenSize(UDim2.new(0, 0, 0, Y_BOUNDS), .3)
-			wait(.3)
-			message_menu:Destroy()
+			-- Clone the modern template
+			local message_frame = modernTemplate:Clone()
+			local message_label = message_frame.Message
+			local submessage_label = message_frame.Submessage
+			local icon_container = message_frame.IconContainer
+			local icon_label = icon_container.Icon
+
+			-- Check if this is a research completion message (contains "completed!" and tokens)
+			local isResearchComplete = string.find(message_text, "completed!") and string.find(message_text, "Research Tokens")
+
+			if isResearchComplete then
+				-- Split the message into two parts
+				local mainText, rewardText = string.match(message_text, "(.+completed!)%s*(.+)")
+
+				if mainText and rewardText then
+					message_label.Text = mainText
+					message_label.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+					submessage_label.Text = rewardText
+					submessage_label.TextColor3 = Color3.fromRGB(100, 180, 255)
+					submessage_label.Visible = true
+				else
+					-- Fallback if pattern doesn't match
+					message_label.Text = message_text
+					message_label.TextColor3 = message_color
+				end
+			else
+				-- Single line message - centered vertically with padding from icon
+				message_label.Text = message_text
+				message_label.TextColor3 = message_color
+				message_label.Position = UDim2.new(0.18, 0, 0.5, 0)  -- Match padding from icon
+				message_label.AnchorPoint = Vector2.new(0, 0.5)
+				message_label.Size = UDim2.new(0.80, 0, 0.6, 0)  -- Match width
+			end
+
+			-- Determine icon and color based on message content
+			local icon_text = "✓"
+			local icon_bg_color = Color3.fromRGB(60, 130, 255)
+
+			-- Error/warning detection
+			if string.find(string.lower(message_text), "cannot") or 
+				string.find(string.lower(message_text), "failed") or
+				string.find(string.lower(message_text), "error") then
+				icon_text = "✕"
+				icon_bg_color = Color3.fromRGB(255, 80, 80)
+				-- Success detection
+			elseif string.find(string.lower(message_text), "unlocked") or
+				string.find(string.lower(message_text), "completed") or
+				string.find(string.lower(message_text), "success") or
+				string.find(string.lower(message_text), "got") then
+				icon_text = "✓"
+				icon_bg_color = Color3.fromRGB(70, 200, 100)
+				-- Info/notification
+			else
+				icon_text = "ℹ"
+				icon_bg_color = Color3.fromRGB(60, 130, 255)
+			end
+
+			icon_label.Text = icon_text
+			icon_container.BackgroundColor3 = icon_bg_color
+
+			-- Play success sound for research completion
+			local lowerText = string.lower(message_text)
+			if string.find(lowerText, "research") and (string.find(lowerText, "complete") or string.find(lowerText, "completed")) then
+				print("Playing success sound for research completion!")
+				if SoundManager and SoundManager.Success then
+					local success, err = pcall(function()
+						SoundManager.Success()
+					end)
+					if not success then
+						warn("Failed to play success sound:", err)
+					end
+				else
+					warn("SoundManager.Success not available!")
+				end
+			end
+
+			-- Scale-based sizing (adjusted for bigger text)
+			local minWidth = 0.15  -- 15% of screen width minimum (slightly wider for bigger text)
+			local maxWidth = 0.22  -- 28% of screen width maximum (wider for bigger text)
+			local targetHeight = isResearchComplete and 0.06 or 0.04  -- Slightly taller for bigger text
+
+			-- Estimate text width based on the longer line
+			local textToMeasure = message_label.Text
+			local estimatedWidth = math.min(#textToMeasure * 0.008 + 0.10, maxWidth)
+			local targetWidth = math.clamp(estimatedWidth, minWidth, maxWidth)
+
+			-- Position and parent - Near top with breathing room
+			message_frame.Position = UDim2.new(0.5, 0, 0.01, 0)  -- 8% from top
+			message_frame.Size = UDim2.new(0, 0, targetHeight, 0)
+			message_frame.Visible = true
+			message_frame.Parent = messageScreenGui  -- Parent to separate ScreenGui, not MainUi
+
+			-- Animate in (scale-based)
+			local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+			local tweenIn = TweenService:Create(message_frame, tweenInfo, {
+				Size = UDim2.new(targetWidth, 0, targetHeight, 0),
+				BackgroundTransparency = 0.2
+			})
+
+			-- Pulse icon animation (scale-based) - updated for new size
+			local iconTweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			local iconTween = TweenService:Create(icon_container, iconTweenInfo, {
+				Size = UDim2.new(0.13, 0, 0.7, 0)  -- Slightly bigger pulse
+			})
+
+			tweenIn:Play()
+			task.wait(0.15)
+			iconTween:Play()
+
+			-- Animate icon back
+			local iconTweenBack = TweenService:Create(icon_container, iconTweenInfo, {
+				Size = UDim2.new(0.11, 0, 0.6, 0)  -- Back to original size
+			})
+			iconTween.Completed:Connect(function()
+				iconTweenBack:Play()
+			end)
+
+			-- Wait and animate out
+			task.wait(4.5)
+
+			local tweenOutInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			local tweenOut = TweenService:Create(message_frame, tweenOutInfo, {
+				Size = UDim2.new(0, 0, targetHeight, 0),
+				BackgroundTransparency = 1
+			})
+
+			tweenOut:Play()
+			tweenOut.Completed:Connect(function()
+				message_frame:Destroy()
+			end)
+
 		elseif message_type == "visual" then
+			-- Visual message (billboard on parts) - Simple floating text with distance scaling
 			local message_part = message_data["visual_part"]
-			local message_menu = script.Parent.Parent.VisualMessage:Clone()
+			local message_menu = Instance.new("BillboardGui")
+			message_menu.Name = "VisualMessage"
+			message_menu.Size = UDim2.new(0, 200, 0, 50)
+			message_menu.AlwaysOnTop = true  -- Keep on top so not blocked by lift
 			message_menu.Parent = script
-			message_menu.Message.Text = message_text
-			message_menu.Message.TextColor3 = message_color
-			local rand_offset = Vector3.new(random:NextNumber(-message_part.Size.X, message_part.Size.X), 4.5+random:NextNumber(0, message_part.Size.Y), random:NextNumber(-message_part.Size.Z, message_part.Size.Z))
+
+			-- Just the text label, no frame background
+			local messageLabel = Instance.new("TextLabel")
+			messageLabel.Name = "Message"
+			messageLabel.Size = UDim2.new(1, 0, 1, 0)
+			messageLabel.BackgroundTransparency = 1  -- No background
+			messageLabel.Text = message_text
+			messageLabel.TextColor3 = message_color
+			messageLabel.TextSize = 24
+			messageLabel.Font = Enum.Font.GothamBold
+			messageLabel.TextScaled = true
+			messageLabel.TextStrokeTransparency = 0.5  -- Subtle outline for readability
+			messageLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+			messageLabel.Parent = message_menu
+
+			local textConstraint = Instance.new("UITextSizeConstraint")
+			textConstraint.MaxTextSize = 24
+			textConstraint.Parent = messageLabel
+
+			-- Random offset position
+			local rand_offset = Vector3.new(
+				random:NextNumber(-message_part.Size.X, message_part.Size.X),
+				4.5 + random:NextNumber(0, message_part.Size.Y),
+				random:NextNumber(-message_part.Size.Z, message_part.Size.Z)
+			)
 			message_menu.StudsOffsetWorldSpace = rand_offset
 			message_menu.Adornee = message_part
 			message_menu.Enabled = true
-			task.wait(message_data["message_time"] or random:NextNumber(2, 4))
-			message_menu:Destroy()
+
+			-- Float upward and fade away animation with distance scaling
+			local floatDuration = message_data["message_time"] or 1.5
+			local startOffset = message_menu.StudsOffsetWorldSpace
+			local endOffset = startOffset + Vector3.new(0, 8, 0)  -- Float up 3 studs
+
+			-- Tween the text fade
+			local tweenInfo = TweenInfo.new(floatDuration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			local fadeTween = TweenService:Create(messageLabel, tweenInfo, {
+				TextTransparency = 1,
+				TextStrokeTransparency = 1
+			})
+
+			fadeTween:Play()
+
+			-- Animate upward movement AND distance-based scaling
+			task.spawn(function()
+				local camera = Plr.Character and Plr.Character:FindFirstChild("Humanoid") and Plr.Character.Humanoid.RootPart or nil
+				local elapsed = 0
+				local startTime = tick()
+				local maxVisibilityDistance = 500  -- Text disappears beyond this distance
+
+				while elapsed < floatDuration do
+					elapsed = tick() - startTime
+					local alpha = elapsed / floatDuration
+					message_menu.StudsOffsetWorldSpace = startOffset:Lerp(endOffset, alpha)
+
+					-- Scale based on distance from player
+					if camera and message_part and message_part.Parent then
+						local distance = (camera.Position - message_part.Position).Magnitude
+
+						-- Hide if beyond max distance
+						if distance > maxVisibilityDistance then
+							message_menu.Enabled = false
+						else
+							message_menu.Enabled = true
+							local scaleFactor = math.clamp(1 - (distance / 300), 0.1, 1)  -- Scales down at distance, min 30% size
+							message_menu.Size = UDim2.new(0, 200 * scaleFactor, 0, 50 * scaleFactor)
+						end
+					end
+
+					task.wait()
+				end
+				message_menu:Destroy()
+			end)
 		end
 	end
+
+	-- Create test button in a SEPARATE ScreenGui (so it's not affected by MainUi constraints)
+	local testScreenGui = Instance.new("ScreenGui")
+	testScreenGui.Name = "TestMessageButtonGui"
+	testScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	testScreenGui.ResetOnSpawn = false
+	testScreenGui.Parent = Plr:WaitForChild("PlayerGui")
+
+	local testButton = Instance.new("TextButton")
+	testButton.Name = "TestMessageButton"
+	testButton.AnchorPoint = Vector2.new(1, 1)
+	testButton.Position = UDim2.new(1, -10, 1, -10)  -- Bottom-right corner
+	testButton.Size = UDim2.new(0.12, 0, 0.08, 0)
+	testButton.BackgroundColor3 = Color3.fromRGB(60, 130, 255)
+	testButton.BackgroundTransparency = 0.3
+	testButton.BorderSizePixel = 0
+	testButton.Text = "Test Message"
+	testButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	testButton.TextSize = 18
+	testButton.Font = Enum.Font.GothamBold
+	testButton.TextScaled = true
+	testButton.ZIndex = 200
+	testButton.Parent = testScreenGui
+
+	local testTextConstraint = Instance.new("UITextSizeConstraint")
+	testTextConstraint.MaxTextSize = 18
+	testTextConstraint.Parent = testButton
+
+	local testCorner = Instance.new("UICorner")
+	testCorner.CornerRadius = UDim.new(0, 10)
+	testCorner.Parent = testButton
+
+	local testStroke = Instance.new("UIStroke")
+	testStroke.Color = Color3.fromRGB(255, 255, 255)
+	testStroke.Transparency = 0.85
+	testStroke.Thickness = 2
+	testStroke.Parent = testButton
+
+	-- Test message (research completion with name and tokens on separate line)
+	local testMessage = {message = "Stone Collector completed! +5 Research Tokens!", message_color = Color3.fromRGB(255, 255, 255)}
+
+	testButton.MouseButton1Click:Connect(function()
+		print("Test button clicked!")
+		module.message_render("screen", testMessage)
+	end)
+
+	-- Hover effect
+	testButton.MouseEnter:Connect(function()
+		testButton.BackgroundTransparency = 0.1
+	end)
+
+	testButton.MouseLeave:Connect(function()
+		testButton.BackgroundTransparency = 0.3
+	end)
+
+	-- Connect to server events
 	RepStorage.Events.MessageClient.OnClientEvent:Connect(module.message_render)
+
+	print("Modern Information script loaded with test button!")
 end
 
 return module
