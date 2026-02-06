@@ -38,7 +38,7 @@ function module.LOAD(MODULE_INFO)
 		local screenWidth = viewport.X
 
 		-- If screen width is less than 800 pixels (mobile/tablet), make GUI bigger
-		if screenWidth < 800 then
+		if screenWidth < 900 then
 			shopFrame.Size = UDim2.new(1.5, 0, 1.35, 0)  -- 95% on mobile (almost fullscreen)
 		else
 			shopFrame.Size = UDim2.new(1.2, 0, 1.3, 0)  -- 85% on desktop
@@ -163,6 +163,30 @@ function module.LOAD(MODULE_INFO)
 	closeStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	closeStroke.Parent = closeButton
 
+	-- ADD THIS RIGHT HERE - AFTER CLOSE BUTTON IS CREATED:
+	-- Function to update close button size for mobile
+	local function updateCloseButtonSize()
+		local viewport = workspace.CurrentCamera.ViewportSize
+		local screenWidth = viewport.X
+
+		if screenWidth < 900 then  -- Match your shop size threshold
+			-- Mobile: Make button bigger (1.5x size)
+			closeButton.Size = UDim2.new(0.107, 0, 1.2, 0)
+			closeButton.Position = UDim2.new(0.88, 0, -0.1, 0)
+		else
+			-- Desktop: Normal size
+			closeButton.Size = UDim2.new(0.0714, 0, 0.8, 0)
+			closeButton.Position = UDim2.new(0.9196, 0, 0.1, 0)
+		end
+	end
+
+	-- Update on initial load
+	updateCloseButtonSize()
+
+	-- Update when screen size changes
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateCloseButtonSize)
+	-- END OF ADDITION
+
 	closeButton.MouseButton1Click:Connect(function()
 		Main.CLOSE_MENU(script.Parent)
 		shopFrame.Visible = false
@@ -280,7 +304,7 @@ function module.LOAD(MODULE_INFO)
 	allButton.Size = UDim2.new(0.23845, 0, 1, 0)  -- 110/520 width
 	allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
 	allButton.BackgroundTransparency = 0
-	allButton.Text = "📦 All"
+	allButton.Text = "All"
 	allButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	allButton.TextSize = 14
 	allButton.Font = Enum.Font.GothamBold
@@ -337,8 +361,13 @@ function module.LOAD(MODULE_INFO)
 
 	-- Calculate responsive cell size based on scroll frame dimensions
 	local function updateGridSize()
+		local viewport = workspace.CurrentCamera.ViewportSize
+		local screenWidth = viewport.X
 		local scrollWidth = itemsScroll.AbsoluteSize.X
-		local cellWidth = (scrollWidth - 30) / 3 - 10  -- 3 columns, accounting for padding
+
+		-- Mobile: 2 columns with bigger items, Desktop: 3 columns
+		local numColumns = (screenWidth < 900) and 2 or 3
+		local cellWidth = (scrollWidth - 30) / numColumns - 10  -- Adjust for columns
 		local cellHeight = cellWidth / 0.7381  -- Maintain 155:210 aspect ratio
 
 		itemsGrid.CellSize = UDim2.new(0, cellWidth, 0, cellHeight)
@@ -556,7 +585,7 @@ function module.LOAD(MODULE_INFO)
 	buyButton.Position = UDim2.new(0, 0, 0, 0)
 	buyButton.BackgroundColor3 = Color3.fromRGB(70, 130, 70)
 	buyButton.BackgroundTransparency = 0
-	buyButton.Text = "💰 Buy - 150"
+	buyButton.Text = "💰 Buy - $150"
 	buyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	buyButton.TextSize = 14
 	buyButton.Font = Enum.Font.GothamBold
@@ -614,9 +643,9 @@ function module.LOAD(MODULE_INFO)
 
 	-- Category buttons data (HARDCODED - DO NOT CHANGE)
 	local categories = {
-		{Name = "MineTab", Display = "Conveyors", Icon = "🚚", Color = Color3.fromRGB(70, 100, 140)},
-		{Name = "MachineTab", Display = "Machines", Icon = "⚙️", Color = Color3.fromRGB(16, 71, 60)},	
-		{Name = "DecorTab", Display = "Decor", Icon = "🎨", Color = Color3.fromRGB(140, 100, 70)},
+		{Name = "MineTab", Display = "Conveyors", Color = Color3.fromRGB(70, 100, 140)},
+		{Name = "MachineTab", Display = "Machines", Color = Color3.fromRGB(16, 71, 60)},	
+		{Name = "DecorTab", Display = "Decor", Color = Color3.fromRGB(140, 100, 70)},
 	}
 
 	-- Store category buttons for later reference
@@ -629,7 +658,7 @@ function module.LOAD(MODULE_INFO)
 		tabButton.Size = UDim2.new(0.23845, 0, 1, 0)
 		tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)  -- Start gray
 		tabButton.BackgroundTransparency = 0
-		tabButton.Text = category.Icon .. " " .. category.Display
+		tabButton.Text = category.Display
 		tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 		tabButton.TextSize = 14
 		tabButton.Font = Enum.Font.GothamBold
@@ -819,7 +848,7 @@ function module.LOAD(MODULE_INFO)
 			priceLabel.BackgroundColor3 = isUnlocked and Color3.fromRGB(70, 130, 70) or Color3.fromRGB(130, 60, 60)
 			priceLabel.BackgroundTransparency = 0
 			priceLabel.BorderSizePixel = 0
-			priceLabel.Text = isUnlocked and ("💰 $" .. CASH_LIB.SUFFIX_NUM(ITEM_INFO.Cost)) or "🔒 Locked"
+			priceLabel.Text = isUnlocked and ("$" .. CASH_LIB.SUFFIX_NUM(ITEM_INFO.Cost)) or "🔒 Locked"
 			priceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 			priceLabel.TextSize = 14
 			priceLabel.Font = Enum.Font.GothamBold
@@ -888,7 +917,7 @@ function module.LOAD(MODULE_INFO)
 					selectedTier.TextColor3 = tierData and tierData["TIER_COLOR"] or Color3.fromRGB(150, 150, 150)
 
 					if isUnlocked then
-						buyButton.Text = "💰 Buy - " .. CASH_LIB.SUFFIX_NUM(ITEM_INFO.Cost)
+						buyButton.Text = "💰 Buy - $" .. CASH_LIB.SUFFIX_NUM(ITEM_INFO.Cost)
 						buyButton.BackgroundColor3 = Color3.fromRGB(70, 130, 70)
 					else
 						buyButton.Text = "🔒 LOCKED"
@@ -925,7 +954,7 @@ function module.LOAD(MODULE_INFO)
 		amountLabel.Text = tostring(AMOUNT)
 		if SELECTED_ITEM then
 			local ITEM_INFO = require(SELECTED_ITEM.ItemStats)
-			buyButton.Text = "💰 Buy - " .. CASH_LIB.SUFFIX_NUM(ITEM_INFO.Cost * AMOUNT)
+			buyButton.Text = "💰 Buy - $" .. CASH_LIB.SUFFIX_NUM(ITEM_INFO.Cost * AMOUNT)
 		end
 	end)
 
@@ -934,7 +963,7 @@ function module.LOAD(MODULE_INFO)
 		amountLabel.Text = tostring(AMOUNT)
 		if SELECTED_ITEM then
 			local ITEM_INFO = require(SELECTED_ITEM.ItemStats)
-			buyButton.Text = "💰 Buy - " .. CASH_LIB.SUFFIX_NUM(ITEM_INFO.Cost * AMOUNT)
+			buyButton.Text = "💰 Buy - $" .. CASH_LIB.SUFFIX_NUM(ITEM_INFO.Cost * AMOUNT)
 		end
 	end)
 
