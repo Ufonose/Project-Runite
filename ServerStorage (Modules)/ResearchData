@@ -41,7 +41,7 @@ ResearchData.Objectives = {
 		},
 		Rewards = {
 			ResearchTokens = 99,
-			UnlockMachines = {4}, -- Standard Refiner
+			UnlockMachines = {}, -- Standard Refiner
 		},
 		Icon = "rbxassetid://7448167682",
 		TreePosition = {X = 1, Y = 1}, -- Starting position (column 1, row 1)
@@ -58,7 +58,7 @@ ResearchData.Objectives = {
 		},
 		Rewards = {
 			ResearchTokens = 8,
-			UnlockMachines = {5}, -- Advanced machines
+			UnlockMachines = {}, -- Advanced machines
 		},
 		Icon = "rbxassetid://7435467441",
 		TreePosition = {X = 2, Y = 1}, -- Column 2, row 1
@@ -66,21 +66,58 @@ ResearchData.Objectives = {
 
 	{
 		Id = 3,
-		Name = "Master Stone Processor",
-		Description = "Process large quantities of stone",
+		Name = "Master Stone Processor 1",
+		Description = "Process large quantities of plates with the rolling mill",
 		Age = 1,
-		RequiredObjectives = {2}, -- Requires Stone Refiner
+		RequiredObjectives = {}, -- Requires Stone Refiner
 		Requirements = {
-			{ItemName = "StoneOreModel", Amount = 200},
-			{ItemName = "StoneOreModel_Refined", Amount = 100},
+			{ItemName = "Iron Ore", Amount = 10},
+			{ItemName = "Diamond Gem", Amount = 100},
+			{ItemName = "Iron Ore Cleaned", Amount = 100},
 		},
 		Rewards = {
-			ResearchTokens = 25,
+			ResearchTokens = 20,
 			UnlockMachines = {}, -- Unlock multiple machines
 		},
 		Icon = "rbxassetid://7435467441",
-		TreePosition = {X = 3, Y = 1}, -- Column 3, row 1
+		TreePosition = {X = 1, Y = 2}, -- Column 3, row 1
 	},
+	{
+		Id = 4,
+		Name = "Master Stone Processor 2",
+		Description = "Process large quantities of plates with the rolling mill",
+		Age = 1,
+		RequiredObjectives = {}, -- Requires Stone Refiner
+		Requirements = {
+			{ItemName = "Iron Ore", Amount = 20000},
+			{ItemName = "Ruby Gem", Amount = 100},
+			{ItemName = "Iron Ore Cleaned", Amount = 100},
+		},
+		Rewards = {
+			ResearchTokens = 20,
+			UnlockMachines = {}, -- Unlock multiple machines
+		},
+		Icon = "rbxassetid://7435467441",
+		TreePosition = {X = 2, Y = 2}, -- Column 3, row 1
+	},
+	{
+		Id = 5,
+		Name = "Master Stone Processor 3",
+		Description = "Process large quantities of plates with the rolling mill",
+		Age = 1,
+		RequiredObjectives = {}, -- Requires Stone Refiner
+		Requirements = {
+			{ItemName = "Iron Ore", Amount = 20000},
+			{ItemName = "Iron Ore_Refined", Amount = 100},
+		},
+		Rewards = {
+			ResearchTokens = 20,
+			UnlockMachines = {}, -- Unlock multiple machines
+		},
+		Icon = "rbxassetid://7435467441",
+		TreePosition = {X = 3, Y = 2}, -- Column 3, row 1
+	},
+	
 
 	-- ============================================
 	-- SECOND AGE - Advanced Production
