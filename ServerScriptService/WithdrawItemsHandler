@@ -1,0 +1,106 @@
+-- ServerScriptService/WithdrawItemsHandler
+
+local RepStorage = game:GetService("ReplicatedStorage")
+local Plrs = game:GetService("Players")
+
+-- Create the RemoteFunction if it doesn't exist
+local withdrawItemsRemote = RepStorage.Events:FindFirstChild("WithdrawAllItems")
+if not withdrawItemsRemote then
+	withdrawItemsRemote = Instance.new("RemoteFunction")
+	withdrawItemsRemote.Name = "WithdrawAllItems"
+	withdrawItemsRemote.Parent = RepStorage.Events
+end
+
+-- Function to check if an item should be excluded from withdrawal
+local function shouldExclude(item, plot)
+	-- Check if item is a hotspot miner (has HotspotMiner attribute)
+	if item:GetAttribute("HotspotMiner") == true then
+		return true
+	end
+
+	-- Check if item is a hotspot furnace (has HotspotFurnace attribute)
+	if item:GetAttribute("HotspotFurnace") == true then
+		return true
+	end
+
+	-- Also check by name for Standard Furnace as backup
+	if item.Name == "Standard Furnace" then
+		local itemStats = item:FindFirstChild("ItemStats")
+		if itemStats and itemStats:IsA("ModuleScript") then
+			local success, itemInfo = pcall(function()
+				return require(itemStats)
+			end)
+			if success and itemInfo and itemInfo.ItemId == 3 then  -- Assuming Standard Furnace has ItemId 3
+				return true
+			end
+		end
+	end
+
+	return false
+end
+
+-- Function to withdraw all items from a player's plot
+local function withdrawAllItems(player)
+	-- Get the player's plot
+	local playerPlot = player.SetPlot.Value
+
+	if not playerPlot then
+		warn("Player does not have a plot assigned!")
+		return false
+	end
+
+	-- Find the PlacedItems folder
+	local placedItems = playerPlot:FindFirstChild("PlacedItems")
+
+	if not placedItems then
+		warn("PlacedItems folder not found in plot!")
+		return false
+	end
+
+	-- Count how many items we're withdrawing
+	local itemsWithdrawn = 0
+
+	-- Loop through all items in PlacedItems
+	for _, item in pairs(placedItems:GetChildren()) do
+		-- Skip if this item should be excluded
+		if not shouldExclude(item, playerPlot) then
+			-- Get the item's stats
+			local itemStats = item:FindFirstChild("ItemStats")
+			if itemStats and itemStats:IsA("ModuleScript") then
+				local success, itemInfo = pcall(function()
+					return require(itemStats)
+				end)
+
+				if success and itemInfo then
+					local itemId = itemInfo.ItemId
+
+					-- Add 1 of this item to player's inventory
+					if _G["global_data"] and _G["global_data"][player.Name] then
+						if _G["global_data"][player.Name]["Items"][itemId] then
+							_G["global_data"][player.Name]["Items"][itemId]["Amount"] = 
+								_G["global_data"][player.Name]["Items"][itemId]["Amount"] + 1
+							itemsWithdrawn = itemsWithdrawn + 1
+						end
+					end
+
+					-- Destroy the item from the plot
+					item:Destroy()
+				end
+			end
+		end
+	end
+
+	-- Update the player's inventory on the client
+	if itemsWithdrawn > 0 then
+		RepStorage.Events.InventoryUpdate:FireClient(player)
+	end
+
+	print("Withdrew", itemsWithdrawn, "items from", player.Name .. "'s plot")
+
+	return true
+end
+
+-- Set up the remote function
+withdrawItemsRemote.OnServerInvoke = withdrawAllItems
+
+print("WithdrawItemsHandler loaded!")
