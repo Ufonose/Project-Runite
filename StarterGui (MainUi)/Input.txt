@@ -8,6 +8,9 @@ function module.LOAD(MODULE_INFO)
 	local InputService = SERVICES["UserInputService"]
 	local RepStorage = SERVICES["ReplicatedStorage"]
 	local Plrs = SERVICES["Players"]
+	-- ADD THIS LINE:
+	local ProximityPromptService = game:GetService("ProximityPromptService")
+
 	-- Modules
 	local ItemSelection = MODULES["ItemSelection"]
 	local PlacementLib = MODULES["PlacementLib"]
@@ -35,6 +38,18 @@ function module.LOAD(MODULE_INFO)
 	-- NEW: Simple tap tracking - tap stays active for a short time
 	module.TAP_ACTIVE = false
 	module.TAP_POSITION = nil
+
+	-- ADD THESE LINES - ProximityPrompt cooldown system:
+	local lastProximityPromptTime = 0
+	local PROXIMITY_COOLDOWN = 2  -- 300ms cooldown after using proximity prompt
+
+	-- Track when ANY proximity prompt is triggered
+	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
+		if player == Plr then
+			lastProximityPromptTime = tick()
+		end
+	end)
+	-- END OF ADDITION
 
 	InputService.InputBegan:Connect(function(KEY_INPUT, PROCESSED)
 		if PROCESSED then
@@ -157,6 +172,11 @@ function module.LOAD(MODULE_INFO)
 				ItemSelection.SELL_ITEMS()
 			end
 		elseif KEY_INPUT.KeyCode == Enum.KeyCode.E then
+			-- ADD THIS CHECK - Don't open inventory if we just used a proximity prompt:
+			if tick() - lastProximityPromptTime < PROXIMITY_COOLDOWN then
+				return  -- Ignore the E press
+			end
+			-- EXISTING CODE:
 			if not PLACEMENT.PLACING_ITEMS then
 				Main.OPEN_MENU(script.Parent.Parent.Inv)
 			end
