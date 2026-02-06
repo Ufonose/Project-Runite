@@ -8,13 +8,11 @@ function module.LOAD(MODULE_INFO)
 	local RepStorage = SERVICES["ReplicatedStorage"]
 	local Plrs = SERVICES["Players"]
 	-- Modules
-	local CASH_LIB = MODULES["CashLib"]
 	local Main = MODULES["Main"]
 	local ModernOptions = MODULES["ModernOptions"]
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
-	-- Variables
-	local DB = true
+	local PlayerGui = Plr:WaitForChild("PlayerGui")
 
 	-- Hide old Options GUI elements (keep the script but hide the frames)
 	for _, child in pairs(script.Parent:GetChildren()) do
@@ -26,29 +24,61 @@ function module.LOAD(MODULE_INFO)
 	-- Create modern options UI
 	local modernUI = ModernOptions.CREATE_MODERN_OPTIONS_UI(script.Parent.Parent)
 
-	-- Function to update rebirth information
-	local function updateRebirthInfo()
-		local cost = CASH_LIB.GET_REBIRTH_COST(Plr)
-		modernUI.CostValue.Text = "$" .. CASH_LIB.SUFFIX_NUM(cost)
-		modernUI.RebirthValue.Text = tostring(Plr.leaderstats.Rebirths.Value)
+	-- Function to update Active Research Display visibility
+	local function updateResearchDisplay()
+		local activeResearchDisplay = PlayerGui:FindFirstChild("ActiveResearchDisplay")
+		if activeResearchDisplay then
+			local hideResearch = Plr.Settings:FindFirstChild("HideResearch")
+			if hideResearch then
+				-- If HideResearch is true, hide the display. If false, show it.
+				activeResearchDisplay.Enabled = not hideResearch.Value
+
+				-- IMPORTANT: Set DisplayOrder to keep it behind other GUIs
+				-- This prevents it from appearing on top when re-enabled
+				activeResearchDisplay.DisplayOrder = -1
+			end
+		end
 	end
 
-	-- Set up rebirth information updates
-	updateRebirthInfo()
-	Plr.Rebirth.Changed:Connect(updateRebirthInfo)
-	Plr.leaderstats.Rebirths.Changed:Connect(updateRebirthInfo)
+	-- Set up Active Research Display toggle
+	local hideResearchSetting = Plr.Settings:FindFirstChild("HideResearch")
+	if hideResearchSetting then
+		-- Initial update
+		updateResearchDisplay()
 
-	-- Rebirth button functionality
-	modernUI.RebirthButton.MouseButton1Click:Connect(function()
-		if DB then
-			DB = false
-			local success = RepStorage.Events.Rebirth:InvokeServer()
-			if success then
-				warn("Rebirth Success!")
-			end
-			wait(0.1)
-			DB = true
+		-- Listen for changes
+		hideResearchSetting.Changed:Connect(updateResearchDisplay)
+	end
+
+	-- Clear ores button functionality
+	modernUI.ClearOresButton.MouseButton1Click:Connect(function()
+		local success = RepStorage.Events.ClearPlotOres:InvokeServer()
+		if success then
+			print("Plot ores cleared successfully!")
+		else
+			warn("Failed to clear plot ores")
 		end
+	end)
+
+	-- Withdraw button functionality (show confirmation popup)
+	modernUI.WithdrawButton.MouseButton1Click:Connect(function()
+		modernUI.ConfirmationPopup.Visible = true
+	end)
+
+	-- Confirmation popup - Yes button
+	modernUI.YesButton.MouseButton1Click:Connect(function()
+		modernUI.ConfirmationPopup.Visible = false
+		local success = RepStorage.Events.WithdrawAllItems:InvokeServer()
+		if success then
+			print("All items withdrawn successfully!")
+		else
+			warn("Failed to withdraw items")
+		end
+	end)
+
+	-- Confirmation popup - No button
+	modernUI.NoButton.MouseButton1Click:Connect(function()
+		modernUI.ConfirmationPopup.Visible = false
 	end)
 
 	-- Close button functionality
@@ -60,7 +90,6 @@ function module.LOAD(MODULE_INFO)
 	script.Parent.MenuObject.Changed:Connect(function()
 		if script.Parent.MenuObject.Value then
 			modernUI.Container.Visible = true
-			updateRebirthInfo()  -- Update info when opening
 		else
 			modernUI.Container.Visible = false
 		end
