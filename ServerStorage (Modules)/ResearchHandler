@@ -23,10 +23,10 @@ function ResearchHandler.StartObjective(player, objectiveId)
 	local research = _G["global_data"][player.Name]["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
-	print("=== START OBJECTIVE ===")
-	print("Player:", player.Name)
-	print("Objective ID:", objectiveId)
-	print("Objective found:", objective ~= nil)
+	--print("=== START OBJECTIVE ===")
+	--print("Player:", player.Name)
+	--print("Objective ID:", objectiveId)
+	--print("Objective found:", objective ~= nil)
 
 	if not objective then
 		warn("Objective", objectiveId, "not found!")
@@ -35,34 +35,34 @@ function ResearchHandler.StartObjective(player, objectiveId)
 
 	-- Check if already completed
 	if table.find(research.CompletedObjectives, objectiveId) then
-		print("Already completed")
+		--print("Already completed")
 		return false, "Already completed"
 	end
 
 	-- Check if already active
 	if table.find(research.ActiveObjectives, objectiveId) then
-		print("Already active")
+		--print("Already active")
 		return false, "Already active"
 	end
 
 	-- Check prerequisites
 	if not ResearchData.CanStartObjective(objectiveId, research.CompletedObjectives) then
-		print("Prerequisites not met")
+		--print("Prerequisites not met")
 		return false, "Prerequisites not met"
 	end
 
 	-- Start the objective
 	table.insert(research.ActiveObjectives, objectiveId)
-	research.ObjectiveProgress[objectiveId] = {}
+	research.ObjectiveProgress[tostring(objectiveId)] = {}
 
 	-- Initialize progress for each requirement
 	for _, requirement in pairs(objective.Requirements) do
-		research.ObjectiveProgress[objectiveId][requirement.ItemName] = 0
-		print("Initialized requirement:", requirement.ItemName, "= 0 /", requirement.Amount)
+		research.ObjectiveProgress[tostring(objectiveId)][requirement.ItemName] = 0
+		--print("Initialized requirement:", requirement.ItemName, "= 0 /", requirement.Amount)
 	end
 
-	print("Objective started successfully!")
-	print("Active objectives:", table.concat(research.ActiveObjectives, ", "))
+	--print("Objective started successfully!")
+	--print("Active objectives:", table.concat(research.ActiveObjectives, ", "))
 
 	return true
 end
@@ -74,28 +74,28 @@ function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
 	local research = _G["global_data"][player.Name]["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
-	print("=== DEPOSIT ITEM ===")
-	print("Player:", player.Name)
-	print("Objective ID:", objectiveId)
-	print("Item Name:", itemName)
-	print("Amount:", amount)
+	--print("=== DEPOSIT ITEM ===")
+	--print("Player:", player.Name)
+	--print("Objective ID:", objectiveId)
+	--print("Objective found:", objective ~= nil)print("Item Name:", itemName)
+	--print("Amount:", amount)
 
 	if not objective then 
-		print("Objective not found!")
+		--print("Objective not found!")
 		return false 
 	end
 
 	-- Check if objective is active
 	if not table.find(research.ActiveObjectives, objectiveId) then
-		print("Objective not active!")
-		print("Active objectives:", table.concat(research.ActiveObjectives, ", "))
+		--print("Objective not active!")
+		--print("Active objectives:", table.concat(research.ActiveObjectives, ", "))
 		return false, "Objective not active"
 	end
 
 	-- Find the requirement
 	local requirement = nil
 	for _, req in pairs(objective.Requirements) do
-		print("Checking requirement:", req.ItemName, "vs", itemName)
+		--print("Checking requirement:", req.ItemName, "vs", itemName)
 		if req.ItemName == itemName then
 			requirement = req
 			break
@@ -103,27 +103,27 @@ function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
 	end
 
 	if not requirement then
-		print("Item not required for this objective!")
-		print("Required items:")
+		--print("Item not required for this objective!")
+		--print("Required items:")
 		for _, req in pairs(objective.Requirements) do
-			print(" -", req.ItemName)
+			--print(" -", req.ItemName)
 		end
 		return false, "Item not required for this objective"
 	end
 
-	print("Requirement found:", requirement.ItemName, requirement.Amount)
+	--print("Requirement found:", requirement.ItemName, requirement.Amount)
 
 	-- Add to progress
-	local currentProgress = research.ObjectiveProgress[objectiveId][itemName] or 0
+	local currentProgress = research.ObjectiveProgress[tostring(objectiveId)][itemName] or 0
 	local newProgress = math.min(currentProgress + amount, requirement.Amount)
-	research.ObjectiveProgress[objectiveId][itemName] = newProgress
+	research.ObjectiveProgress[tostring(objectiveId)][itemName] = newProgress
 
-	print("Progress updated:", currentProgress, "->", newProgress)
+	--print("Progress updated:", currentProgress, "->", newProgress)
 
 	-- Check if objective is complete
 	local isComplete = ResearchHandler.CheckObjectiveComplete(player, objectiveId)
 
-	print("Objective complete?", isComplete)
+	--print("Objective complete?", isComplete)
 
 	if isComplete then
 		ResearchHandler.CompleteObjective(player, objectiveId)
@@ -137,13 +137,13 @@ function ResearchHandler.CheckObjectiveComplete(player, objectiveId)
 	local research = _G["global_data"][player.Name]["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
-	if not objective or not research.ObjectiveProgress[objectiveId] then
+	if not objective or not research.ObjectiveProgress[tostring(objectiveId)] then
 		return false
 	end
 
 	-- Check all requirements
 	for _, requirement in pairs(objective.Requirements) do
-		local progress = research.ObjectiveProgress[objectiveId][requirement.ItemName] or 0
+		local progress = research.ObjectiveProgress[tostring(objectiveId)][requirement.ItemName] or 0
 		if progress < requirement.Amount then
 			return false
 		end
@@ -157,8 +157,8 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 	local research = _G["global_data"][player.Name]["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
-	print("=== COMPLETING OBJECTIVE ===")
-	print("Objective:", objective.Name)
+	-- print("=== COMPLETING OBJECTIVE ===")
+	--print("Objective:", objective.Name)
 
 	if not objective then return false end
 
@@ -174,7 +174,7 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 	-- Give rewards
 	if objective.Rewards.ResearchTokens then
 		player.ResearchTokens.Value = player.ResearchTokens.Value + objective.Rewards.ResearchTokens
-		print("Gave", objective.Rewards.ResearchTokens, "research tokens")
+		--print("Gave", objective.Rewards.ResearchTokens, "research tokens")
 	end
 
 	-- Unlock machines
@@ -182,7 +182,7 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 		for _, machineId in pairs(objective.Rewards.UnlockMachines) do
 			if _G["global_data"][player.Name]["Items"][machineId] then
 				_G["global_data"][player.Name]["Items"][machineId]["Unlocked"] = true
-				print("Unlocked machine ID:", machineId)
+				--print("Unlocked machine ID:", machineId)
 			end
 		end
 	end
@@ -192,7 +192,7 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 		["message"] = objective.Name .. " completed! +" .. (objective.Rewards.ResearchTokens or 0) .. " Research Tokens"
 	})
 
-	print("Objective completed successfully!")
+	--print("Objective completed successfully!")
 
 	return true
 end
