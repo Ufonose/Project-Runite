@@ -69,14 +69,17 @@ script.Parent.Smelt.Touched:Connect(function(HIT)
 								end
 							end
 
-							-- Show research progress message WITHOUT emoji, with current/required format
-							local displayName = oreModelName:gsub("OreModel", ""):gsub("_", " ")
-							RepStorage.Events.MessageClient:FireClient(plot_owner, "visual", {
-								["visual_part"] = script.Parent.Smelt, 
-								["message"] = displayName .. " (" .. currentProgress .. "/" .. requiredAmount .. ")", 
-								["message_color"] = Color3.fromRGB(138, 180, 255)
-							})
-							break  -- Only deposit to one objective
+							-- Only show message if this specific requirement isn't already complete
+							if currentProgress < requiredAmount then
+								-- Show research progress message WITHOUT emoji, with current/required format
+								local displayName = oreModelName:gsub("OreModel", ""):gsub("_", " ")
+								RepStorage.Events.MessageClient:FireClient(plot_owner, "visual", {
+									["visual_part"] = script.Parent.Smelt, 
+									["message"] = displayName .. " (" .. currentProgress .. "/" .. requiredAmount .. ")", 
+									["message_color"] = Color3.fromRGB(138, 180, 255)
+								})
+							end
+							-- No break - continues to check other objectives!
 						end
 					end
 
