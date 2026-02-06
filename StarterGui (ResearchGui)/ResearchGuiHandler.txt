@@ -847,8 +847,8 @@ function updateProgress()
 		if cardData.requirements then
 			for itemName, reqData in pairs(cardData.requirements) do
 				local progress = 0
-				if freshData.ObjectiveProgress[objectiveId] then
-					progress = freshData.ObjectiveProgress[objectiveId][itemName] or 0
+				if freshData.ObjectiveProgress[tostring(objectiveId)] then
+					progress = freshData.ObjectiveProgress[tostring(objectiveId)][itemName] or 0
 				end
 
 				-- Update text and color
@@ -1094,3 +1094,4 @@ spawn(function()
 		end
 	end
 end)
+
