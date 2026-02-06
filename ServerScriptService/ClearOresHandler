@@ -1,0 +1,46 @@
+-- ServerScriptService/ClearOresHandler
+
+local RepStorage = game:GetService("ReplicatedStorage")
+local Plrs = game:GetService("Players")
+
+-- Create the RemoteFunction if it doesn't exist
+local clearOresRemote = RepStorage.Events:FindFirstChild("ClearPlotOres")
+if not clearOresRemote then
+	clearOresRemote = Instance.new("RemoteFunction")
+	clearOresRemote.Name = "ClearPlotOres"
+	clearOresRemote.Parent = RepStorage.Events
+end
+
+-- Function to clear all ores from a player's plot
+local function clearPlotOres(player)
+	-- Get the player's plot
+	local playerPlot = player.SetPlot.Value
+
+	if not playerPlot then
+		warn("Player does not have a plot assigned!")
+		return false
+	end
+
+	-- Find the OresDropped folder
+	local oresDropped = playerPlot.MiscInfo:FindFirstChild("OresDropped")
+
+	if not oresDropped then
+		warn("OresDropped folder not found in plot!")
+		return false
+	end
+
+	-- Count how many ores we're clearing
+	local oreCount = #oresDropped:GetChildren()
+
+	-- Clear all children (all the ores)
+	oresDropped:ClearAllChildren()
+
+	print("Cleared", oreCount, "ores from", player.Name .. "'s plot")
+
+	return true
+end
+
+-- Set up the remote function
+clearOresRemote.OnServerInvoke = clearPlotOres
+
+print("ClearOresHandler loaded!")
