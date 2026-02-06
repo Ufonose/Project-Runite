@@ -1,0 +1,436 @@
+-- ActiveResearchDisplay
+-- Shows current active research on the side of the screen
+-- FIXED: Now properly detects screen size changes
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Responsive values (will be updated based on screen size)
+local containerWidth = 0.13
+local titleFontSize = 12
+local reqFontSize = 11
+local progressFontSize = 10
+local headerFontSize = 14
+local rightPosition = 0.99
+local topPosition = 0.093
+local isMobile = false
+
+-- Main container
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ActiveResearchDisplay"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.ScreenInsets = Enum.ScreenInsets.None  -- Disable safe insets to allow positioning at top
+screenGui.Parent = playerGui
+
+-- Title label (directly in screenGui)
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Name = "TitleLabel"
+titleLabel.AnchorPoint = Vector2.new(1, 0)
+titleLabel.Size = UDim2.new(containerWidth, 0, 0, 25)
+titleLabel.Position = UDim2.new(rightPosition, 0, topPosition, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "ACTIVE RESEARCH"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextTransparency = 0.3
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextSize = titleFontSize
+titleLabel.TextXAlignment = Enum.TextXAlignment.Center
+titleLabel.Visible = false
+titleLabel.Parent = screenGui
+
+local titleConstraint = Instance.new("UITextSizeConstraint")
+titleConstraint.MaxTextSize = titleFontSize
+titleConstraint.MinTextSize = 8
+titleConstraint.Parent = titleLabel
+
+-- Container for research items (directly in screenGui)
+local researchContainer = Instance.new("Frame")
+researchContainer.Name = "ResearchContainer"
+researchContainer.AnchorPoint = Vector2.new(1, 0)
+researchContainer.Size = UDim2.new(containerWidth, 0, 0, 100)
+researchContainer.Position = UDim2.new(rightPosition, 0, 0.116, 0)
+researchContainer.BackgroundTransparency = 1
+researchContainer.Visible = false
+researchContainer.Parent = screenGui
+
+local containerLayout = Instance.new("UIListLayout")
+containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+containerLayout.Padding = UDim.new(0, 10)
+containerLayout.Parent = researchContainer
+
+-- Function to update responsive values based on screen size
+local function updateResponsiveValues()
+	local viewport = workspace.CurrentCamera.ViewportSize
+	local screenWidth = viewport.X
+
+	-- Update isMobile flag and all responsive values
+	isMobile = screenWidth < 900
+
+	if isMobile then
+		containerWidth = 0.12
+		titleFontSize = 10
+		reqFontSize = 9
+		progressFontSize = 8
+		headerFontSize = 11
+		rightPosition = 0.99
+		topPosition = 0.055  -- Title position - change this to move title higher/lower
+
+		-- Container position - independent of title position on mobile
+		local containerTopPosition = 0.1  -- Change this to move objectives higher/lower
+		researchContainer.Position = UDim2.new(rightPosition, 0, containerTopPosition, 0)
+	else
+		containerWidth = 0.13
+		titleFontSize = 17
+		reqFontSize = 14
+		progressFontSize = 12
+		headerFontSize = 16
+		rightPosition = 0.99
+		topPosition = 0.25
+
+		-- Desktop uses offset from title
+		researchContainer.Position = UDim2.new(rightPosition, 0, 0.275, 0)
+	end
+
+	-- Update title label
+	titleLabel.Size = UDim2.new(containerWidth, 0, 0, isMobile and 20 or 25)
+	titleLabel.Position = UDim2.new(rightPosition, 0, topPosition, 0)
+	titleLabel.TextSize = titleFontSize
+	titleConstraint.MaxTextSize = titleFontSize
+
+	-- Update research container size
+	researchContainer.Size = UDim2.new(containerWidth, 0, 0, researchContainer.Size.Y.Offset)
+
+	-- Update container layout padding
+	containerLayout.Padding = UDim.new(0, isMobile and 6 or 10)
+end
+
+-- Update on initial load
+updateResponsiveValues()
+
+-- Update when screen size changes (device rotation, window resize)
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+	updateResponsiveValues()
+	-- Force a display update to recreate items with new sizing
+	updateDisplay()
+end)
+
+-- Function to create a single requirement line
+local function createRequirementLine(itemName, current, required)
+	local lineFrame = Instance.new("Frame")
+	lineFrame.Name = "RequirementLine"
+	lineFrame.Size = UDim2.new(1, 0, 0, isMobile and 25 or 35)
+	lineFrame.BackgroundTransparency = 1
+
+	-- Item name label
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(0.97, 0, 0, isMobile and 10 or 14)
+	nameLabel.Position = UDim2.new(0.015, 0, 0, 0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = itemName
+	nameLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+	nameLabel.Font = Enum.Font.Gotham
+	nameLabel.TextSize = reqFontSize
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+	nameLabel.Parent = lineFrame
+
+	local nameSizeConstraint = Instance.new("UITextSizeConstraint")
+	nameSizeConstraint.MaxTextSize = reqFontSize
+	nameSizeConstraint.MinTextSize = 7
+	nameSizeConstraint.Parent = nameLabel
+
+	-- Progress background
+	local progressBg = Instance.new("Frame")
+	progressBg.Size = UDim2.new(0.97, 0, 0, isMobile and 12 or 16)
+	progressBg.Position = UDim2.new(0.015, 0, 0, isMobile and 11 or 16)
+	progressBg.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	progressBg.BackgroundTransparency = 0.5
+	progressBg.BorderSizePixel = 0
+	progressBg.Parent = lineFrame
+
+	local progCorner = Instance.new("UICorner")
+	progCorner.CornerRadius = UDim.new(0, isMobile and 3 or 4)
+	progCorner.Parent = progressBg
+
+	-- Progress bar - color changes based on completion
+	local isComplete = current >= required
+	local progressBar = Instance.new("Frame")
+	progressBar.Name = "ProgressBar"
+	progressBar.Size = UDim2.new(0, 0, 1, 0)
+	progressBar.BackgroundColor3 = isComplete and Color3.fromRGB(61, 166, 75) or Color3.fromRGB(90, 97, 54)
+	progressBar.BorderSizePixel = 0
+	progressBar.Parent = progressBg
+
+	local barCorner = Instance.new("UICorner")
+	barCorner.CornerRadius = UDim.new(0, isMobile and 3 or 4)
+	barCorner.Parent = progressBar
+
+	-- Progress text
+	local progressText = Instance.new("TextLabel")
+	progressText.Name = "ProgressText"
+	progressText.Size = UDim2.new(1, 0, 1, 0)
+	progressText.BackgroundTransparency = 1
+	progressText.Text = string.format("%d / %d", math.floor(current), required)
+	progressText.TextColor3 = Color3.fromRGB(255, 255, 255)
+	progressText.Font = Enum.Font.GothamBold
+	progressText.TextSize = progressFontSize
+	progressText.ZIndex = 2
+	progressText.Parent = progressBg
+
+	local progressTextConstraint = Instance.new("UITextSizeConstraint")
+	progressTextConstraint.MaxTextSize = progressFontSize
+	progressTextConstraint.MinTextSize = 6
+	progressTextConstraint.Parent = progressText
+
+	return lineFrame, progressBar, progressText
+end
+
+-- Function to create a research item display
+local function createResearchItem(objectiveName, requirements, progressData)
+	local numRequirements = #requirements
+	local lineHeight = isMobile and 25 or 35
+	local itemHeight = (isMobile and 28 or 40) + (numRequirements * lineHeight)
+
+	local itemFrame = Instance.new("Frame")
+	itemFrame.Name = "ResearchItem"
+	itemFrame.Size = UDim2.new(1, 0, 0, itemHeight)
+	itemFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+	itemFrame.BackgroundTransparency = 0.2
+	itemFrame.BorderSizePixel = 0
+
+	local itemCorner = Instance.new("UICorner")
+	itemCorner.CornerRadius = UDim.new(0, isMobile and 5 or 8)
+	itemCorner.Parent = itemFrame
+
+	local itemStroke = Instance.new("UIStroke")
+	itemStroke.Color = Color3.fromRGB(60, 60, 80)
+	itemStroke.Thickness = isMobile and 0.8 or 1
+	itemStroke.Transparency = 0.7
+	itemStroke.Parent = itemFrame
+
+	-- Research name header
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(0.93, 0, 0, isMobile and 14 or 25)
+	nameLabel.Position = UDim2.new(0.035, 0, 0, isMobile and 3 or 5)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = objectiveName
+	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextSize = headerFontSize
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Center
+	nameLabel.TextWrapped = true
+	nameLabel.Parent = itemFrame
+
+	local nameConstraint = Instance.new("UITextSizeConstraint")
+	nameConstraint.MaxTextSize = headerFontSize
+	nameConstraint.MinTextSize = 10
+	nameConstraint.Parent = nameLabel
+
+	-- Container for requirement lines
+	local requirementsContainer = Instance.new("Frame")
+	requirementsContainer.Name = "RequirementsContainer"
+	requirementsContainer.Size = UDim2.new(0.93, 0, 1, isMobile and -24 or -35)
+	requirementsContainer.Position = UDim2.new(0.035, 0, 0, isMobile and 20 or 30)
+	requirementsContainer.BackgroundTransparency = 1
+	requirementsContainer.Parent = itemFrame
+
+	local reqLayout = Instance.new("UIListLayout")
+	reqLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	reqLayout.Padding = UDim.new(0, isMobile and 2 or 3)
+	reqLayout.Parent = requirementsContainer
+
+	-- Create requirement lines and store references
+	local requirementElements = {}
+	for index, requirement in ipairs(requirements) do
+		local current = progressData[requirement.ItemName] or 0
+		local lineFrame, progressBar, progressText = createRequirementLine(
+			requirement.ItemName,
+			current,
+			requirement.Amount
+		)
+		lineFrame.LayoutOrder = index
+		lineFrame.Parent = requirementsContainer
+
+		requirementElements[requirement.ItemName] = {
+			frame = lineFrame,
+			progressBar = progressBar,
+			progressText = progressText
+		}
+	end
+
+	return itemFrame, requirementElements
+end
+
+-- Track created items for updating
+local activeItems = {}
+
+-- Function to update display
+function updateDisplay()
+	-- Get research data from server
+	local success, researchData = pcall(function()
+		return ReplicatedStorage.Events.GetResearchData:InvokeServer()
+	end)
+
+	if not success or not researchData then
+		print("Failed to get research data")
+		titleLabel.Visible = false
+		researchContainer.Visible = false
+		return
+	end
+
+	-- Check if there are active objectives
+	if #researchData.ActiveObjectives == 0 then
+		titleLabel.Visible = false
+		researchContainer.Visible = false
+		-- Clear all items
+		for _, itemData in pairs(activeItems) do
+			itemData.frame:Destroy()
+		end
+		activeItems = {}
+		return
+	end
+
+	-- Show title and container
+	titleLabel.Visible = true
+	researchContainer.Visible = true
+
+	-- Track which objectives are still active
+	local currentActive = {}
+
+	-- Update or create items for each active objective
+	for index, activeId in pairs(researchData.ActiveObjectives) do
+		currentActive[activeId] = true
+
+		-- Find the objective data
+		local activeObjective = nil
+		for _, obj in pairs(researchData.AllObjectives) do
+			if obj.Id == activeId then
+				activeObjective = obj
+				break
+			end
+		end
+
+		if activeObjective then
+			-- Get progress data for this objective
+			local progressKey = tostring(activeId)
+			local progressData = researchData.ObjectiveProgress[progressKey] or {}
+
+			-- Check if item already exists
+			if activeItems[activeId] then
+				-- Update existing item
+				local itemData = activeItems[activeId]
+				itemData.frame.LayoutOrder = index
+
+				-- Update each requirement
+				for _, requirement in ipairs(activeObjective.Requirements) do
+					local reqElement = itemData.requirementElements[requirement.ItemName]
+					if reqElement then
+						local current = progressData[requirement.ItemName] or 0
+						local progress = math.clamp(current / requirement.Amount, 0, 1)
+						local isComplete = current >= requirement.Amount
+
+						-- Update progress bar size
+						reqElement.progressBar:TweenSize(
+							UDim2.new(progress, 0, 1, 0),
+							Enum.EasingDirection.Out,
+							Enum.EasingStyle.Quad,
+							0.3,
+							true
+						)
+
+						-- Update progress bar color based on completion
+						TweenService:Create(
+							reqElement.progressBar,
+							TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+							{BackgroundColor3 = isComplete and Color3.fromRGB(61, 166, 75) or Color3.fromRGB(90, 97, 54)}
+						):Play()
+
+						-- Update progress text
+						reqElement.progressText.Text = string.format("%d / %d", math.floor(current), requirement.Amount)
+					end
+				end
+			else
+				-- Create new item
+				local frame, requirementElements = createResearchItem(
+					activeObjective.Name,
+					activeObjective.Requirements,
+					progressData
+				)
+				frame.LayoutOrder = index
+				frame.Parent = researchContainer
+
+				-- Animate progress bars with correct colors
+				for _, requirement in ipairs(activeObjective.Requirements) do
+					local reqElement = requirementElements[requirement.ItemName]
+					if reqElement then
+						local current = progressData[requirement.ItemName] or 0
+						local progress = math.clamp(current / requirement.Amount, 0, 1)
+						local isComplete = current >= requirement.Amount
+
+						-- Set color immediately based on completion status
+						reqElement.progressBar.BackgroundColor3 = isComplete and Color3.fromRGB(61, 166, 75) or Color3.fromRGB(90, 97, 54)
+
+						-- Animate size
+						reqElement.progressBar:TweenSize(
+							UDim2.new(progress, 0, 1, 0),
+							Enum.EasingDirection.Out,
+							Enum.EasingStyle.Quad,
+							0.3,
+							true
+						)
+					end
+				end
+
+				activeItems[activeId] = {
+					frame = frame,
+					requirementElements = requirementElements
+				}
+			end
+		end
+	end
+
+	-- Remove items for objectives that are no longer active
+	for objectiveId, itemData in pairs(activeItems) do
+		if not currentActive[objectiveId] then
+			itemData.frame:Destroy()
+			activeItems[objectiveId] = nil
+		end
+	end
+
+	-- Calculate total height for the container
+	local lineHeight = isMobile and 25 or 35
+	local baseHeight = isMobile and 28 or 40
+	local spacing = isMobile and 6 or 10
+
+	local totalHeight = 0
+	for _, activeId in ipairs(researchData.ActiveObjectives) do
+		-- Find the objective to count requirements
+		for _, obj in pairs(researchData.AllObjectives) do
+			if obj.Id == activeId then
+				local numRequirements = #obj.Requirements
+				local itemHeight = baseHeight + (numRequirements * lineHeight)
+				totalHeight = totalHeight + itemHeight + spacing -- Item + spacing
+				break
+			end
+		end
+	end
+	totalHeight = totalHeight - spacing -- Remove last spacing
+
+	-- Update container size (width scale, height offset)
+	researchContainer.Size = UDim2.new(containerWidth, 0, 0, totalHeight)
+end
+
+-- Auto-update loop
+spawn(function()
+	wait(1) -- Wait for game to load
+	while task.wait(1) do
+		updateDisplay()
+	end
+end)
+
+print("Active Research Display initialized")
