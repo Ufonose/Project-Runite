@@ -1077,7 +1077,7 @@ mainFrame.Visible = false
 
 -- Auto-refresh progress only (no flicker)
 spawn(function()
-	while task.wait(2) do
+	while task.wait(1) do
 		if mainFrame.Visible and researchData then
 			-- Check if objectives changed (completed or started)
 			local freshData = RepStorage.Events.GetResearchData:InvokeServer()
