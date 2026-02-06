@@ -159,7 +159,7 @@ local titleText = Instance.new("TextLabel")
 titleText.Size = UDim2.new(0.5, 0, 1, 0)
 titleText.Position = UDim2.new(0.02, 0, 0, 0)  -- 20/1000 = 0.02
 titleText.BackgroundTransparency = 1
-titleText.Text = "Research Tree"
+titleText.Text = "Research"
 titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleText.TextSize = 26
 titleText.Font = Enum.Font.GothamBold
@@ -178,7 +178,7 @@ local tokensLabel = Instance.new("TextLabel")
 tokensLabel.Size = UDim2.new(0.3, 0, 1, 0)
 tokensLabel.Position = UDim2.new(0.5, 0, 0, 0)
 tokensLabel.BackgroundTransparency = 1
-tokensLabel.Text = "🔬 0 Tokens"
+tokensLabel.Text = "0 Tokens"
 tokensLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
 tokensLabel.TextSize = 20
 tokensLabel.Font = Enum.Font.GothamBold
@@ -290,7 +290,7 @@ treeContainer.Position = UDim2.new(0.23, 0, 0.1071, 0)  -- 230/1000 = 0.23, 75/7
 treeContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 treeContainer.BackgroundTransparency = 0.3
 treeContainer.BorderSizePixel = 0
-treeContainer.ScrollBarThickness = 10  -- Will be updated dynamically
+treeContainer.ScrollBarThickness = 5  -- Will be updated dynamically
 treeContainer.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 105)
 treeContainer.CanvasSize = UDim2.new(0, 2000, 0, 2000)
 treeContainer.ZIndex = 7
@@ -299,6 +299,43 @@ treeContainer.Parent = mainFrame
 local treeCorner = Instance.new("UICorner")
 treeCorner.CornerRadius = UDim.new(0, 12)
 treeCorner.Parent = treeContainer
+
+-- Mouse drag panning for desktop (add after treeStroke)
+local dragging = false
+local dragStart = nil
+local startCanvasPos = nil
+local dragConnection = nil
+
+treeContainer.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startCanvasPos = treeContainer.CanvasPosition
+
+		-- Connect to input changed to track mouse movement
+		if dragConnection then dragConnection:Disconnect() end
+		dragConnection = UserInputService.InputChanged:Connect(function(inputChanged)
+			if inputChanged.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+				local delta = dragStart - inputChanged.Position
+				local newCanvasPos = Vector2.new(
+					math.clamp(startCanvasPos.X + delta.X, 0, treeContainer.CanvasSize.X.Offset - treeContainer.AbsoluteSize.X),
+					math.clamp(startCanvasPos.Y + delta.Y, 0, treeContainer.CanvasSize.Y.Offset - treeContainer.AbsoluteSize.Y)
+				)
+				treeContainer.CanvasPosition = newCanvasPos
+			end
+		end)
+	end
+end)
+
+treeContainer.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+		if dragConnection then
+			dragConnection:Disconnect()
+			dragConnection = nil
+		end
+	end
+end)
 
 -- Tree container stroke
 local treeStroke = Instance.new("UIStroke")
@@ -332,51 +369,77 @@ local cardReferences = {} -- Store references to cards for updating
 local function drawConnection(fromPos, toPos, isCompleted)
 	local startX = fromPos.X + CARD_WIDTH
 	local startY = fromPos.Y + CARD_HEIGHT / 2
-	local endX = toPos.X
-	local endY = toPos.Y + CARD_HEIGHT / 2
-
-	-- Calculate midpoint for curved line
-	local midX = (startX + endX) / 2
 
 	-- Scale line thickness
 	local lineThickness = math.max(2, 3 * SCALE_FACTOR)
 
-	-- Draw horizontal line from start to midpoint
-	local line1 = Instance.new("Frame")
-	line1.Size = UDim2.new(0, midX - startX, 0, lineThickness)
-	line1.Position = UDim2.new(0, startX, 0, startY - lineThickness/2)
-	line1.BackgroundColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
-	line1.BorderSizePixel = 0
-	line1.ZIndex = 1
-	line1.Parent = connectionsFrame
+	-- Check if cards are in different rows (different Y positions)
+	local differentRows = math.abs(fromPos.Y - toPos.Y) > CARD_HEIGHT / 2
 
-	-- Draw vertical line
-	local verticalLength = math.abs(endY - startY)
-	local line2 = Instance.new("Frame")
-	line2.Size = UDim2.new(0, lineThickness, 0, verticalLength)
-	line2.Position = UDim2.new(0, midX - lineThickness/2, 0, math.min(startY, endY))
-	line2.BackgroundColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
-	line2.BorderSizePixel = 0
-	line2.ZIndex = 1
-	line2.Parent = connectionsFrame
+	local endX, endY
 
-	-- Draw horizontal line from midpoint to end
-	local line3 = Instance.new("Frame")
-	line3.Size = UDim2.new(0, endX - midX, 0, lineThickness)
-	line3.Position = UDim2.new(0, midX, 0, endY - lineThickness/2)
-	line3.BackgroundColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
-	line3.BorderSizePixel = 0
-	line3.ZIndex = 1
-	line3.Parent = connectionsFrame
+	if differentRows then
+		-- DIFFERENT ROWS: Connect straight down from bottom-center to top-center
+		local startCenterX = fromPos.X + CARD_WIDTH / 2  -- Bottom center of parent card
+		local startBottomY = fromPos.Y + CARD_HEIGHT  -- Bottom edge of parent card
 
-	-- Add arrow at end (scaled)
+		endX = toPos.X + CARD_WIDTH / 2  -- Top center of child card
+		endY = toPos.Y  -- Top edge of child card
+
+		-- Draw single vertical line straight down
+		local verticalLength = endY - startBottomY
+		local line = Instance.new("Frame")
+		line.Size = UDim2.new(0, lineThickness, 0, verticalLength)
+		line.Position = UDim2.new(0, startCenterX - lineThickness/2, 0, startBottomY)
+		line.BackgroundColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
+		line.BorderSizePixel = 0
+		line.ZIndex = 1
+		line.Parent = connectionsFrame
+
+	else
+		-- SAME ROW: Connect left to right (original 3-segment routing)
+		endX = toPos.X  -- Left side of card
+		endY = toPos.Y + CARD_HEIGHT / 2  -- Middle height
+
+		local midX = (startX + endX) / 2
+
+		-- Draw horizontal line from start to midpoint
+		local line1 = Instance.new("Frame")
+		line1.Size = UDim2.new(0, midX - startX, 0, lineThickness)
+		line1.Position = UDim2.new(0, startX, 0, startY - lineThickness/2)
+		line1.BackgroundColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
+		line1.BorderSizePixel = 0
+		line1.ZIndex = 1
+		line1.Parent = connectionsFrame
+
+		-- Draw vertical line
+		local verticalLength = math.abs(endY - startY)
+		local line2 = Instance.new("Frame")
+		line2.Size = UDim2.new(0, lineThickness, 0, verticalLength)
+		line2.Position = UDim2.new(0, midX - lineThickness/2, 0, math.min(startY, endY))
+		line2.BackgroundColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
+		line2.BorderSizePixel = 0
+		line2.ZIndex = 1
+		line2.Parent = connectionsFrame
+
+		-- Draw horizontal line from midpoint to end
+		local line3 = Instance.new("Frame")
+		line3.Size = UDim2.new(0, endX - midX, 0, lineThickness)
+		line3.Position = UDim2.new(0, midX, 0, endY - lineThickness/2)
+		line3.BackgroundColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
+		line3.BorderSizePixel = 0
+		line3.ZIndex = 1
+		line3.Parent = connectionsFrame
+	end
+
+	-- Add arrow at end (scaled) - positioned based on row difference
 	local arrowSize = math.max(8, 12 * SCALE_FACTOR)
 	local arrow = Instance.new("ImageLabel")
 	arrow.Size = UDim2.new(0, arrowSize, 0, arrowSize)
 	arrow.Position = UDim2.new(0, endX - arrowSize/2, 0, endY - arrowSize/2)
 	arrow.BackgroundTransparency = 1
 	arrow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-	arrow.Rotation = 0
+	arrow.Rotation = differentRows and 90 or 0  -- Point down if different rows, right if same row
 	arrow.ImageColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
 	arrow.ZIndex = 1
 	arrow.Parent = connectionsFrame
@@ -441,7 +504,7 @@ local function createObjectiveCard(objectiveData, researchData, position)
 	title.BackgroundTransparency = 1
 	title.Text = objectiveData.Name
 	title.TextColor3 = Color3.fromRGB(255, 255, 255)
-	title.TextSize = 18
+	title.TextSize = 24
 	title.Font = Enum.Font.GothamBold
 	title.TextWrapped = true
 	title.TextXAlignment = Enum.TextXAlignment.Left
@@ -451,7 +514,7 @@ local function createObjectiveCard(objectiveData, researchData, position)
 	title.Parent = card
 
 	local titleConstraint = Instance.new("UITextSizeConstraint")
-	titleConstraint.MaxTextSize = 18
+	titleConstraint.MaxTextSize = 24
 	titleConstraint.Parent = title
 
 	-- Description
@@ -461,7 +524,7 @@ local function createObjectiveCard(objectiveData, researchData, position)
 	desc.BackgroundTransparency = 1
 	desc.Text = objectiveData.Description
 	desc.TextColor3 = Color3.fromRGB(180, 180, 180)
-	desc.TextSize = 13
+	desc.TextSize = 20
 	desc.Font = Enum.Font.Gotham
 	desc.TextWrapped = true
 	desc.TextXAlignment = Enum.TextXAlignment.Left
@@ -471,11 +534,65 @@ local function createObjectiveCard(objectiveData, researchData, position)
 	desc.Parent = card
 
 	local descConstraint = Instance.new("UITextSizeConstraint")
-	descConstraint.MaxTextSize = 13
+	descConstraint.MaxTextSize = 20
 	descConstraint.Parent = desc
 
-	-- Requirements
-	local reqY = 78
+	-- Requirements Container Frame
+	local requirementsContainer = Instance.new("Frame")
+	requirementsContainer.Name = "RequirementsContainer"
+	requirementsContainer.Size = UDim2.new(0.9273, 0, 0.3182, 0)  -- Width: (220-16)/220, Height: ~70px/220
+	requirementsContainer.Position = UDim2.new(0.0364, 0, 0.3545, 0)  -- 8/220 horizontal, 78/220 vertical
+	requirementsContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+	requirementsContainer.BackgroundTransparency = 0.3
+	requirementsContainer.BorderSizePixel = 0
+	requirementsContainer.ZIndex = 3
+	requirementsContainer.Parent = card
+
+	local reqCorner = Instance.new("UICorner")
+	reqCorner.CornerRadius = UDim.new(0.0545, 0)  -- 12/220 = 0.0545 for consistency
+	reqCorner.Parent = requirementsContainer
+
+	local reqStroke = Instance.new("UIStroke")
+	reqStroke.Color = Color3.fromRGB(60, 60, 80)
+	reqStroke.Thickness = 1
+	reqStroke.Transparency = 0.6
+	reqStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	reqStroke.Parent = requirementsContainer
+
+	-- Padding for requirements container
+	local reqPadding = Instance.new("UIPadding")
+	reqPadding.PaddingTop = UDim.new(0.05, 0)
+	reqPadding.PaddingBottom = UDim.new(0.05, 0)
+	reqPadding.PaddingLeft = UDim.new(0.04, 0)
+	reqPadding.PaddingRight = UDim.new(0.04, 0)
+	reqPadding.Parent = requirementsContainer
+
+	-- UIListLayout for automatic spacing
+	local reqLayout = Instance.new("UIListLayout")
+	reqLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	reqLayout.Padding = UDim.new(0.05, 0)  -- Small spacing between items
+	reqLayout.Parent = requirementsContainer
+
+	-- Requirements header
+	local reqHeader = Instance.new("TextLabel")
+	reqHeader.Name = "Header"
+	reqHeader.Size = UDim2.new(1, 0, 0.2, 0)
+	reqHeader.BackgroundTransparency = 1
+	reqHeader.Text = "Requirements:"
+	reqHeader.TextColor3 = Color3.fromRGB(255, 255, 255)
+	reqHeader.TextSize = 12
+	reqHeader.Font = Enum.Font.GothamBold
+	reqHeader.TextXAlignment = Enum.TextXAlignment.Left
+	reqHeader.TextScaled = true
+	reqHeader.ZIndex = 4
+	reqHeader.LayoutOrder = 0
+	reqHeader.Parent = requirementsContainer
+
+	local headerConstraint = Instance.new("UITextSizeConstraint")
+	headerConstraint.MaxTextSize = 12
+	headerConstraint.Parent = reqHeader
+
+	-- Create requirement labels
 	local requirementLabels = {}
 	for i, requirement in pairs(objectiveData.Requirements) do
 		local progress = 0
@@ -484,27 +601,26 @@ local function createObjectiveCard(objectiveData, researchData, position)
 		end
 
 		local reqText = Instance.new("TextLabel")
-		reqText.Size = UDim2.new(0.9273, 0, 0.0682, 0)  -- (220-16)/220 = 0.9273, 15/220 = 0.0682
-		reqText.Position = UDim2.new(0.0364, 0, reqY/220, 0)  -- 8/220 = 0.0364
+		reqText.Name = "Req_" .. i
+		reqText.Size = UDim2.new(1, 0, 0.2, 0)  -- Will be sized by ListLayout
 		reqText.BackgroundTransparency = 1
 		reqText.Text = string.format("• %s: %d/%d", requirement.ItemName:gsub("OreModel", ""):gsub("_", " "), progress, requirement.Amount)
 		reqText.TextColor3 = progress >= requirement.Amount and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(200, 200, 200)
-		reqText.TextSize = 12
+		reqText.TextSize = 11
 		reqText.Font = Enum.Font.Gotham
 		reqText.TextXAlignment = Enum.TextXAlignment.Left
 		reqText.TextTruncate = Enum.TextTruncate.AtEnd
 		reqText.TextScaled = true
-		reqText.ZIndex = 3
-		reqText.Parent = card
+		reqText.ZIndex = 4
+		reqText.LayoutOrder = i
+		reqText.Parent = requirementsContainer
 
 		local reqConstraint = Instance.new("UITextSizeConstraint")
-		reqConstraint.MaxTextSize = 12
+		reqConstraint.MaxTextSize = 14
 		reqConstraint.Parent = reqText
 
 		-- Store reference for updating
 		requirementLabels[requirement.ItemName] = {label = reqText, amount = requirement.Amount}
-
-		reqY = reqY + 17
 	end
 
 	-- Store card reference
@@ -514,16 +630,36 @@ local function createObjectiveCard(objectiveData, researchData, position)
 		statusIcon = statusIcon
 	}
 
-	-- Unlocks section (after requirements)
-	local unlocksY = reqY + 5
+	-- TOKEN REWARD DISPLAY (show for all objectives with tokens)
+	if objectiveData.Rewards.ResearchTokens and objectiveData.Rewards.ResearchTokens > 0 then
+		local rewardLabel = Instance.new("TextLabel")
+		rewardLabel.Size = UDim2.new(0.9273, 0, 0.0909, 0)
+		rewardLabel.Position = UDim2.new(0.0364, 0, 0.7, 0)  -- Adjusted position
+		rewardLabel.BackgroundTransparency = 1
+		rewardLabel.Text = "+" .. objectiveData.Rewards.ResearchTokens .. " Research Tokens"
+		rewardLabel.TextColor3 = Color3.fromRGB(150, 220, 255)
+		rewardLabel.TextSize = 12
+		rewardLabel.Font = Enum.Font.GothamBold
+		rewardLabel.TextXAlignment = Enum.TextXAlignment.Left
+		rewardLabel.TextYAlignment = Enum.TextYAlignment.Center
+		rewardLabel.TextScaled = true
+		rewardLabel.ZIndex = 3
+		rewardLabel.Parent = card
+
+		local rewardConstraint = Instance.new("UITextSizeConstraint")
+		rewardConstraint.MaxTextSize = 14
+		rewardConstraint.Parent = rewardLabel
+	end
+
+	-- Unlocks section (machines)
 	if objectiveData.Rewards.UnlockMachines and #objectiveData.Rewards.UnlockMachines > 0 then
 		local unlocksLabel = Instance.new("TextLabel")
-		unlocksLabel.Size = UDim2.new(0.2727, 0, 0.1455, 0)  -- 60/220 = 0.2727, 32/220 = 0.1455
-		unlocksLabel.Position = UDim2.new(0.0364, 0, unlocksY/220, 0)
+		unlocksLabel.Size = UDim2.new(0.32, 0, 0.18, 0)  -- 60/220 = 0.2727, 32/220 = 0.1455
+		unlocksLabel.Position = UDim2.new(0.0364, 0, 0.67, 0)  -- Adjusted position
 		unlocksLabel.BackgroundTransparency = 1
-		unlocksLabel.Text = "🔓 Unlocks:"
+		unlocksLabel.Text = "🔓Unlocks:"
 		unlocksLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
-		unlocksLabel.TextSize = 11
+		unlocksLabel.TextSize = 12
 		unlocksLabel.Font = Enum.Font.GothamBold
 		unlocksLabel.TextXAlignment = Enum.TextXAlignment.Left
 		unlocksLabel.TextYAlignment = Enum.TextYAlignment.Center
@@ -532,14 +668,13 @@ local function createObjectiveCard(objectiveData, researchData, position)
 		unlocksLabel.Parent = card
 
 		local unlocksConstraint = Instance.new("UITextSizeConstraint")
-		unlocksConstraint.MaxTextSize = 11
+		unlocksConstraint.MaxTextSize = 24
 		unlocksConstraint.Parent = unlocksLabel
 
 		-- Display unlocked machines (next to the label)
-		-- Use relative positioning based on card size
-		local iconStartX = 0.3318  -- 73/220 = 0.3318
+		local iconStartX = 0.38  -- 73/220 = 0.3318
 		local iconSpacing = 0.1682  -- 37/220 = 0.1682
-		local iconSize = 0.1455  -- 32/220 = 0.1455
+		local iconSize = 0.14  -- 32/220 = 0.1455
 		local currentIconX = iconStartX
 
 		for _, machineId in pairs(objectiveData.Rewards.UnlockMachines) do
@@ -550,7 +685,7 @@ local function createObjectiveCard(objectiveData, researchData, position)
 					-- Create icon button for hover detection
 					local iconButton = Instance.new("ImageButton")
 					iconButton.Size = UDim2.new(iconSize, 0, iconSize, 0)
-					iconButton.Position = UDim2.new(currentIconX, 0, unlocksY/220, 0)
+					iconButton.Position = UDim2.new(currentIconX, 0, 0.685, 0)  -- Adjusted position
 					iconButton.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
 					iconButton.BorderSizePixel = 0
 					iconButton.Image = itemInfo.ThumbnailId
