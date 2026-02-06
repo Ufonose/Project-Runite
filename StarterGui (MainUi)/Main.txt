@@ -1,4 +1,4 @@
--- StarterGui/MainUi/Main.lua (UPDATED WITH SOUNDS)
+-- StarterGui/MainUi/Main.lua (UPDATED - ONLY ONE MENU OPEN AT A TIME)
 
 local module = {}
 
@@ -27,7 +27,7 @@ function module.LOAD(MODULE_INFO)
 	local ITEM_HOVER = MODULES["ItemHover"]
 	local PLACEMENT = MODULES["Placement"]
 	local INPUT = MODULES["Input"]
-	local SoundManager = require(RepStorage.Modules.SoundManager) -- NEW: Sound system
+	local SoundManager = require(RepStorage.Modules.SoundManager)
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
 	local Mouse = Plr:GetMouse()
@@ -50,12 +50,12 @@ function module.LOAD(MODULE_INFO)
 				MENU_OBJ.MenuObject.Value = false
 			end
 
-			-- NEW: Only set Visible if the object has this property (Frames have it, ScreenGuis don't)
+			-- Only set Visible if the object has this property (Frames have it, ScreenGuis don't)
 			if MENU_OBJ:IsA("Frame") or MENU_OBJ:IsA("ScrollingFrame") then
 				MENU_OBJ.Visible = false
 			end
 
-			-- NEW: Play close sound
+			-- Play close sound
 			SoundManager.MenuClose()
 		end
 	end
@@ -69,23 +69,12 @@ function module.LOAD(MODULE_INFO)
 		if MENU_OPENED then
 			module.CLOSE_MENU(MENU_OBJ)
 		else
+			-- Close ALL currently opened menus (no exceptions - only one menu open at a time)
 			for I, OPENED in pairs(mainUi.Values.OpenedMenus:GetChildren()) do
-				if OPENED.Name == "Inv" and MENU_OBJ.Name == "Shop" then
-					-- Do Nothing
-				elseif OPENED.Name == "Shop" and MENU_OBJ.Name == "Inv" then
-					-- Do Nothing
-				elseif OPENED.Name == "Inv" and MENU_OBJ.Name == "ResearchGui" then
-					-- Do Nothing
-				elseif OPENED.Name == "Shop" and MENU_OBJ.Name == "ResearchGui" then
-					-- Do Nothing
-				elseif OPENED.Name == "ResearchGui" and MENU_OBJ.Name == "Inv" then
-					-- Do Nothing
-				elseif OPENED.Name == "ResearchGui" and MENU_OBJ.Name == "Shop" then
-					-- Do Nothing
-				else
-					module.CLOSE_MENU(OPENED.Value)
-				end
+				module.CLOSE_MENU(OPENED.Value)
 			end
+
+			-- Open the new menu
 			local OPENED_TAG = Instance.new("ObjectValue", mainUi.Values.OpenedMenus)
 			OPENED_TAG.Name = MENU_OBJ.Name
 			OPENED_TAG.Value = MENU_OBJ
@@ -94,7 +83,7 @@ function module.LOAD(MODULE_INFO)
 			end
 			MENU_OBJ.Visible = true
 
-			-- NEW: Play open sound
+			-- Play open sound
 			SoundManager.MenuOpen()
 		end
 	end
@@ -136,4 +125,3 @@ function module.LOAD(MODULE_INFO)
 end
 
 return module
-
