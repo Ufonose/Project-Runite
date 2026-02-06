@@ -151,7 +151,7 @@ function module.LOAD(MODULE_INFO)
 	-- Create the template and get the ScreenGui
 	local modernTemplate, messageScreenGui = createModernTemplate()
 
-	-- DEFINE message_render BEFORE the test button uses it
+	-- DEFINE message_render BEFORE the server events use it
 	function module.message_render(message_type, message_data)
 		local message_type = message_type or "screen"
 		local message_text = message_data["message"]
@@ -374,64 +374,10 @@ function module.LOAD(MODULE_INFO)
 		end
 	end
 
-	-- Create test button in a SEPARATE ScreenGui (so it's not affected by MainUi constraints)
-	local testScreenGui = Instance.new("ScreenGui")
-	testScreenGui.Name = "TestMessageButtonGui"
-	testScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	testScreenGui.ResetOnSpawn = false
-	testScreenGui.Parent = Plr:WaitForChild("PlayerGui")
-
-	local testButton = Instance.new("TextButton")
-	testButton.Name = "TestMessageButton"
-	testButton.AnchorPoint = Vector2.new(1, 1)
-	testButton.Position = UDim2.new(1, -10, 1, -10)  -- Bottom-right corner
-	testButton.Size = UDim2.new(0.12, 0, 0.08, 0)
-	testButton.BackgroundColor3 = Color3.fromRGB(60, 130, 255)
-	testButton.BackgroundTransparency = 0.3
-	testButton.BorderSizePixel = 0
-	testButton.Text = "Test Message"
-	testButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-	testButton.TextSize = 18
-	testButton.Font = Enum.Font.GothamBold
-	testButton.TextScaled = true
-	testButton.ZIndex = 200
-	testButton.Parent = testScreenGui
-
-	local testTextConstraint = Instance.new("UITextSizeConstraint")
-	testTextConstraint.MaxTextSize = 18
-	testTextConstraint.Parent = testButton
-
-	local testCorner = Instance.new("UICorner")
-	testCorner.CornerRadius = UDim.new(0, 10)
-	testCorner.Parent = testButton
-
-	local testStroke = Instance.new("UIStroke")
-	testStroke.Color = Color3.fromRGB(255, 255, 255)
-	testStroke.Transparency = 0.85
-	testStroke.Thickness = 2
-	testStroke.Parent = testButton
-
-	-- Test message (research completion with name and tokens on separate line)
-	local testMessage = {message = "Stone Collector completed! +5 Research Tokens", message_color = Color3.fromRGB(255, 255, 255)}
-
-	testButton.MouseButton1Click:Connect(function()
-		print("Test button clicked!")
-		module.message_render("screen", testMessage)
-	end)
-
-	-- Hover effect
-	testButton.MouseEnter:Connect(function()
-		testButton.BackgroundTransparency = 0.1
-	end)
-
-	testButton.MouseLeave:Connect(function()
-		testButton.BackgroundTransparency = 0.3
-	end)
-
 	-- Connect to server events
 	RepStorage.Events.MessageClient.OnClientEvent:Connect(module.message_render)
 
-	print("Modern Information script loaded with test button!")
+	print("Modern Information script loaded!")
 end
 
 return module
