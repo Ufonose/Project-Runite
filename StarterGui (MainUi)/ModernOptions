@@ -4,11 +4,11 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	local Plrs = game:GetService("Players")
 	local RepStorage = game:GetService("ReplicatedStorage")
 	local Plr = Plrs.LocalPlayer
+	local Camera = workspace.CurrentCamera
 
-	-- Main container - larger to fit all settings
+	-- Main container - converted to scale (550x650 base reference)
 	local container = Instance.new("Frame")
 	container.Name = "ModernOptions"
-	container.Size = UDim2.new(0, 550, 0, 650)
 	container.Position = UDim2.new(0.5, 0, 0.5, 0)
 	container.AnchorPoint = Vector2.new(0.5, 0.5)
 	container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
@@ -17,6 +17,25 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	container.Visible = false
 	container.ZIndex = 10
 	container.Parent = parent
+
+	-- Function to update container size based on screen size
+	local function updateContainerSize()
+		local viewport = Camera.ViewportSize
+		local screenWidth = viewport.X
+
+		-- If screen width is less than 900 pixels (mobile), make GUI bigger
+		if screenWidth < 900 then
+			container.Size = UDim2.new(0.7, 0, 0.85, 0)  -- 50% width, 85% height on mobile
+		else
+			container.Size = UDim2.new(0.3, 0, 0.6, 0)  -- 30% width, 60% height on desktop
+		end
+	end
+
+	-- Update on initial load
+	updateContainerSize()
+
+	-- Update when screen size changes
+	Camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateContainerSize)
 
 	-- Blur/Glass effect background
 	local blur = Instance.new("Frame")
@@ -43,10 +62,10 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	corner.CornerRadius = UDim.new(0, 12)
 	corner.Parent = container
 
-	-- Header
+	-- Header (60/650 = 0.0923)
 	local header = Instance.new("Frame")
 	header.Name = "Header"
-	header.Size = UDim2.new(1, 0, 0, 60)
+	header.Size = UDim2.new(1, 0, 0.0923, 0)
 	header.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	header.BorderSizePixel = 0
 	header.ZIndex = 12
@@ -56,10 +75,11 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	headerCorner.CornerRadius = UDim.new(0, 12)
 	headerCorner.Parent = header
 
-	-- Header bottom part should be square
+	-- Header bottom part should be square (12/650 = 0.0185)
 	local headerCover = Instance.new("Frame")
-	headerCover.Size = UDim2.new(1, 0, 0, 12)
-	headerCover.Position = UDim2.new(0, 0, 1, -12)
+	headerCover.Size = UDim2.new(1, 0, 0.0185, 0)
+	headerCover.Position = UDim2.new(0, 0, 1, 0)
+	headerCover.AnchorPoint = Vector2.new(0, 1)
 	headerCover.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	headerCover.BorderSizePixel = 0
 	headerCover.ZIndex = 12
@@ -68,10 +88,10 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	-- Title
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
-	title.Size = UDim2.new(1, -100, 1, 0)
-	title.Position = UDim2.new(0, 20, 0, 0)
+	title.Size = UDim2.new(0.82, 0, 1, 0)  -- (550-100)/550 = 0.82
+	title.Position = UDim2.new(0.036, 0, 0, 0)  -- 20/550 = 0.036
 	title.BackgroundTransparency = 1
-	title.Text = "⚙️ Settings"
+	title.Text = "Settings"
 	title.TextColor3 = Color3.fromRGB(255, 255, 255)
 	title.TextSize = 24
 	title.Font = Enum.Font.GothamBold
@@ -79,12 +99,12 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	title.ZIndex = 13
 	title.Parent = header
 
-	-- Close button
+	-- Close button (40x40, positioned 50 from right edge)
 	local closeButton = Instance.new("TextButton")
 	closeButton.Name = "CloseButton"
-	closeButton.Size = UDim2.new(0, 40, 0, 40)
-	closeButton.Position = UDim2.new(1, -50, 0.5, -20)
-	closeButton.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
+	closeButton.Size = UDim2.new(0.0727, 0, 0.667, 0)  -- 40/550 width, 40/60 height relative to header
+	closeButton.Position = UDim2.new(0.909, 0, 0.167, 0)  -- (550-50)/550 = 0.909, centered in header
+	closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 	closeButton.Text = "X"
 	closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	closeButton.TextSize = 20
@@ -98,17 +118,17 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 
 	-- Hover effect for close button
 	closeButton.MouseEnter:Connect(function()
-		closeButton.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
+		closeButton.BackgroundColor3 = Color3.fromRGB(181, 45, 45)
 	end)
 	closeButton.MouseLeave:Connect(function()
-		closeButton.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
+		closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 	end)
 
-	-- Content area
+	-- Content area (15px padding, 70px from top = header 60 + 10 spacing)
 	local content = Instance.new("ScrollingFrame")
 	content.Name = "Content"
-	content.Size = UDim2.new(1, -30, 1, -80)
-	content.Position = UDim2.new(0, 15, 0, 70)
+	content.Size = UDim2.new(0.945, 0, 0.877, 0)  -- (550-30)/550 = 0.945, (650-80)/650 = 0.877
+	content.Position = UDim2.new(0.027, 0, 0.108, 0)  -- 15/550 = 0.027, 70/650 = 0.108
 	content.BackgroundTransparency = 1
 	content.ScrollBarThickness = 6
 	content.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 100)
@@ -117,7 +137,7 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	content.Parent = container
 
 	local contentLayout = Instance.new("UIListLayout")
-	contentLayout.Padding = UDim.new(0, 15)
+	contentLayout.Padding = UDim.new(0.023, 0)  -- 15/650 = 0.023
 	contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	contentLayout.Parent = content
 
@@ -142,11 +162,11 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 		sectionStroke.Transparency = 0.7
 		sectionStroke.Parent = section
 
-		-- Section header
+		-- Section header (40 height, 10 padding from edges, 5 from top)
 		local sectionHeader = Instance.new("TextLabel")
 		sectionHeader.Name = "Header"
-		sectionHeader.Size = UDim2.new(1, -20, 0, 40)
-		sectionHeader.Position = UDim2.new(0, 10, 0, 5)
+		sectionHeader.Size = UDim2.new(0.962, 0, 0, 40)  -- (520-20)/520 = 0.962, fixed 40 height
+		sectionHeader.Position = UDim2.new(0.019, 0, 0, 5)  -- 10/520 = 0.019
 		sectionHeader.BackgroundTransparency = 1
 		sectionHeader.Text = icon .. " " .. sectionName
 		sectionHeader.TextColor3 = Color3.fromRGB(200, 200, 220)
@@ -159,8 +179,8 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 		-- Section content container
 		local sectionContent = Instance.new("Frame")
 		sectionContent.Name = "SectionContent"
-		sectionContent.Size = UDim2.new(1, -20, 0, 0)
-		sectionContent.Position = UDim2.new(0, 10, 0, 50)
+		sectionContent.Size = UDim2.new(0.962, 0, 0, 0)  -- 0.962 width to match header
+		sectionContent.Position = UDim2.new(0.019, 0, 0, 50)  -- Below header (40 + 10 spacing)
 		sectionContent.BackgroundTransparency = 1
 		sectionContent.ZIndex = 12
 		sectionContent.Parent = section
@@ -172,7 +192,7 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 
 		-- Update section size based on content
 		sectionLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-			sectionContent.Size = UDim2.new(1, -20, 0, sectionLayout.AbsoluteContentSize.Y)
+			sectionContent.Size = UDim2.new(0.962, 0, 0, sectionLayout.AbsoluteContentSize.Y)
 			section.Size = UDim2.new(1, 0, 0, sectionLayout.AbsoluteContentSize.Y + 65)
 		end)
 
@@ -183,7 +203,7 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	local function createToggle(parent, labelText, settingName, layoutOrder)
 		local toggleFrame = Instance.new("Frame")
 		toggleFrame.Name = settingName
-		toggleFrame.Size = UDim2.new(1, 0, 0, 50)
+		toggleFrame.Size = UDim2.new(1, 0, 0, 50)  -- Fixed height for consistency
 		toggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 		toggleFrame.BorderSizePixel = 0
 		toggleFrame.LayoutOrder = layoutOrder
@@ -196,8 +216,8 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 
 		-- Label
 		local label = Instance.new("TextLabel")
-		label.Size = UDim2.new(1, -80, 1, 0)
-		label.Position = UDim2.new(0, 15, 0, 0)
+		label.Size = UDim2.new(0.846, 0, 1, 0)  -- (520-80)/520 = 0.846
+		label.Position = UDim2.new(0.029, 0, 0, 0)  -- 15/520 = 0.029
 		label.BackgroundTransparency = 1
 		label.Text = labelText
 		label.TextColor3 = Color3.fromRGB(220, 220, 220)
@@ -207,11 +227,11 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 		label.ZIndex = 14
 		label.Parent = toggleFrame
 
-		-- Toggle button container
+		-- Toggle button container (60x30, 70 from right)
 		local toggleButton = Instance.new("TextButton")
 		toggleButton.Name = "ToggleButton"
-		toggleButton.Size = UDim2.new(0, 60, 0, 30)
-		toggleButton.Position = UDim2.new(1, -70, 0.5, -15)
+		toggleButton.Size = UDim2.new(0.115, 0, 0.6, 0)  -- 60/520 = 0.115, 30/50 = 0.6
+		toggleButton.Position = UDim2.new(0.865, 0, 0.2, 0)  -- (520-70)/520 = 0.865, centered vertically
 		toggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
 		toggleButton.Text = ""
 		toggleButton.ZIndex = 14
@@ -221,11 +241,11 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 		toggleBtnCorner.CornerRadius = UDim.new(1, 0)
 		toggleBtnCorner.Parent = toggleButton
 
-		-- Toggle indicator (the circle that slides)
+		-- Toggle indicator (24x24 circle that slides)
 		local toggleIndicator = Instance.new("Frame")
 		toggleIndicator.Name = "Indicator"
-		toggleIndicator.Size = UDim2.new(0, 24, 0, 24)
-		toggleIndicator.Position = UDim2.new(0, 3, 0.5, -12)
+		toggleIndicator.Size = UDim2.new(0.4, 0, 0.8, 0)  -- 24/60 = 0.4, 24/30 = 0.8
+		toggleIndicator.Position = UDim2.new(0.05, 0, 0.1, 0)  -- 3/60 = 0.05, centered vertically
 		toggleIndicator.BackgroundColor3 = Color3.fromRGB(180, 180, 180)
 		toggleIndicator.BorderSizePixel = 0
 		toggleIndicator.ZIndex = 15
@@ -244,14 +264,14 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 				-- Active state - green
 				TweenService:Create(toggleButton, tweenInfo, {BackgroundColor3 = Color3.fromRGB(70, 180, 90)}):Play()
 				TweenService:Create(toggleIndicator, tweenInfo, {
-					Position = UDim2.new(1, -27, 0.5, -12),
+					Position = UDim2.new(0.55, 0, 0.1, 0),  -- 33/60 = 0.55 (60-24-3 = 33)
 					BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 				}):Play()
 			else
 				-- Inactive state - gray
 				TweenService:Create(toggleButton, tweenInfo, {BackgroundColor3 = Color3.fromRGB(60, 60, 70)}):Play()
 				TweenService:Create(toggleIndicator, tweenInfo, {
-					Position = UDim2.new(0, 3, 0.5, -12),
+					Position = UDim2.new(0.05, 0, 0.1, 0),
 					BackgroundColor3 = Color3.fromRGB(180, 180, 180)
 				}):Play()
 			end
@@ -276,11 +296,75 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 		return toggleFrame
 	end
 
+	-- Function to create a button-style toggle (same style as toggle but with clickable button instead)
+	local function createButtonToggle(parent, labelText, buttonText, buttonColor, layoutOrder)
+		local toggleFrame = Instance.new("Frame")
+		toggleFrame.Name = labelText
+		toggleFrame.Size = UDim2.new(1, 0, 0, 50)  -- Fixed height for consistency
+		toggleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		toggleFrame.BorderSizePixel = 0
+		toggleFrame.LayoutOrder = layoutOrder
+		toggleFrame.ZIndex = 13
+		toggleFrame.Parent = parent
+
+		local toggleCorner = Instance.new("UICorner")
+		toggleCorner.CornerRadius = UDim.new(0, 8)
+		toggleCorner.Parent = toggleFrame
+
+		-- Label
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(0.846, 0, 1, 0)  -- (520-80)/520 = 0.846 (matches toggle label)
+		label.Position = UDim2.new(0.029, 0, 0, 0)  -- 15/520 = 0.029
+		label.BackgroundTransparency = 1
+		label.Text = labelText
+		label.TextColor3 = Color3.fromRGB(220, 220, 220)
+		label.TextSize = 16
+		label.Font = Enum.Font.Gotham
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.ZIndex = 14
+		label.Parent = toggleFrame
+
+		-- Action button (same size as toggle)
+		local actionButton = Instance.new("TextButton")
+		actionButton.Name = "ActionButton"
+		actionButton.Size = UDim2.new(0.115, 0, 0.6, 0)  -- 60/520 = 0.115, 30/50 = 0.6 (matches toggle)
+		actionButton.Position = UDim2.new(0.865, 0, 0.2, 0)  -- Same position as toggle
+		actionButton.BackgroundColor3 = buttonColor
+		actionButton.Text = buttonText
+		actionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		actionButton.TextSize = 13
+		actionButton.Font = Enum.Font.GothamBold
+		actionButton.ZIndex = 14
+		actionButton.Parent = toggleFrame
+
+		local actionCorner = Instance.new("UICorner")
+		actionCorner.CornerRadius = UDim.new(0, 6)
+		actionCorner.Parent = actionButton
+
+		-- Hover effects
+		local originalColor = buttonColor
+		local hoverColor = Color3.new(
+			math.min(buttonColor.R * 1.2, 1),
+			math.min(buttonColor.G * 1.2, 1),
+			math.min(buttonColor.B * 1.2, 1)
+		)
+
+		actionButton.MouseEnter:Connect(function()
+			actionButton.BackgroundColor3 = hoverColor
+		end)
+
+		actionButton.MouseLeave:Connect(function()
+			actionButton.BackgroundColor3 = originalColor
+		end)
+
+		return toggleFrame, actionButton
+	end
+
 	-- Function to create an info label
 	local function createInfoLabel(parent, labelText, valueText, layoutOrder)
 		local infoFrame = Instance.new("Frame")
 		infoFrame.Name = "InfoLabel"
-		infoFrame.Size = UDim2.new(1, 0, 0, 40)
+		infoFrame.Size = UDim2.new(1, 0, 0, 40)  -- Fixed height
 		infoFrame.BackgroundTransparency = 1
 		infoFrame.LayoutOrder = layoutOrder
 		infoFrame.ZIndex = 13
@@ -320,7 +404,7 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	local function createButton(parent, buttonText, buttonIcon, color, layoutOrder)
 		local button = Instance.new("TextButton")
 		button.Name = buttonText .. "Button"
-		button.Size = UDim2.new(1, 0, 0, 50)
+		button.Size = UDim2.new(1, 0, 0, 50)  -- Fixed height
 		button.BackgroundColor3 = color
 		button.Text = ""
 		button.BorderSizePixel = 0
@@ -372,26 +456,22 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 
 	-- Create sections
 
-	-- 1. Plot Settings Section
-	local plotSection, plotContent = createSection("Plot Settings", "🏗️", 1)
+	-- 1. Game Settings Section
+	local gameSection, gameContent = createSection("Game Settings", "🎮", 1)
+	local hideResearchToggle = createToggle(gameContent, "Hide Active Research Display", "HideResearch", 1)
+
+	-- 2. Plot Settings Section
+	local plotSection, plotContent = createSection("Plot Settings", "🏗️", 2)
 	local minesToggle = createToggle(plotContent, "Enable All Miners", "MinesActive", 1)
-
-	-- 2. Rebirth Section
-	local rebirthSection, rebirthContent = createSection("Rebirth", "♻️", 2)
-
-	-- Info labels for rebirth
-	local rebirthInfo, rebirthValue = createInfoLabel(rebirthContent, "Current Rebirth:", "0", 1)
-	local costInfo, costValue = createInfoLabel(rebirthContent, "Rebirth Cost:", "$0", 2)
-
-	-- Rebirth button
-	local rebirthButton = createButton(rebirthContent, "Rebirth", "🔄", Color3.fromRGB(80, 60, 140), 3)
+	local clearOresFrame, clearOresButton = createButtonToggle(plotContent, "Cleanup All Ores", "Clean", Color3.fromRGB(180, 80, 60), 2)
+	local withdrawFrame, withdrawButton = createButtonToggle(plotContent, "Withdraw All Items", "Withdraw", Color3.fromRGB(200, 60, 60), 3)
 
 	-- 3. Deluxe Section (Placeholder)
 	local deluxeSection, deluxeContent = createSection("Deluxe", "💎", 3)
 
 	-- Placeholder message
 	local placeholderFrame = Instance.new("Frame")
-	placeholderFrame.Size = UDim2.new(1, 0, 0, 80)
+	placeholderFrame.Size = UDim2.new(1, 0, 0, 80)  -- Fixed height
 	placeholderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 	placeholderFrame.BorderSizePixel = 0
 	placeholderFrame.LayoutOrder = 1
@@ -403,8 +483,8 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	placeholderCorner.Parent = placeholderFrame
 
 	local placeholderLabel = Instance.new("TextLabel")
-	placeholderLabel.Size = UDim2.new(1, -20, 1, -20)
-	placeholderLabel.Position = UDim2.new(0, 10, 0, 10)
+	placeholderLabel.Size = UDim2.new(0.962, 0, 0.75, 0)  -- (520-20)/520 = 0.962, (80-20)/80 = 0.75
+	placeholderLabel.Position = UDim2.new(0.019, 0, 0.125, 0)  -- 10/520 = 0.019, 10/80 = 0.125
 	placeholderLabel.BackgroundTransparency = 1
 	placeholderLabel.Text = "🛒 Premium items and features coming soon!\n\nStay tuned for exclusive content."
 	placeholderLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
@@ -420,13 +500,113 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 		content.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 15)
 	end)
 
+	-- Create confirmation popup
+	local confirmationPopup = Instance.new("Frame")
+	confirmationPopup.Name = "ConfirmationPopup"
+	confirmationPopup.Size = UDim2.new(0.7, 0, 0.35, 0)  -- 70% width, 35% height of container
+	confirmationPopup.Position = UDim2.new(0.5, 0, 0.5, 0)
+	confirmationPopup.AnchorPoint = Vector2.new(0.5, 0.5)
+	confirmationPopup.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+	confirmationPopup.BorderSizePixel = 0
+	confirmationPopup.Visible = false
+	confirmationPopup.ZIndex = 20
+	confirmationPopup.Parent = container
+
+	local popupCorner = Instance.new("UICorner")
+	popupCorner.CornerRadius = UDim.new(0, 10)
+	popupCorner.Parent = confirmationPopup
+
+	local popupStroke = Instance.new("UIStroke")
+	popupStroke.Color = Color3.fromRGB(200, 60, 60)
+	popupStroke.Thickness = 2
+	popupStroke.Transparency = 0.3
+	popupStroke.Parent = confirmationPopup
+
+	-- Popup message
+	local popupMessage = Instance.new("TextLabel")
+	popupMessage.Size = UDim2.new(0.9, 0, 0.8, 0)
+	popupMessage.Position = UDim2.new(0.05, 0, -0.1, 0)
+	popupMessage.BackgroundTransparency = 1
+	popupMessage.Text = "Are you sure you want to withdraw all items?\n\nAll placed items on your plot will be returned to your inventory."
+	popupMessage.TextColor3 = Color3.fromRGB(255, 255, 255)
+	popupMessage.TextSize = 16
+	popupMessage.Font = Enum.Font.GothamBold
+	popupMessage.TextWrapped = true
+	popupMessage.TextYAlignment = Enum.TextYAlignment.Center
+	popupMessage.ZIndex = 21
+	popupMessage.Parent = confirmationPopup
+
+	-- Button container
+	local buttonContainer = Instance.new("Frame")
+	buttonContainer.Size = UDim2.new(0.9, 0, 0.25, 0)
+	buttonContainer.Position = UDim2.new(0.05, 0, 0.65, 0)
+	buttonContainer.BackgroundTransparency = 1
+	buttonContainer.ZIndex = 21
+	buttonContainer.Parent = confirmationPopup
+
+	local buttonLayout = Instance.new("UIListLayout")
+	buttonLayout.FillDirection = Enum.FillDirection.Horizontal
+	buttonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	buttonLayout.Padding = UDim.new(0.05, 0)
+	buttonLayout.Parent = buttonContainer
+
+	-- Yes button
+	local yesButton = Instance.new("TextButton")
+	yesButton.Name = "YesButton"
+	yesButton.Size = UDim2.new(0.4, 0, 1, 0)
+	yesButton.BackgroundColor3 = Color3.fromRGB(70, 180, 90)
+	yesButton.Text = "Yes"
+	yesButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	yesButton.TextSize = 16
+	yesButton.Font = Enum.Font.GothamBold
+	yesButton.ZIndex = 22
+	yesButton.Parent = buttonContainer
+
+	local yesCorner = Instance.new("UICorner")
+	yesCorner.CornerRadius = UDim.new(0, 8)
+	yesCorner.Parent = yesButton
+
+	-- No button
+	local noButton = Instance.new("TextButton")
+	noButton.Name = "NoButton"
+	noButton.Size = UDim2.new(0.4, 0, 1, 0)
+	noButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+	noButton.Text = "No"
+	noButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	noButton.TextSize = 16
+	noButton.Font = Enum.Font.GothamBold
+	noButton.ZIndex = 22
+	noButton.Parent = buttonContainer
+
+	local noCorner = Instance.new("UICorner")
+	noCorner.CornerRadius = UDim.new(0, 8)
+	noCorner.Parent = noButton
+
+	-- Hover effects for yes button
+	yesButton.MouseEnter:Connect(function()
+		yesButton.BackgroundColor3 = Color3.fromRGB(90, 200, 110)
+	end)
+	yesButton.MouseLeave:Connect(function()
+		yesButton.BackgroundColor3 = Color3.fromRGB(70, 180, 90)
+	end)
+
+	-- Hover effects for no button
+	noButton.MouseEnter:Connect(function()
+		noButton.BackgroundColor3 = Color3.fromRGB(220, 80, 80)
+	end)
+	noButton.MouseLeave:Connect(function()
+		noButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+	end)
+
 	-- Return references and functions
 	return {
 		Container = container,
 		CloseButton = closeButton,
-		RebirthValue = rebirthValue,
-		CostValue = costValue,
-		RebirthButton = rebirthButton,
+		ClearOresButton = clearOresButton,
+		WithdrawButton = withdrawButton,
+		ConfirmationPopup = confirmationPopup,
+		YesButton = yesButton,
+		NoButton = noButton,
 	}
 end
 
