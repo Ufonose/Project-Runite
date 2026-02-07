@@ -216,7 +216,7 @@ function module.LOAD(MODULE_INFO)
 							-- Define colors for different gems
 							local colorMap = {
 								["Diamond Gem"] = "#00FFFF",  -- Cyan
-								["Ruby Gem"] = "#FF0000",      -- Red
+								["Ruby Gem"] = "#e20000",      -- Red
 								["Emerald Gem"] = "#00FF00",   -- Green
 								["Gold Ore"] = "#FFD700",      -- Gold
 								["Iron Ore"] = "#a16f53",      
