@@ -20,7 +20,7 @@ function module.LOAD(MODULE_INFO)
 	local Plr = Plrs.LocalPlayer
 	local Mouse = Plr:GetMouse()
 	local PlayerGui = Plr:WaitForChild("PlayerGui")
-	local ResearchGui = PlayerGui:WaitForChild("ResearchGui", 10)
+	--local ResearchGui = PlayerGui:WaitForChild("ResearchGui", 10)
 	local PLR_PLOT = Plr.SetPlot.Value
 	local SoundManager = require(RepStorage.Modules.SoundManager)
 	-- Variables
@@ -155,6 +155,7 @@ function module.LOAD(MODULE_INFO)
 			end
 		elseif KEY_INPUT.KeyCode == Enum.KeyCode.T then
 			if not PLACEMENT.PLACING_ITEMS and not module.SELECTING_ITEMS then
+				local ResearchGui = PlayerGui:FindFirstChild("ResearchGui")  -- Get fresh reference
 				if ResearchGui then
 					Main.OPEN_MENU(ResearchGui)
 				end
