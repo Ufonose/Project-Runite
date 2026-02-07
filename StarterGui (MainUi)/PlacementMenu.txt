@@ -100,9 +100,9 @@ function module.LOAD(MODULE_INFO)
 	end
 
 	function module.LOAD_MENU()
-		-- Set initial position off-screen (perfectly centered, 30% bigger)
+		-- Set initial position off-screen (scale-based)
 		if not modernMenu.Container.Visible then
-			modernMenu.Container.Position = UDim2.new(0.5, 0, 1, 20)
+			modernMenu.Container.Position = UDim2.new(0.5, 0, 1.02, 0)  -- Off-screen below
 		end
 
 		-- Get the item being placed and update the header
@@ -123,20 +123,20 @@ function module.LOAD(MODULE_INFO)
 			end
 		end
 
-		-- Show and animate menu sliding up
+		-- Show and animate menu sliding up (scale-based - flush with bottom)
 		modernMenu.Container.Visible = true
-		PosAnim(modernMenu.Container, UDim2.new(0.5, 0, 1, -173), 0.3)
+		PosAnim(modernMenu.Container, UDim2.new(0.5, 0, 0.98, 0), 0.3)
 	end
 
 	function module.UNLOAD_MENU()
 		-- Clear current placing item reference
 		currentPlacingItemId = nil
 
-		-- Animate menu sliding down
+		-- Animate menu sliding down (scale-based)
 		if modernMenu.Container.Visible then
-			modernMenu.Container.Position = UDim2.new(0.5, 0, 1, -173)
+			modernMenu.Container.Position = UDim2.new(0.5, 0, 1, 0)  -- Current position
 		end
-		PosAnim(modernMenu.Container, UDim2.new(0.5, 0, 1, 20), 0.3)
+		PosAnim(modernMenu.Container, UDim2.new(0.5, 0, 1.2, 0), 0.3)  -- Off-screen below
 		wait(0.3)
 		modernMenu.Container.Visible = false
 	end
