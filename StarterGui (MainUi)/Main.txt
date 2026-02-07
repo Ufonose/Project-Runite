@@ -1,127 +1,314 @@
--- StarterGui/MainUi/Main.lua (UPDATED - ONLY ONE MENU OPEN AT A TIME)
+-- Services
+local RepStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local Plrs = game:GetService("Players")
+-- Modules
+local MAIN_LIB = require(RepStorage.Modules.MainLib)
+-- Variables
+	-- Arrays
+local DEBOUNCE = {}
 
-local module = {}
+-- Define minimum quantities that must remain for each item (by item name)
+local MINIMUM_ITEM_QUANTITIES = {
+	["Standard Conveyor"] = 18,
+	["Corner Conveyor"] = 4,
+	-- Add more items as needed
+}
 
-function module.CLOSE_MENU()
-	warn("Main.CLOSE_MENU() HASN'T LOADED YET!")
-end
+warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] loading...")
 
-function module.OPEN_MENU()
-	warn("Main.OPEN_MENU() HASN'T LOADED YET!")
-end
+-- ServerScriptService/Main.txt (UPDATE PLACE_ITEM)
 
-function module.LOAD_PAGE()
-	warn("Main.LOAD_PAGE() HASN'T LOADED YET!")
-end
+function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
+	if Plr and PLACED_ITEMS and ITEMS then
+		local ITEM_FAILED = false
+		for I, ITEM in pairs(ITEMS) do
+			local ITEM_REP = RepStorage.Items:FindFirstChild(ITEM["ITEM_NAME"])
+			local ITEM_INFO = require(ITEM_REP.ItemStats)
+			if _G["global_data"][Plr.Name]["Items"][ITEM_INFO.ItemId]["Amount"] > 0 then
+				local REAL_ITEM = ITEM_REP:Clone()
+				REAL_ITEM:SetPrimaryPartCFrame(ITEM["ITEM_LOCATION"])
 
-function module.LOAD(MODULE_INFO)
-	-- Basic Needs
-	local MODULES = MODULE_INFO["MODULES"]
-	local SERVICES = MODULE_INFO["SERVICES"]
-	-- Services
-	local RepStorage = SERVICES["ReplicatedStorage"]
-	local RunService = SERVICES["RunService"]
-	local Plrs = SERVICES["Players"]
-	-- Modules
-	local ITEM_SELECTION = MODULES["ItemSelection"]
-	local ITEM_HOVER = MODULES["ItemHover"]
-	local PLACEMENT = MODULES["Placement"]
-	local INPUT = MODULES["Input"]
-	local SoundManager = require(RepStorage.Modules.SoundManager)
-	-- Plr Info
-	local Plr = Plrs.LocalPlayer
-	local Mouse = Plr:GetMouse()
-	-- Variables
-	-- Booleans
-	local DB = true
-
-	-- Menu Opening/Closing Handling
-	function module.CLOSE_MENU(MENU_OBJ)
-		local mainUi = script.Parent.Parent
-
-		if mainUi.ItemHover.ButtonHovering.Value ~= nil and mainUi.ItemHover.ButtonHovering.Value:IsDescendantOf(MENU_OBJ) then
-			mainUi.ItemHover.Visible = false
-		end
-
-		local MENU_OPENED = mainUi.Values.OpenedMenus:FindFirstChild(MENU_OBJ.Name)
-		if MENU_OPENED then
-			MENU_OPENED:Destroy()
-			if MENU_OBJ:FindFirstChild("MenuObject") then
-				MENU_OBJ.MenuObject.Value = false
-			end
-
-			-- Only set Visible if the object has this property (Frames have it, ScreenGuis don't)
-			if MENU_OBJ:IsA("Frame") or MENU_OBJ:IsA("ScrollingFrame") then
-				MENU_OBJ.Visible = false
-			end
-
-			-- Play close sound
-			SoundManager.MenuClose()
-		end
-	end
-
-	function module.OPEN_MENU(MENU_OBJ)
-		local mainUi = script.Parent.Parent
-
-		ITEM_SELECTION.UNSELECT_ITEMS()		-- Wipe the selected items before anything.
-
-		local MENU_OPENED = mainUi.Values.OpenedMenus:FindFirstChild(MENU_OBJ.Name)
-		if MENU_OPENED then
-			module.CLOSE_MENU(MENU_OBJ)
-		else
-			-- Close ALL currently opened menus (no exceptions - only one menu open at a time)
-			for I, OPENED in pairs(mainUi.Values.OpenedMenus:GetChildren()) do
-				module.CLOSE_MENU(OPENED.Value)
-			end
-
-			-- Open the new menu
-			local OPENED_TAG = Instance.new("ObjectValue", mainUi.Values.OpenedMenus)
-			OPENED_TAG.Name = MENU_OBJ.Name
-			OPENED_TAG.Value = MENU_OBJ
-			if MENU_OBJ:FindFirstChild("MenuObject") then
-				MENU_OBJ.MenuObject.Value = true
-			end
-			MENU_OBJ.Visible = true
-
-			-- Play open sound
-			SoundManager.MenuOpen()
-		end
-	end
-
-	function module.LOAD_PAGE(PAGES, PAGE_NAME)
-		local REAL_PAGE = nil
-		for I, PAGE in pairs(PAGES:GetChildren()) do
-			if PAGE:IsA("Frame") then
-				if PAGE.Name == PAGE_NAME then
-					PAGE.Visible = true
-					REAL_PAGE = PAGE
+				-- Store the placement layer on the item
+				local layerValue = Instance.new("IntValue", REAL_ITEM)
+				layerValue.Name = "PlacementLayer"
+				if type(ITEM_INFO.PlacementLayer) == "table" then
+					layerValue.Value = ITEM_INFO.PlacementLayer[1]
+					local layersString = Instance.new("StringValue", REAL_ITEM)
+					layersString.Name = "PlacementLayers"
+					layersString.Value = table.concat(ITEM_INFO.PlacementLayer, ",")
 				else
-					PAGE.Visible = false
+					layerValue.Value = ITEM_INFO.PlacementLayer or 1
 				end
-			end
-		end
-		if REAL_PAGE == nil then
-			warn(PAGE_NAME.." DOESN'T EXIST!")
-		end
-		return REAL_PAGE
-	end
 
-	-- Frame Update Stuff
-	RunService.RenderStepped:Connect(function()
-		-- Process pretty much all the Frame-Update stuff here for performance reasons.
-		ITEM_HOVER.UPDATE_HOVER()
-		ITEM_SELECTION.ITEM_DETECT()
-		if INPUT.MOUSE_DOWN then
-			if PLACEMENT.PLACING_ITEMS  then
-				if DB then
-					DB = false
-					PLACEMENT.PLACE_ITEM()
-					wait(.2)
-					DB = true
+				-- IMPORTANT: Reverse ConvVelo and Beam BEFORE enabling scripts!
+				if ITEM["CONVEYOR_REVERSED"] then
+					REAL_ITEM:SetAttribute("ConveyorReversed", true)
+					print("=== REVERSING CONVEYOR ===")
+					print("Item:", REAL_ITEM.Name)
+
+					for _, descendant in pairs(REAL_ITEM:GetDescendants()) do
+						-- Handle Conv and ConvSlope only (NOT ConvMerge)
+						if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope") then
+							-- Skip if NoFlip attribute is set (for merge conveyors)
+							if descendant:GetAttribute("NoFlip") then
+								print("Skipping", descendant:GetFullName(), "- NoFlip attribute set")
+								continue
+							end
+
+							-- EXTRA SAFETY: Skip ConvMerge by name
+							if descendant.Name == "ConvMerge" then
+								print("Skipping ConvMerge - cannot flip direction")
+								continue
+							end
+
+							local convVelo = descendant:FindFirstChild("ConvVelo")
+							if convVelo then
+								print("Found ConvVelo:", convVelo.Value)
+								convVelo.Value = -convVelo.Value
+								print("Reversed to:", convVelo.Value)
+							else
+								warn("ConvVelo not found on Conv part!")
+							end
+
+							-- Reverse beam texture
+							local beam = descendant:FindFirstChildOfClass("Beam")
+							if beam then
+								print("Found Beam, TextureSpeed:", beam.TextureSpeed)
+								beam.TextureSpeed = -beam.TextureSpeed
+								print("Reversed Beam TextureSpeed to:", beam.TextureSpeed)
+							end
+						end
+					end
+					print("=== REVERSAL COMPLETE ===")
 				end
+
+				-- Parent AFTER reversing (before scripts run)
+				REAL_ITEM.Parent = PLACED_ITEMS
+
+				_G["global_data"][Plr.Name]["Items"][ITEM_INFO.ItemId]["Amount"] -= 1
+
+				-- NOW enable scripts
+				spawn(function()
+					for E, DESCENDANT in pairs(REAL_ITEM:GetDescendants()) do
+						if DESCENDANT:IsA("Script") then
+							DESCENDANT.Disabled = DESCENDANT:FindFirstChild("ForceDisabled")
+						end
+						if E%50 == 0 then
+							wait()
+						end
+					end
+
+					-- NEW: Hide support poles if needed
+					local hideSupportScript = REAL_ITEM:FindFirstChild("HideSupportPoles", true)
+					if hideSupportScript and hideSupportScript:IsA("Script") then
+						hideSupportScript.Disabled = false
+					end
+
+					RepStorage.Events.InventoryUpdate:FireClient(Plr)
+				end)
+			else
+				ITEM_FAILED = true
 			end
 		end
-	end)
+		return not ITEM_FAILED
+	end
+	return false
 end
 
-return module
+
+function GET_INVENTORY(Plr, INVENTORY_TYPE)
+	local INV_GETTING = Plr		-- Make this be the Plot Owner if possible but if not be the Plr
+	return _G["global_data"][INV_GETTING.Name][INVENTORY_TYPE]
+end
+
+function BUY_ITEM(Plr, ITEM_ID, AMOUNT)
+	local CASH = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
+	if CASH then
+		local CANT_BUY_TYPES = {"special", "cantbuy"}
+		local AMOUNT = AMOUNT or 1
+		local ITEM_ID = ITEM_ID
+		local COST_VAL = 0
+		if type(ITEM_ID) ~= "table" then
+			ITEM_ID = {ITEM_ID}
+		end
+		local BOUGHT_ITEMS = {}
+		for I, REAL_ID in pairs(ITEM_ID) do
+			local REAL_ITEM = MAIN_LIB.ITEM_FROM_ID(REAL_ID)
+			local ITEM_INFO = require(REAL_ITEM.ItemStats)
+			if table.find(CANT_BUY_TYPES, ITEM_INFO.ItemType) == nil then	-- string.lower(ITEM_INFO.ItemType) == "special" or string.lower(ITEM_INFO.CostType) == "cantbuy" then
+				if CASH.Value >= math.floor(ITEM_INFO.Cost*AMOUNT) then
+					COST_VAL += math.floor(ITEM_INFO.Cost*AMOUNT)
+					BOUGHT_ITEMS[#BOUGHT_ITEMS+1] = REAL_ID
+				end
+			end
+		end
+		if #BOUGHT_ITEMS == #ITEM_ID then
+			CASH.Value -= COST_VAL
+			for I, ITEM_ID in pairs(BOUGHT_ITEMS) do
+				ServerStorage.Events.ItemGive:Invoke(Plr, ITEM_ID, AMOUNT)
+			end
+			return true
+		end
+	end
+	return false
+end
+
+function SELL_ITEM(Plr, ITEMS)
+	local CASH = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
+	if CASH then
+		local CANT_SELL_TYPES = {"special", "cantbuy"}
+		local ITEM_ID = ITEMS
+		if type(ITEM_ID) ~= "table" then
+			ITEM_ID = {ITEM_ID}
+		end
+
+		-- Count items being sold by name
+		local itemsBeingSold = {}
+		for I, REAL_ID in pairs(ITEM_ID) do
+			local ITEM_INFO = require(REAL_ID.ItemStats)
+			local itemName = MAIN_LIB.ITEM_FROM_ID(ITEM_INFO.ItemId).Name
+			itemsBeingSold[itemName] = (itemsBeingSold[itemName] or 0) + 1
+		end
+
+		-- Count TOTAL items (placed on plot + in inventory)
+		local PLR_PLOT = Plr.SetPlot.Value
+		local PLACED_ITEMS = PLR_PLOT:FindFirstChild("PlacedItems")
+		local totalItemCounts = {}
+
+		-- Count items placed on the plot
+		if PLACED_ITEMS then
+			for _, item in pairs(PLACED_ITEMS:GetChildren()) do
+				if item:FindFirstChild("ItemStats") then
+					local itemStats = require(item.ItemStats)
+					local itemName = MAIN_LIB.ITEM_FROM_ID(itemStats.ItemId).Name
+					totalItemCounts[itemName] = (totalItemCounts[itemName] or 0) + 1
+				end
+			end
+		end
+
+		-- ADD items in inventory
+		if _G["global_data"] and _G["global_data"][Plr.Name] and _G["global_data"][Plr.Name]["Items"] then
+			for itemId, itemData in pairs(_G["global_data"][Plr.Name]["Items"]) do
+				if itemData.Amount and itemData.Amount > 0 then
+					local item = MAIN_LIB.ITEM_FROM_ID(itemId)
+					if item then
+						local itemName = item.Name
+						totalItemCounts[itemName] = (totalItemCounts[itemName] or 0) + itemData.Amount
+					end
+				end
+			end
+		end
+
+		-- Check if selling would drop below minimum for any item
+		for itemName, sellCount in pairs(itemsBeingSold) do
+			local minimumRequired = MINIMUM_ITEM_QUANTITIES[itemName]
+			if minimumRequired then
+				local totalOwned = totalItemCounts[itemName] or 0
+				local remainingAfterSale = totalOwned - sellCount
+
+				if remainingAfterSale < minimumRequired then
+					RepStorage.Events.MessageClient:FireClient(Plr, "screen", {
+						["message"] = "Cannot sell! You must keep at least " .. minimumRequired .. " " .. itemName .. "s."
+					})
+					return false
+				end
+			end
+		end
+
+		-- Proceed with selling
+		for I, REAL_ID in pairs(ITEM_ID) do
+			-- Check hotspot items
+			if REAL_ID:GetAttribute("HotspotMiner") == true then
+				warn("Cannot sell hotspot miner!")
+				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "Hotspot miners cannot be sold!"})
+				return false
+			end
+
+			if REAL_ID:GetAttribute("HotspotFurnace") == true then
+				warn("Cannot sell hotspot furnace!")
+				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "The central furnace cannot be sold!"})
+				return false
+			end
+
+			local ITEM_INFO = require(REAL_ID.ItemStats)
+			if table.find(CANT_SELL_TYPES, ITEM_INFO.ItemType) == nil then
+				local sellValue = math.floor(ITEM_INFO.Cost * 0.3)  -- 30% of buy price
+				CASH.Value += sellValue
+				REAL_ID:Destroy()
+			end
+		end
+		return true
+	end
+	return false
+end
+
+function WITHDRAW_ITEMS(Plr, ITEMS)
+	if DEBOUNCE[Plr.Name] then
+		return false
+	else
+		DEBOUNCE[Plr.Name] = true
+		spawn(function()
+			wait(.3)
+			DEBOUNCE[Plr.Name] = nil
+		end)
+	end
+	if Plr then
+		for I, ITEM in pairs(ITEMS) do
+			-- CHECK IF IT'S A HOTSPOT MINER OR FURNACE (UPDATED!)
+			if ITEM:GetAttribute("HotspotMiner") == true then
+				warn("Cannot withdraw hotspot miner!")
+				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "Hotspot miners cannot be moved!"})
+				return false
+			end
+
+			if ITEM:GetAttribute("HotspotFurnace") == true then
+				warn("Cannot withdraw hotspot furnace!")
+				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "The central furnace cannot be moved!"})
+				return false
+			end
+
+			local ITEM_INFO = require(ITEM.ItemStats)
+			_G["global_data"][Plr.Name]["Items"][ITEM_INFO.ItemId]["Amount"] += 1
+			ITEM:Destroy()
+		end
+		RepStorage.Events.InventoryUpdate:FireClient(Plr)
+		return true
+	end
+	return false
+end
+
+function toggle_update(plr, toggle_name)
+	local real_setting = plr.Settings:FindFirstChild(toggle_name)
+	if real_setting ~= nil then
+		real_setting.Value = not real_setting.Value
+		return true
+	end
+	warn(toggle_name.." doesn't exist for "..plr.Name.." so it's either failed to load or not been implemented!")
+	return false
+end
+
+-- Function/Event Responses
+RepStorage.Events.GetInventoryType.OnServerInvoke = GET_INVENTORY
+RepStorage.Events.WithdrawItems.OnServerInvoke = WITHDRAW_ITEMS
+RepStorage.Events.UpdateStorting.OnServerInvoke = UPDATE_STORT
+RepStorage.Events.UpdateToggle.OnServerInvoke = toggle_update
+RepStorage.Events.PlaceItem.OnServerInvoke = PLACE_ITEM
+RepStorage.Events.SellItem.OnServerInvoke = SELL_ITEM
+RepStorage.Events.BuyItem.OnServerInvoke = BUY_ITEM
+
+-- Server Locked Stuff
+function ItemGive(Plr, ITEM_ID, AMOUNT)
+	if _G["global_data"][Plr.Name]["Items"][ITEM_ID] then
+		_G["global_data"][Plr.Name]["Items"][ITEM_ID]["Amount"] += AMOUNT
+		RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = ""..AMOUNT.." "..MAIN_LIB.ITEM_FROM_ID(ITEM_ID).Name.."'s Added to your Inventory"})
+		RepStorage.Events.InventoryUpdate:FireClient(Plr)
+		return true
+	end
+	return false
+end
+
+-- Server Locked Functions/Events
+ServerStorage.Events.ItemGive.OnInvoke = ItemGive
+
+warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] loaded!")
