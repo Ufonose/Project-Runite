@@ -3,18 +3,36 @@ local module = {}
 function module.CREATE_MODERN_PLACEMENT_MENU(parent)
 	local Camera = workspace.CurrentCamera
 
-	-- Main container - now with header for inventory count
+	-- Main container - scale-based (based on 1920x1080 reference)
 	local container = Instance.new("Frame")
 	container.Name = "ModernPlacement"
-	container.Size = UDim2.new(0, 312, 0, 155)  -- Taller to fit header (was 117)
-	container.Position = UDim2.new(0.5, 0, 1, -173)  -- Adjusted for new height
-	container.AnchorPoint = Vector2.new(0.5, 0)  -- Anchor at center-top of frame
+	container.Position = UDim2.new(0.5, 0, 1.02, 0)  -- Start off-screen below
+	container.AnchorPoint = Vector2.new(0.5, 1)  -- Anchor at bottom center
 	container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 	container.BackgroundTransparency = 0.1
 	container.BorderSizePixel = 0
 	container.Visible = false
 	container.ZIndex = 10
 	container.Parent = parent
+
+	-- Function to update container size based on screen size
+	local function updateContainerSize()
+		local viewport = Camera.ViewportSize
+		local screenWidth = viewport.X
+
+		-- If screen width is less than 900 pixels (mobile), make GUI bigger
+		if screenWidth < 900 then
+			container.Size = UDim2.new(0.6, 0, 0.3, 0)  -- 85% width, 25% height on mobile
+		else
+			container.Size = UDim2.new(0.1625, 0, 0.1435, 0)  -- 16.25% width, 14.35% height on desktop
+		end
+	end
+
+	-- Update on initial load
+	updateContainerSize()
+
+	-- Update when screen size changes
+	Camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateContainerSize)
 
 	-- Blur/Glass effect background
 	local blur = Instance.new("Frame")
@@ -26,7 +44,7 @@ function module.CREATE_MODERN_PLACEMENT_MENU(parent)
 	blur.Parent = container
 
 	local blurCorner = Instance.new("UICorner")
-	blurCorner.CornerRadius = UDim.new(0, 14)  -- Scaled from 12
+	blurCorner.CornerRadius = UDim.new(0.09, 0)  -- 14px/155px container height
 	blurCorner.Parent = blur
 
 	-- Outer glow/shadow
@@ -38,14 +56,14 @@ function module.CREATE_MODERN_PLACEMENT_MENU(parent)
 	stroke.Parent = container
 
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 14)  -- Scaled from 12
+	corner.CornerRadius = UDim.new(0.09, 0)  -- 14px/155px container height
 	corner.Parent = container
 
 	-- Header section for inventory count
 	local header = Instance.new("Frame")
 	header.Name = "Header"
-	header.Size = UDim2.new(1, -16, 0, 32)
-	header.Position = UDim2.new(0, 8, 0, 8)
+	header.Size = UDim2.new(0.9487, 0, 0.2065, 0)  -- (312-16)/312 width, 32/155 height
+	header.Position = UDim2.new(0.0256, 0, 0.0516, 0)  -- 8/312, 8/155
 	header.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 	header.BackgroundTransparency = 0.3
 	header.BorderSizePixel = 0
@@ -53,14 +71,14 @@ function module.CREATE_MODERN_PLACEMENT_MENU(parent)
 	header.Parent = container
 
 	local headerCorner = Instance.new("UICorner")
-	headerCorner.CornerRadius = UDim.new(0, 8)
+	headerCorner.CornerRadius = UDim.new(0.25, 0)  -- 8px/32px header height
 	headerCorner.Parent = header
 
 	-- Item name label
 	local itemNameLabel = Instance.new("TextLabel")
 	itemNameLabel.Name = "ItemNameLabel"
 	itemNameLabel.Size = UDim2.new(0.6, 0, 1, 0)
-	itemNameLabel.Position = UDim2.new(0, 8, 0, 0)
+	itemNameLabel.Position = UDim2.new(0.027, 0, 0, 0)  -- 8px/296px header width
 	itemNameLabel.BackgroundTransparency = 1
 	itemNameLabel.Text = "Item Name"
 	itemNameLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
@@ -74,7 +92,7 @@ function module.CREATE_MODERN_PLACEMENT_MENU(parent)
 	-- Inventory count label
 	local inventoryLabel = Instance.new("TextLabel")
 	inventoryLabel.Name = "InventoryLabel"
-	inventoryLabel.Size = UDim2.new(0.4, -8, 1, 0)
+	inventoryLabel.Size = UDim2.new(0.373, 0, 1, 0)  -- 0.4 - (8/296) for right padding
 	inventoryLabel.Position = UDim2.new(0.6, 0, 0, 0)
 	inventoryLabel.BackgroundTransparency = 1
 	inventoryLabel.Text = "Inventory: 0"
@@ -85,19 +103,19 @@ function module.CREATE_MODERN_PLACEMENT_MENU(parent)
 	inventoryLabel.ZIndex = 13
 	inventoryLabel.Parent = header
 
-	-- Buttons container - 2x2 grid layout (moved down to make room for header)
+	-- Buttons container - 2x2 grid layout
 	local buttonsContainer = Instance.new("Frame")
 	buttonsContainer.Name = "ButtonsContainer"
-	buttonsContainer.Size = UDim2.new(1, -16, 0, 101)  -- Fixed height for 2x2 grid
-	buttonsContainer.Position = UDim2.new(0, 8, 0, 46)  -- Positioned below header
+	buttonsContainer.Size = UDim2.new(0.9487, 0, 0.6516, 0)  -- (312-16)/312 width, 101/155 height
+	buttonsContainer.Position = UDim2.new(0.0256, 0, 0.2968, 0)  -- 8/312, 46/155
 	buttonsContainer.BackgroundTransparency = 1
 	buttonsContainer.ZIndex = 12
 	buttonsContainer.Parent = container
 
 	-- Use UIGridLayout for 2x2 grid
 	local gridLayout = Instance.new("UIGridLayout")
-	gridLayout.CellSize = UDim2.new(0, 143, 0, 47)  -- 30% bigger cells
-	gridLayout.CellPadding = UDim2.new(0, 8, 0, 8)  -- Slightly more padding
+	gridLayout.CellSize = UDim2.new(0.483, 0, 0.465, 0)  -- 143/296 width, 47/101 height
+	gridLayout.CellPadding = UDim2.new(0.027, 0, 0.079, 0)  -- 8/296, 8/101
 	gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	gridLayout.VerticalAlignment = Enum.VerticalAlignment.Center
@@ -116,7 +134,7 @@ function module.CREATE_MODERN_PLACEMENT_MENU(parent)
 		button.Parent = buttonsContainer
 
 		local btnCorner = Instance.new("UICorner")
-		btnCorner.CornerRadius = UDim.new(0, 10)  -- Scaled from 8
+		btnCorner.CornerRadius = UDim.new(0.213, 0)  -- 10px/47px button height
 		btnCorner.Parent = button
 
 		-- Subtle inner shadow
@@ -129,20 +147,20 @@ function module.CREATE_MODERN_PLACEMENT_MENU(parent)
 
 		-- Button content container
 		local content = Instance.new("Frame")
-		content.Size = UDim2.new(1, -8, 1, 0)  -- Scaled from -6
-		content.Position = UDim2.new(0, 4, 0, 0)  -- Scaled from 3
+		content.Size = UDim2.new(0.944, 0, 1, 0)  -- (143-8)/143
+		content.Position = UDim2.new(0.028, 0, 0, 0)  -- 4/143
 		content.BackgroundTransparency = 1
 		content.ZIndex = 14
 		content.Parent = button
 
 		-- Icon
 		local iconLabel = Instance.new("TextLabel")
-		iconLabel.Size = UDim2.new(0, 26, 1, 0)
+		iconLabel.Size = UDim2.new(0.193, 0, 1, 0)  -- 26/135 content width
 		iconLabel.Position = UDim2.new(0, 0, 0, 0)
 		iconLabel.BackgroundTransparency = 1
 		iconLabel.Text = icon
 		iconLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-		iconLabel.TextSize = 20  -- Scaled up from 16
+		iconLabel.TextSize = 20
 		iconLabel.Font = Enum.Font.GothamBold
 		iconLabel.ZIndex = 15
 		iconLabel.Parent = content
@@ -150,12 +168,12 @@ function module.CREATE_MODERN_PLACEMENT_MENU(parent)
 		-- Button text
 		local label = Instance.new("TextLabel")
 		label.Name = "ButtonLabel"
-		label.Size = UDim2.new(1, -55, 1, 0)
-		label.Position = UDim2.new(0, 28, 0, 0)
+		label.Size = UDim2.new(0.593, 0, 1, 0)  -- (135-55)/135
+		label.Position = UDim2.new(0.207, 0, 0, 0)  -- 28/135
 		label.BackgroundTransparency = 1
 		label.Text = name
 		label.TextColor3 = Color3.fromRGB(255, 255, 255)
-		label.TextSize = 16  -- Scaled up from 13
+		label.TextSize = 16
 		label.Font = Enum.Font.GothamBold
 		label.TextXAlignment = Enum.TextXAlignment.Center
 		label.ZIndex = 15
@@ -163,20 +181,20 @@ function module.CREATE_MODERN_PLACEMENT_MENU(parent)
 
 		-- Hotkey indicator - positioned at bottom right
 		local hotkeyLabel = Instance.new("TextLabel")
-		hotkeyLabel.Size = UDim2.new(0, 26, 0, 20)
-		hotkeyLabel.Position = UDim2.new(1, -28, 1, -22)
+		hotkeyLabel.Size = UDim2.new(0.193, 0, 0.426, 0)  -- 26/135, 20/47
+		hotkeyLabel.Position = UDim2.new(0.793, 0, 0.532, 0)  -- (135-28)/135, (47-22)/47
 		hotkeyLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 		hotkeyLabel.BackgroundTransparency = 0.3
 		hotkeyLabel.BorderSizePixel = 0
 		hotkeyLabel.Text = hotkey
 		hotkeyLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-		hotkeyLabel.TextSize = 11  -- Scaled up from 9
+		hotkeyLabel.TextSize = 11
 		hotkeyLabel.Font = Enum.Font.GothamBold
 		hotkeyLabel.ZIndex = 15
 		hotkeyLabel.Parent = content
 
 		local hotkeyCorner = Instance.new("UICorner")
-		hotkeyCorner.CornerRadius = UDim.new(0, 5)  -- Scaled from 4
+		hotkeyCorner.CornerRadius = UDim.new(0.25, 0)  -- 5px/20px hotkey height
 		hotkeyCorner.Parent = hotkeyLabel
 
 		-- Simple hover effects
