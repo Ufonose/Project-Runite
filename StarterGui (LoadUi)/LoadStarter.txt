@@ -222,6 +222,8 @@ end
 -- Main loading sequence
 local function StartLoadingSequence()
 	local loadingScreen, statusText, progressFill, percentText = CreateModernLoadingScreen()
+	local title = loadingScreen.Container.Title
+	local tipsText = loadingScreen.Container.TipsText
 
 	-- Phase 1: Initialize (0-10%)
 	UpdateProgress(statusText, progressFill, percentText, 5, "Connecting to server...")
@@ -287,10 +289,40 @@ local function StartLoadingSequence()
 
 	-- Fade out loading screen
 	local container = loadingScreen.Container
+
+	-- Tween all text elements to transparent
+	TweenService:Create(title, TweenInfo.new(0.5), {
+		TextTransparency = 1,
+		TextStrokeTransparency = 1
+	}):Play()
+
+	TweenService:Create(statusText, TweenInfo.new(0.5), {
+		TextTransparency = 1
+	}):Play()
+
+	TweenService:Create(percentText, TweenInfo.new(0.5), {
+		TextTransparency = 1
+	}):Play()
+
+	TweenService:Create(tipsText, TweenInfo.new(0.5), {
+		TextTransparency = 1
+	}):Play()
+
+	-- Tween progress bar out
+	TweenService:Create(progressFill, TweenInfo.new(0.5), {
+		BackgroundTransparency = 1
+	}):Play()
+
+	TweenService:Create(progressFill.Parent, TweenInfo.new(0.5), {
+		BackgroundTransparency = 1
+	}):Play()
+
+	-- Tween container size
 	TweenService:Create(container, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 		Size = UDim2.new(0, 0, 0, 0)
 	}):Play()
 
+	-- Tween background
 	TweenService:Create(loadingScreen.Background, TweenInfo.new(0.5), {
 		BackgroundTransparency = 1
 	}):Play()
