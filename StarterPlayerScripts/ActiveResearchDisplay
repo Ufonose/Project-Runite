@@ -131,7 +131,7 @@ local function createRequirementLine(itemName, current, required)
 	nameLabel.Size = UDim2.new(0.97, 0, 0, isMobile and 10 or 14)
 	nameLabel.Position = UDim2.new(0.015, 0, 0, 0)
 	nameLabel.BackgroundTransparency = 1
-	nameLabel.Text = itemName
+	nameLabel.Text = itemName:gsub("_", " ")
 	nameLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 	nameLabel.Font = Enum.Font.Gotham
 	nameLabel.TextSize = reqFontSize
