@@ -6,6 +6,7 @@ local CollectionService = game:GetService("CollectionService")
 local cachedCaveWalls = {} -- Cache for current plot's cave walls
 local DirectionalArrows = require(RepStorage.Modules.DirectionalArrows) -- NEW: Arrow system
 local touch = game:GetService("UserInputService").TouchEnabled
+local SoundManager = require(game:GetService("ReplicatedStorage").Modules.SoundManager)
 
 local Enums = require(RepStorage.Modules.CustomEnums)
 
@@ -534,6 +535,8 @@ end
 function module.rotate()
 	calc(nil, (cr + 1) % 4)
 	render()
+	
+	SoundManager.RotateItem()
 
 	-- NEW: Update arrows for all currently placing objects
 	if currentObjects then
