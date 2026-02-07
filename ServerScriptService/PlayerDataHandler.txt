@@ -11,7 +11,7 @@ local PLAYER_DATA_INFO = require(ServerStorage.Modules.PlayerDataInfo)
 local CASH_LIB = require(RepStorage.Modules.CashLib)
 local MainLib = require(RepStorage.Modules.MainLib)
 -- Constants
-local data_code = "map_v1"		-- Change this string to reset data map_36
+local data_code = "map_v54"		-- Change this string to reset data map_36
 
 if workspace:FindFirstChild("Items") then
 	workspace.Items.Parent = RepStorage
@@ -81,7 +81,14 @@ local function LOAD_DATA(Plr)
 	for val_name, val_data in pairs(PLAYER_DATA_INFO.SETTINGS_VALUES) do
 		local val_obj = Instance.new(val_data["VALUE_TYPE"] or "BoolValue", Plr.Settings)
 		val_obj.Name = val_name
-		val_obj.Value = plr_data["setting"..val_name] or val_data["DEFAULT"]
+
+		-- FIX: Check for nil instead of using "or"
+		local savedValue = plr_data["setting"..val_name]
+		if savedValue ~= nil then
+			val_obj.Value = savedValue
+		else
+			val_obj.Value = val_data["DEFAULT"]
+		end
 	end
 	
 	-- Cash Loading
