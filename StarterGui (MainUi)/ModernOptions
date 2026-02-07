@@ -25,7 +25,7 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 
 		-- If screen width is less than 900 pixels (mobile), make GUI bigger
 		if screenWidth < 900 then
-			container.Size = UDim2.new(0.7, 0, 0.85, 0)  -- 50% width, 85% height on mobile
+			container.Size = UDim2.new(0.7, 0, 0.85, 0)  -- 70% width, 85% height on mobile
 		else
 			container.Size = UDim2.new(0.3, 0, 0.6, 0)  -- 30% width, 60% height on desktop
 		end
@@ -360,100 +360,6 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 		return toggleFrame, actionButton
 	end
 
-	-- Function to create an info label
-	local function createInfoLabel(parent, labelText, valueText, layoutOrder)
-		local infoFrame = Instance.new("Frame")
-		infoFrame.Name = "InfoLabel"
-		infoFrame.Size = UDim2.new(1, 0, 0, 40)  -- Fixed height
-		infoFrame.BackgroundTransparency = 1
-		infoFrame.LayoutOrder = layoutOrder
-		infoFrame.ZIndex = 13
-		infoFrame.Parent = parent
-
-		-- Label
-		local label = Instance.new("TextLabel")
-		label.Size = UDim2.new(0.5, 0, 1, 0)
-		label.Position = UDim2.new(0, 0, 0, 0)
-		label.BackgroundTransparency = 1
-		label.Text = labelText
-		label.TextColor3 = Color3.fromRGB(180, 180, 180)
-		label.TextSize = 15
-		label.Font = Enum.Font.Gotham
-		label.TextXAlignment = Enum.TextXAlignment.Left
-		label.ZIndex = 14
-		label.Parent = infoFrame
-
-		-- Value
-		local value = Instance.new("TextLabel")
-		value.Name = "Value"
-		value.Size = UDim2.new(0.5, 0, 1, 0)
-		value.Position = UDim2.new(0.5, 0, 0, 0)
-		value.BackgroundTransparency = 1
-		value.Text = valueText
-		value.TextColor3 = Color3.fromRGB(255, 255, 255)
-		value.TextSize = 16
-		value.Font = Enum.Font.GothamBold
-		value.TextXAlignment = Enum.TextXAlignment.Right
-		value.ZIndex = 14
-		value.Parent = infoFrame
-
-		return infoFrame, value
-	end
-
-	-- Function to create an action button
-	local function createButton(parent, buttonText, buttonIcon, color, layoutOrder)
-		local button = Instance.new("TextButton")
-		button.Name = buttonText .. "Button"
-		button.Size = UDim2.new(1, 0, 0, 50)  -- Fixed height
-		button.BackgroundColor3 = color
-		button.Text = ""
-		button.BorderSizePixel = 0
-		button.LayoutOrder = layoutOrder
-		button.ZIndex = 13
-		button.Parent = parent
-
-		local btnCorner = Instance.new("UICorner")
-		btnCorner.CornerRadius = UDim.new(0, 10)
-		btnCorner.Parent = button
-
-		local btnStroke = Instance.new("UIStroke")
-		btnStroke.Color = Color3.new(1, 1, 1)
-		btnStroke.Thickness = 1.5
-		btnStroke.Transparency = 0.8
-		btnStroke.Parent = button
-
-		-- Button text with icon
-		local btnLabel = Instance.new("TextLabel")
-		btnLabel.Size = UDim2.new(1, 0, 1, 0)
-		btnLabel.BackgroundTransparency = 1
-		btnLabel.Text = buttonIcon .. " " .. buttonText
-		btnLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-		btnLabel.TextSize = 18
-		btnLabel.Font = Enum.Font.GothamBold
-		btnLabel.ZIndex = 14
-		btnLabel.Parent = button
-
-		-- Hover effects
-		local originalColor = color
-		local hoverColor = Color3.new(
-			math.min(color.R * 1.2, 1),
-			math.min(color.G * 1.2, 1),
-			math.min(color.B * 1.2, 1)
-		)
-
-		button.MouseEnter:Connect(function()
-			button.BackgroundColor3 = hoverColor
-			btnStroke.Transparency = 0.5
-		end)
-
-		button.MouseLeave:Connect(function()
-			button.BackgroundColor3 = originalColor
-			btnStroke.Transparency = 0.8
-		end)
-
-		return button
-	end
-
 	-- Create sections
 
 	-- 1. Game Settings Section
@@ -466,8 +372,13 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	local clearOresFrame, clearOresButton = createButtonToggle(plotContent, "Cleanup All Ores", "Clean", Color3.fromRGB(180, 80, 60), 2)
 	local withdrawFrame, withdrawButton = createButtonToggle(plotContent, "Withdraw All Items", "Withdraw", Color3.fromRGB(200, 60, 60), 3)
 
-	-- 3. Deluxe Section (Placeholder)
-	local deluxeSection, deluxeContent = createSection("Deluxe", "💎", 3)
+	-- 3. Sound Settings Section
+	local soundSection, soundContent = createSection("Sound Settings", "🔊", 3)
+	local uiSoundsToggle = createToggle(soundContent, "UI & Placement Sounds", "UISounds", 1)
+	local notificationSoundsToggle = createToggle(soundContent, "Notification Sounds", "NotificationSounds", 2)
+
+	-- 4. Deluxe Section (Placeholder)
+	local deluxeSection, deluxeContent = createSection("Deluxe", "💎", 4)
 
 	-- Placeholder message
 	local placeholderFrame = Instance.new("Frame")
