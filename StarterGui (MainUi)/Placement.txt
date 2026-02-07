@@ -172,6 +172,12 @@ function module.LOAD(MODULE_INFO)
 			else
 				warn("ITEMS PLACED FAILED!")
 			end
+		else
+			-- NEW: Item is colliding - play error sound
+			if module.PLACING_ITEMS then
+				warn("Cannot place - item is colliding!")
+				SoundManager.Error()
+			end
 		end
 		return false
 	end
