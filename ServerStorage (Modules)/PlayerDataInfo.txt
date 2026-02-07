@@ -5,6 +5,18 @@ PLAYER_DATA.SETTINGS_VALUES = {
 		["VALUE_TYPE"] = "BoolValue",
 		["DEFAULT"] = true,
 	},
+	["HideResearch"] = {
+		["VALUE_TYPE"] = "BoolValue",
+		["DEFAULT"] = false,  -- Default to showing the research display
+	},
+	["UISounds"] = {
+		["VALUE_TYPE"] = "BoolValue",
+		["DEFAULT"] = true,  -- Default to sounds enabled
+	},
+	["NotificationSounds"] = {
+		["VALUE_TYPE"] = "BoolValue",
+		["DEFAULT"] = true,  -- Default to sounds enabled
+	},
 }
 
 PLAYER_DATA.SIMPLE_VALS = {
@@ -24,7 +36,6 @@ PLAYER_DATA.SIMPLE_VALS = {
 		["VALUE_TYPE"] = "NumberValue",
 		["DEFAULT"] = 0,
 	},
-	-- ADD THIS:
 	["ResearchTokens"] = {
 		["VALUE_TYPE"] = "NumberValue",
 		["DEFAULT"] = 0,
@@ -33,7 +44,7 @@ PLAYER_DATA.SIMPLE_VALS = {
 
 PLAYER_DATA.INVENTORY_TYPES = {
 	"Items",
-	"CraftedItems", -- ADD THIS: For items like swords, helms, etc.
+	"CraftedItems",
 }
 
 return PLAYER_DATA
