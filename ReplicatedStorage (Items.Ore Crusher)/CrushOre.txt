@@ -1,4 +1,4 @@
--- ReplicatedStorage (Items.OreCrusher)/CrushOre.txt
+-- ReplicatedStorage (Items.OreCrusher)/CrushOre.txt (WITH ORE FILTERING)
 
 local RepStorage = game:GetService("ReplicatedStorage")
 local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
@@ -14,28 +14,62 @@ local SPREAD_WIDTH = 2.7  -- Left/right spread in studs
 -- Track recently crushed ores to prevent duplicates
 local crushedOres = {}
 
+-- ============================================
+-- CONFIGURABLE: List of accepted raw ores
+-- ============================================
+local ACCEPTED_RAW_ORES = {
+	"Iron Ore",
+	"Gold Ore",
+	"Copper Ore",
+	-- Add more raw ore names here as needed
+	-- "Copper Ore",
+	-- "Silver Ore",
+}
+
+-- Helper function to check if ore is accepted
+local function isAcceptedOre(oreModelName)
+	for _, acceptedName in ipairs(ACCEPTED_RAW_ORES) do
+		if oreModelName == acceptedName then
+			return true
+		end
+	end
+	return false
+end
+
 local function crushOre(ORE)
 	-- Prevent duplicate crushing
 	if crushedOres[ORE] then return end
 	crushedOres[ORE] = true
 
-	print("=== CRUSHING ORE ===")
-	print("Ore Name:", ORE.Name)
+	--print("=== CRUSHER PROCESSING ===")
+	--print("Ore Name:", ORE.Name)
 
 	-- Get the original ore model name
 	local oreModelTag = ORE:FindFirstChild("OreModelName")
 	if not oreModelTag then
-		warn("Ore doesn't have OreModelName tag! Cannot crush.")
+		warn("Ore doesn't have OreModelName tag! Destroying.")
+		ORE:Destroy()
 		crushedOres[ORE] = nil
 		return
 	end
 
 	local originalModelName = oreModelTag.Value
-	print("Original model name:", originalModelName)
+	--print("Original model name:", originalModelName)
 
-	-- Check if already refined (crushed)
-	if string.find(originalModelName, "_Refined") then
-		print("Ore is already refined, skipping")
+	-- NEW: Check if this is an accepted raw ore
+	if not isAcceptedOre(originalModelName) then
+		--print("⚠️ REJECTED: '" .. originalModelName .. "' is not a raw ore - DESTROYING")
+		ORE:Destroy()
+		crushedOres[ORE] = nil
+		return
+	end
+
+	--print("✓ ACCEPTED: '" .. originalModelName .. "' is a raw ore")
+
+	-- Check if already refined (crushed) - shouldn't happen with filter above
+	if string.find(originalModelName, "_Crushed") then
+		--print("Ore is already refined, destroying")
+		ORE:Destroy()
 		crushedOres[ORE] = nil
 		return
 	end
@@ -44,29 +78,32 @@ local function crushOre(ORE)
 	local oreFolder = RepStorage:FindFirstChild("OreModels")
 	if not oreFolder then
 		warn("OreModels folder not found!")
+		ORE:Destroy()
 		crushedOres[ORE] = nil
 		return
 	end
 
-	local refinedModelName = originalModelName .. "_Refined"
-	print("Looking for refined model:", refinedModelName)
+	local refinedModelName = originalModelName .. "_Crushed"
+	--print("Looking for refined model:", refinedModelName)
 
 	local refinedModel = oreFolder:FindFirstChild(refinedModelName)
 
 	if not refinedModel then
-		warn("Refined model '" .. refinedModelName .. "' not found!")
+		warn("Refined model '" .. refinedModelName .. "' not found! Destroying ore.")
+		ORE:Destroy()
 		crushedOres[ORE] = nil
 		return
 	end
 
 	-- Validate refined model
 	if refinedModel:IsA("Model") and not refinedModel.PrimaryPart then
-		warn(refinedModelName .. " needs a PrimaryPart!")
+		warn(refinedModelName .. " needs a PrimaryPart! Destroying ore.")
+		ORE:Destroy()
 		crushedOres[ORE] = nil
 		return
 	end
 
-	print("Found refined model! Creating...")
+	--print("Found refined model! Creating...")
 
 	-- Clone the refined model
 	local newOre = refinedModel:Clone()
@@ -83,7 +120,7 @@ local function crushOre(ORE)
 		local cashValue = Instance.new("NumberValue", newOre)
 		cashValue.Name = "Cash"
 		cashValue.Value = ORE.Cash.Value
-		print("Cash value copied:", cashValue.Value)
+		--print("Cash value copied:", cashValue.Value)
 	end
 
 	-- Copy upgrade tags
@@ -110,7 +147,7 @@ local function crushOre(ORE)
 	-- Destroy old ore
 	ORE:Destroy()
 
-	print("Crushing complete! Spawned at random offset:", randomX)
+	--print("✓ Crushing complete! Spawned at random offset:", randomX)
 
 	-- Clean up tracking after a delay
 	task.delay(0.5, function()
@@ -143,9 +180,9 @@ CRUSH_INPUT.Touched:Connect(function(HIT)
 			30
 		)
 
-		-- Crush the ore (works regardless of upgrade)
+		-- Crush the ore (will destroy if not accepted)
 		crushOre(ORE)
 	end
 end)
 
-print("Ore Crusher loaded!")
+print("Ore Crusher loaded! Accepted ores:", table.concat(ACCEPTED_RAW_ORES, ", "))
