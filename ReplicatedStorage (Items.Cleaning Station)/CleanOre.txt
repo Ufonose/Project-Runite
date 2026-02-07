@@ -19,8 +19,8 @@ local function cleanOre(ORE)
 	if cleanedOres[ORE] then return end
 	cleanedOres[ORE] = true
 
-	print("=== CLEANING ORE ===")
-	print("Ore Name:", ORE.Name)
+	--print("=== CLEANING ORE ===")
+	--print("Ore Name:", ORE.Name)
 
 	-- Get the original ore model name
 	local oreModelTag = ORE:FindFirstChild("OreModelName")
@@ -31,18 +31,18 @@ local function cleanOre(ORE)
 	end
 
 	local originalModelName = oreModelTag.Value
-	print("Original model name:", originalModelName)
+	--print("Original model name:", originalModelName)
 
-	-- ONLY process ores with "_Refined" in the name
-	if not string.find(originalModelName, "_Refined") then
-		print("Ore is not refined, ignoring")
+	-- ONLY process ores with "_Crushed" in the name
+	if not string.find(originalModelName, "_Crushed") then
+		--print("Ore is not refined, ignoring")
 		cleanedOres[ORE] = nil
 		return
 	end
 
 	-- Check if already cleaned
-	if string.find(originalModelName, "_Clean") then
-		print("Ore is already clean, ignoring")
+	if string.find(originalModelName, "_Cleaned") then
+		--print("Ore is already clean, ignoring")
 		cleanedOres[ORE] = nil
 		return
 	end
@@ -66,15 +66,15 @@ local function cleanOre(ORE)
 		return
 	end
 
-	-- REPLACE "_Refined" with "_Clean" (not append!)
-	local cleanModelName = string.gsub(originalModelName, "_Refined", "_Clean")
-	print("Looking for clean model:", cleanModelName)
+	-- REPLACE "_Crushed" with "_Cleaned" (not append!)
+	local cleanModelName = string.gsub(originalModelName, "_Crushed", "_Cleaned")
+	--print("Looking for clean model:", cleanModelName)
 
 	local cleanModel = oreFolder:FindFirstChild(cleanModelName)
 
 	if not cleanModel then
 		warn("Clean model '" .. cleanModelName .. "' not found!")
-		print("Make sure you have models like 'StoneOreModel_Clean' in OreModels folder")
+		--print("Make sure you have models like 'StoneOreModel_Cleaned' in OreModels folder")
 		cleanedOres[ORE] = nil
 		return
 	end
@@ -86,7 +86,7 @@ local function cleanOre(ORE)
 		return
 	end
 
-	print("Found clean model! Creating...")
+	--print("Found clean model! Creating...")
 
 	-- Clone the clean model
 	local newOre = cleanModel:Clone()
@@ -103,7 +103,7 @@ local function cleanOre(ORE)
 		local cashValue = Instance.new("NumberValue", newOre)
 		cashValue.Name = "Cash"
 		cashValue.Value = ORE.Cash.Value
-		print("Cash value copied:", cashValue.Value)
+		--print("Cash value copied:", cashValue.Value)
 	end
 
 	-- Copy upgrade tags
@@ -130,7 +130,7 @@ local function cleanOre(ORE)
 	-- Destroy old ore
 	ORE:Destroy()
 
-	print("Cleaning complete! Spawned at random offset:", randomX)
+	--print("Cleaning complete! Spawned at random offset:", randomX)
 
 	-- Clean up tracking after a delay
 	task.delay(0.5, function()
