@@ -1,27 +1,28 @@
 -- ReplicatedStorage/Modules/SoundManager.lua
--- Handles all UI and game sounds
+-- Handles all UI and game sounds with player settings support
 
 local SoundService = game:GetService("SoundService")
+local Players = game:GetService("Players")
 
 local module = {}
 
 -- Sound configuration (you can change these asset IDs to your own sounds)
 local SOUNDS = {
 	-- UI Sounds
-	MenuOpen = "rbxassetid://93927627634818",      -- Click sound when opening menu
-	MenuClose = "rbxassetid://93927627634818",     -- Softer click when closing menu
-	ButtonClick = "rbxassetid://93927627634818",   -- General button click
-	ButtonHover = "rbxassetid://93927627634818",   -- Hover over button
+	MenuOpen = "rbxassetid://93927627634818",
+	MenuClose = "rbxassetid://93927627634818",
+	ButtonClick = "rbxassetid://93927627634818",
+	ButtonHover = "rbxassetid://93927627634818",
 
-	-- Placement Sounds (for future use)
-	PlaceItem = "rbxassetid://93927627634818",     -- Item placed successfully
-	RotateItem = "rbxassetid://93927627634818",    -- Rotate item
-	CancelPlace = "rbxassetid://93927627634818",   -- Cancel placement
+	-- Placement Sounds
+	PlaceItem = "rbxassetid://93927627634818",
+	RotateItem = "rbxassetid://93927627634818",
+	CancelPlace = "rbxassetid://93927627634818",
 
-	-- Notification Sounds (for future use)
-	Success = "rbxassetid://93927627634818",       -- Success notification
-	Error = "rbxassetid://91660275693179",         -- Error notification
-	Purchase = "rbxassetid://93927627634818",      -- Item purchased
+	-- Notification Sounds
+	Success = "rbxassetid://93927627634818",
+	Error = "rbxassetid://91660275693179",
+	Purchase = "rbxassetid://93927627634818",
 }
 
 -- Volume settings
@@ -36,6 +37,19 @@ local VOLUMES = {
 	Success = 0.5,
 	Error = 0.5,
 	Purchase = 0.4,
+}
+
+-- Sound categories for settings check
+local SOUND_CATEGORIES = {
+	-- UI & Placement Sounds (controlled by UISounds setting)
+	UISounds = {
+		"MenuOpen", "MenuClose", "ButtonClick", "ButtonHover",
+		"PlaceItem", "RotateItem", "CancelPlace"
+	},
+	-- Notification Sounds (controlled by NotificationSounds setting)
+	NotificationSounds = {
+		"Success", "Error", "Purchase"
+	}
 }
 
 -- Pre-created sound instances (created once, reused many times)
@@ -59,8 +73,40 @@ end
 -- Initialize sounds immediately
 initializeSounds()
 
--- Play a sound (instant - no delay!)
+-- Helper function to check if a sound should play based on player settings
+local function shouldPlaySound(soundName)
+	local player = Players.LocalPlayer
+	if not player then return true end  -- If no player (shouldn't happen), allow sound
+
+	local settings = player:FindFirstChild("Settings")
+	if not settings then return true end  -- If no settings folder, allow sound
+
+	-- Check if this sound is a UI/Placement sound
+	if table.find(SOUND_CATEGORIES.UISounds, soundName) then
+		local uiSoundsSetting = settings:FindFirstChild("UISounds")
+		if uiSoundsSetting then
+			return uiSoundsSetting.Value  -- Return the setting value (true = play, false = mute)
+		end
+	end
+
+	-- Check if this sound is a Notification sound
+	if table.find(SOUND_CATEGORIES.NotificationSounds, soundName) then
+		local notificationSoundsSetting = settings:FindFirstChild("NotificationSounds")
+		if notificationSoundsSetting then
+			return notificationSoundsSetting.Value  -- Return the setting value
+		end
+	end
+
+	return true  -- Default to allowing sound if category not found
+end
+
+-- Play a sound (instant - no delay!) with settings check
 function module.PlaySound(soundName)
+	-- Check if sound should play based on player settings
+	if not shouldPlaySound(soundName) then
+		return  -- Don't play if setting is disabled
+	end
+
 	local sound = soundInstances[soundName]
 
 	if sound then
