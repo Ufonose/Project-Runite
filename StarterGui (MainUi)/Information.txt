@@ -201,8 +201,9 @@ function module.LOAD(MODULE_INFO)
 			if string.find(string.lower(message_text), "cannot") or 
 				string.find(string.lower(message_text), "failed") or
 				string.find(string.lower(message_text), "error") then
-				icon_text = "✕"
+				icon_text = "X"
 				icon_bg_color = Color3.fromRGB(255, 80, 80)
+				SoundManager.Error()
 				-- Success detection
 			elseif string.find(string.lower(message_text), "unlocked") or
 				string.find(string.lower(message_text), "completed") or
@@ -236,9 +237,9 @@ function module.LOAD(MODULE_INFO)
 			end
 
 			-- Scale-based sizing (adjusted for bigger text)
-			local minWidth = 0.15  -- 15% of screen width minimum (slightly wider for bigger text)
+			local minWidth = 0.22  -- 15% of screen width minimum (slightly wider for bigger text)
 			local maxWidth = 0.22  -- 28% of screen width maximum (wider for bigger text)
-			local targetHeight = isResearchComplete and 0.06 or 0.04  -- Slightly taller for bigger text
+			local targetHeight = isResearchComplete and 0.06 or 0.06  -- Slightly taller for bigger text
 
 			-- Estimate text width based on the longer line
 			local textToMeasure = message_label.Text
