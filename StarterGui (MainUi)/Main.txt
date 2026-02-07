@@ -295,7 +295,7 @@ RepStorage.Events.BuyItem.OnServerInvoke = BUY_ITEM
 function ItemGive(Plr, ITEM_ID, AMOUNT)
 	if _G["global_data"][Plr.Name]["Items"][ITEM_ID] then
 		_G["global_data"][Plr.Name]["Items"][ITEM_ID]["Amount"] += AMOUNT
-		RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = ""..AMOUNT.." "..MAIN_LIB.ITEM_FROM_ID(ITEM_ID).Name.."'s Added to your Inventory"})
+		RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = ""..AMOUNT.." "..MAIN_LIB.ITEM_FROM_ID(ITEM_ID).Name.."'s added to your Inventory"})
 		RepStorage.Events.InventoryUpdate:FireClient(Plr)
 		return true
 	end
