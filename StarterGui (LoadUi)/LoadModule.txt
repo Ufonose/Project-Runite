@@ -1,16 +1,75 @@
+-- LoadModule (StarterGui > LoadUi > LoadModule)
+-- Handles automatic server data loading
+
 local module = {}
 
+-- Services
+local RepStorage = game:GetService("ReplicatedStorage")
+local Plrs = game:GetService("Players")
+
+-- Player Info
+local Plr = Plrs.LocalPlayer
+
+-- Automatic data loading (called by LoadStarter)
+function module.AUTO_LOAD()
+	-- Check if already loaded
+	if Plr:FindFirstChild("DataLoaded") then
+		warn("Data already loaded!")
+		return true
+	end
+
+	-- Check if already loading
+	if Plr:FindFirstChild("Loading") then
+		warn("Data is already being loaded...")
+		-- Wait for it to finish
+		local timeout = tick() + 15 -- 15 second timeout
+		while Plr:FindFirstChild("Loading") and tick() < timeout do
+			wait(0.1)
+		end
+
+		-- Check if it succeeded
+		if Plr:FindFirstChild("DataLoaded") then
+			return true
+		else
+			warn("Data loading timed out or failed!")
+			return false
+		end
+	end
+
+	-- Attempt to load data from server
+	warn("Requesting data from server...")
+
+	local success, result = pcall(function()
+		return RepStorage.Events.LoadData:InvokeServer()
+	end)
+
+	if not success then
+		warn("Error calling LoadData: " .. tostring(result))
+		return false
+	end
+
+	-- Server was called successfully, now wait for DataLoaded to appear
+	-- (Server doesn't return true/false, it just creates the DataLoaded value)
+	warn("Waiting for server to finish loading data...")
+
+	local timeout = tick() + 15 -- 15 second timeout
+	while not Plr:FindFirstChild("DataLoaded") and tick() < timeout do
+		wait(0.1)
+	end
+
+	if Plr:FindFirstChild("DataLoaded") then
+		warn("Data loaded successfully!")
+		return true
+	else
+		warn("Data loading timed out - DataLoaded value never appeared!")
+		return false
+	end
+end
+
+-- Legacy manual loading (if you want to keep the old Load button functionality)
 function module.LOAD()
-	-- Services
-	local InputService = game:GetService("UserInputService")
-	local RepStorage = game:GetService("ReplicatedStorage")
-	local Plrs = game:GetService("Players")
-	-- Plr Info
-	local Plr = Plrs.LocalPlayer
-	-- Variables
-		-- Booleans
 	local DB = true
-	
+
 	local BUTTON_CONNECTION
 	BUTTON_CONNECTION = script.Parent.Contents.Main.Load.MouseButton1Click:Connect(function()
 		if DB then
@@ -22,7 +81,7 @@ function module.LOAD()
 			elseif LOADED_SLOT == false then
 				warn("LOADED DATA FAILED!")
 			end
-			wait(.1)
+			wait(0.1)
 			DB = true
 		end
 	end)
