@@ -97,13 +97,7 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 						if E%50 == 0 then
 							wait()
 						end
-					end
-
-					-- NEW: Hide support poles if needed
-					local hideSupportScript = REAL_ITEM:FindFirstChild("HideSupportPoles", true)
-					if hideSupportScript and hideSupportScript:IsA("Script") then
-						hideSupportScript.Disabled = false
-					end
+					end					
 
 					RepStorage.Events.InventoryUpdate:FireClient(Plr)
 				end)
