@@ -1,4 +1,4 @@
--- ReplicatedStorage (Items.OreSmelter)/SmeltOre.txt (FIXED)
+-- ReplicatedStorage (Items.Blast Furnace)/SmeltOre.txt (FIXED WITH COLLISION)
 
 local RepStorage = game:GetService("ReplicatedStorage")
 local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
@@ -14,8 +14,9 @@ local SPREAD_WIDTH = 3
 
 -- CONFIGURABLE: List of accepted ores
 local ACCEPTED_ORES = {
-	["Gold Ore_Clean"] = {Color = Color3.fromRGB(255, 215, 0), IngotName = "Gold Ingot"},
-	["Iron Ore_Clean"] = {Color = Color3.fromRGB(180, 180, 190), IngotName = "Iron Ingot"},
+	["Gold Ore_Cleaned"] = {Color = Color3.fromRGB(255, 215, 0), IngotName = "Gold Ingot"},
+	["Iron Ore_Cleaned"] = {Color = Color3.fromRGB(180, 180, 190), IngotName = "Iron Ingot"},
+	["Copper Ore_Cleaned"] = {Color = Color3.fromRGB(163, 72, 39), IngotName = "Copper Ingot"},
 	-- ADD MORE ORES HERE
 }
 
@@ -25,13 +26,15 @@ local SMELT_DELAY = 1
 local oreQueue = {}
 local isCurrentlySmelting = false
 
+-- [... all the display GUI code stays the same ...]
+
 -- Create or get the SurfaceGui
 local displayGui = DISPLAY_SCREEN:FindFirstChild("DisplayGui")
 if not displayGui then
 	displayGui = Instance.new("SurfaceGui")
 	displayGui.Name = "DisplayGui"
 	displayGui.Face = Enum.NormalId.Front
-	displayGui.AlwaysOnTop = true
+	displayGui.AlwaysOnTop = false
 	displayGui.Parent = DISPLAY_SCREEN
 end
 
@@ -51,7 +54,7 @@ local titleLabel = mainFrame:FindFirstChild("Title")
 if not titleLabel then
 	titleLabel = Instance.new("TextLabel")
 	titleLabel.Name = "Title"
-	titleLabel.Size = UDim2.new(1, 0, 0, 60) -- Slightly taller
+	titleLabel.Size = UDim2.new(1, 0, 0, 60)
 	titleLabel.BackgroundTransparency = 1
 	titleLabel.Text = "BLAST FURNACE"
 	titleLabel.TextColor3 = Color3.fromRGB(255, 150, 50)
@@ -64,8 +67,8 @@ local infoLabel = mainFrame:FindFirstChild("InfoLabel")
 if not infoLabel then
 	infoLabel = Instance.new("TextLabel")
 	infoLabel.Name = "InfoLabel"
-	infoLabel.Size = UDim2.new(1, -20, 0, 90) -- Width with padding
-	infoLabel.Position = UDim2.new(0, 10, 0, 95) -- Just below title
+	infoLabel.Size = UDim2.new(1, -20, 0, 90)
+	infoLabel.Position = UDim2.new(0, 10, 0, 95)
 	infoLabel.BackgroundTransparency = 1
 	infoLabel.Text = "Only clean ores can be smelted\nMixing different ores produces Impure Ingots"
 	infoLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -75,14 +78,14 @@ if not infoLabel then
 	infoLabel.Parent = mainFrame
 end
 
--- Dots container (FIXED POSITIONING)
+-- Dots container
 local dotsFrame = mainFrame:FindFirstChild("DotsFrame")
 if not dotsFrame then
 	dotsFrame = Instance.new("Frame")
 	dotsFrame.Name = "DotsFrame"
-	dotsFrame.Size = UDim2.new(0.9, 0, 0, 100) -- Taller frame
-	dotsFrame.Position = UDim2.new(0.5, 0, 0.5, 0) -- Centered
-	dotsFrame.AnchorPoint = Vector2.new(0.5, 0.5) -- Center anchor
+	dotsFrame.Size = UDim2.new(0.9, 0, 0, 100)
+	dotsFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+	dotsFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 	dotsFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 	dotsFrame.BorderSizePixel = 0
 	dotsFrame.Parent = mainFrame
@@ -92,22 +95,22 @@ if not dotsFrame then
 	corner.Parent = dotsFrame
 end
 
--- Status label (BIGGER TEXT)
+-- Status label
 local statusLabel = mainFrame:FindFirstChild("Status")
 if not statusLabel then
 	statusLabel = Instance.new("TextLabel")
 	statusLabel.Name = "Status"
-	statusLabel.Size = UDim2.new(1, 0, 0, 50) -- Taller
-	statusLabel.Position = UDim2.new(0, 0, 1, -140) -- Adjusted position
+	statusLabel.Size = UDim2.new(1, 0, 0, 50)
+	statusLabel.Position = UDim2.new(0, 0, 1, -140)
 	statusLabel.BackgroundTransparency = 1
 	statusLabel.Text = "0/5 Ores"
 	statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-	statusLabel.TextSize = 80 -- BIGGER!
+	statusLabel.TextSize = 80
 	statusLabel.Font = Enum.Font.GothamBold
 	statusLabel.Parent = mainFrame
 end
 
--- Function to update display (FIXED DOT ALIGNMENT)
+-- Function to update display
 local function updateDisplay()
 	-- Clear existing dots
 	for _, child in pairs(dotsFrame:GetChildren()) do
@@ -117,11 +120,10 @@ local function updateDisplay()
 	end
 
 	-- Calculate dot size and spacing
-	local dotSize = 70 -- Slightly bigger dots
+	local dotSize = 70
 	local spacing = 12
 	local totalWidth = (dotSize * REQUIRED_ORES) + (spacing * (REQUIRED_ORES - 1))
 
-	-- FIXED: Start position centered in the frame
 	local startX = (dotsFrame.AbsoluteSize.X - totalWidth) / 2
 
 	-- Create dots for each ore in queue
@@ -129,9 +131,8 @@ local function updateDisplay()
 		local dot = Instance.new("Frame")
 		dot.Name = "Dot"
 		dot.Size = UDim2.new(0, dotSize, 0, dotSize)
-		-- FIXED: Proper centering with AnchorPoint
 		dot.Position = UDim2.new(0, startX + ((i - 1) * (dotSize + spacing)), 0.5, 0)
-		dot.AnchorPoint = Vector2.new(0, 0.5) -- Center vertically
+		dot.AnchorPoint = Vector2.new(0, 0.5)
 
 		if oreQueue[i] then
 			dot.BackgroundColor3 = oreQueue[i].Color
@@ -190,18 +191,18 @@ local function areAllSameType()
 	return true
 end
 
--- Function to create ingot (FIXED FALLING THROUGH CONVEYOR)
+-- Function to create ingot (FIXED WITH COLLISION GROUP)
 local function createIngot()
-	print("=== CREATING INGOT ===")
+	--print("=== CREATING INGOT ===")
 
 	local ingotName
 	if areAllSameType() then
 		local oreType = oreQueue[1].Type
 		ingotName = ACCEPTED_ORES[oreType].IngotName
-		print("All ores are", oreType, "- Creating", ingotName)
+		--print("All ores are", oreType, "- Creating", ingotName)
 	else
 		ingotName = "Impure Ingot"
-		print("Mixed ore types - Creating Impure Ingot")
+		--print("Mixed ore types - Creating Impure Ingot")
 	end
 
 	-- Look for ingot model
@@ -220,17 +221,19 @@ local function createIngot()
 	-- Clone the ingot
 	local newIngot = ingotModel:Clone()
 
-	-- CRITICAL: Set physics properties BEFORE parenting
+	-- NEW: Set collision group for all parts
 	if newIngot:IsA("Model") then
 		for _, part in pairs(newIngot:GetDescendants()) do
 			if part:IsA("BasePart") then
 				part.CanCollide = true
 				part.Anchored = false
+				part.CollisionGroup = "Ores" -- ADD THIS!
 			end
 		end
 	elseif newIngot:IsA("BasePart") then
 		newIngot.CanCollide = true
 		newIngot.Anchored = false
+		newIngot.CollisionGroup = "Ores" -- ADD THIS!
 	end
 
 	-- Tag with ingot name
@@ -256,8 +259,7 @@ local function createIngot()
 	-- Random spread
 	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
 
-	-- FIXED: Position ABOVE the output (add 1 stud up to prevent clipping through)
-	local spawnOffset = Vector3.new(randomX, 0, 0) -- 1 stud above output
+	local spawnOffset = Vector3.new(randomX, 0, 0)
 
 	if newIngot:IsA("Model") then
 		local outputCFrame = SMELT_OUTPUT.CFrame * CFrame.new(spawnOffset)
@@ -269,8 +271,8 @@ local function createIngot()
 	-- Parent to plot
 	newIngot.Parent = PLOT.MiscInfo.OresDropped
 
-	-- CRITICAL: Zero out velocity to prevent initial fall-through
-	task.wait(0.05) -- Small delay for physics to initialize
+	-- Zero out velocity
+	task.wait(0.05)
 
 	if newIngot:IsA("Model") and newIngot.PrimaryPart then
 		newIngot.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -280,7 +282,7 @@ local function createIngot()
 		newIngot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
 	end
 
-	print("Ingot created:", ingotName, "Worth: $" .. cashValue.Value)
+	--print("Ingot created:", ingotName, "Worth: $" .. cashValue.Value)
 end
 
 -- Function to start smelting
@@ -293,7 +295,7 @@ local function startSmelting()
 		return
 	end
 
-	print("=== STARTING SMELT PROCESS ===")
+	--print("=== STARTING SMELT PROCESS ===")
 	isCurrentlySmelting = true
 	updateDisplay()
 
@@ -305,7 +307,7 @@ local function startSmelting()
 	isCurrentlySmelting = false
 	updateDisplay()
 
-	print("=== SMELT COMPLETE ===")
+	--print("=== SMELT COMPLETE ===")
 end
 
 -- Function to get ore from hit
