@@ -67,8 +67,9 @@ function module.LOAD(MODULE_INFO)
 			return RepStorage.Events.GetInventoryType:InvokeServer("Items")
 		end)
 
-		if success and inventory and inventory[currentPlacingItemId] then
-			local amount = inventory[currentPlacingItemId].Amount or 0
+		local itemKey = tostring(currentPlacingItemId)
+		if success and inventory and inventory[itemKey] then
+			local amount = inventory[itemKey].Amount or 0
 			modernMenu.InventoryLabel.Text = "Inventory: " .. amount
 
 			-- Change color based on amount (green if has items, red if empty)
