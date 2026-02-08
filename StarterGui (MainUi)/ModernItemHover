@@ -12,7 +12,7 @@ function module.CREATE_MODERN_HOVER_UI(parent)
 	container.BackgroundTransparency = 0.05
 	container.BorderSizePixel = 0
 	container.Visible = false
-	container.ZIndex = 9
+	container.ZIndex = 11
 	container.Parent = parent
 
 	-- Function to update container size based on screen size
@@ -40,7 +40,7 @@ function module.CREATE_MODERN_HOVER_UI(parent)
 	blur.BackgroundColor3 = Color3.fromRGB(25, 25, 33)
 	blur.BackgroundTransparency = 0.9
 	blur.BorderSizePixel = 0
-	blur.ZIndex = 10
+	blur.ZIndex = 12
 	blur.Parent = container
 
 	local blurCorner = Instance.new("UICorner")
@@ -65,7 +65,7 @@ function module.CREATE_MODERN_HOVER_UI(parent)
 	content.Size = UDim2.new(0.94, 0, 0.85, 0)  -- 94% width, 85% height (equivalent to -16 padding)
 	content.Position = UDim2.new(0.03, 0, 0.075, 0)  -- 3% from left, 7.5% from top (equivalent to 8px on 250px width)
 	content.BackgroundTransparency = 1
-	content.ZIndex = 11
+	content.ZIndex = 13
 	content.Parent = container
 
 	-- Item name
@@ -80,7 +80,7 @@ function module.CREATE_MODERN_HOVER_UI(parent)
 	itemName.Font = Enum.Font.GothamBold
 	itemName.TextXAlignment = Enum.TextXAlignment.Left
 	itemName.TextTruncate = Enum.TextTruncate.AtEnd
-	itemName.ZIndex = 12
+	itemName.ZIndex = 14
 	itemName.Parent = content
 
 	local nameConstraint = Instance.new("UITextSizeConstraint")
@@ -99,7 +99,7 @@ function module.CREATE_MODERN_HOVER_UI(parent)
 	itemTier.TextScaled = true
 	itemTier.Font = Enum.Font.Gotham
 	itemTier.TextXAlignment = Enum.TextXAlignment.Left
-	itemTier.ZIndex = 12
+	itemTier.ZIndex = 14
 	itemTier.Parent = content
 
 	local tierConstraint = Instance.new("UITextSizeConstraint")
@@ -116,7 +116,7 @@ function module.CREATE_MODERN_HOVER_UI(parent)
 	divider.BackgroundTransparency = 0.5
 	divider.BorderSizePixel = 0
 	divider.Visible = false
-	divider.ZIndex = 11
+	divider.ZIndex = 13
 	divider.Parent = content
 
 	-- Item description (optional)
@@ -134,7 +134,7 @@ function module.CREATE_MODERN_HOVER_UI(parent)
 	itemDesc.TextYAlignment = Enum.TextYAlignment.Top
 	itemDesc.RichText = true
 	itemDesc.Visible = false
-	itemDesc.ZIndex = 12
+	itemDesc.ZIndex = 14
 	itemDesc.Parent = content
 
 	local descConstraint = Instance.new("UITextSizeConstraint")
