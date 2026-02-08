@@ -8,6 +8,13 @@ local MAIN_LIB = require(RepStorage.Modules.MainLib)
 	-- Arrays
 local DEBOUNCE = {}
 
+-- Define minimum quantities that must remain for each item (by item name)
+local MINIMUM_ITEM_QUANTITIES = {
+	["Standard Conveyor"] = 18,
+	["Corner Conveyor"] = 4,
+	-- Add more items as needed
+}
+
 warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] loading...")
 
 -- ServerScriptService/Main.txt (UPDATE PLACE_ITEM)
@@ -18,7 +25,8 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 		for I, ITEM in pairs(ITEMS) do
 			local ITEM_REP = RepStorage.Items:FindFirstChild(ITEM["ITEM_NAME"])
 			local ITEM_INFO = require(ITEM_REP.ItemStats)
-			if _G["global_data"][Plr.Name]["Items"][ITEM_INFO.ItemId]["Amount"] > 0 then
+			-- FIXED: Changed item_info to ITEM_INFO and added tostring()
+			if _G["global_data"][Plr.Name]["Items"][tostring(ITEM_INFO.ItemId)]["Amount"] > 0 then
 				local REAL_ITEM = ITEM_REP:Clone()
 				REAL_ITEM:SetPrimaryPartCFrame(ITEM["ITEM_LOCATION"])
 
@@ -41,15 +49,11 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 					print("Item:", REAL_ITEM.Name)
 
 					for _, descendant in pairs(REAL_ITEM:GetDescendants()) do
-						-- Handle Conv and ConvSlope only (NOT ConvMerge)
 						if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope") then
-							-- Skip if NoFlip attribute is set (for merge conveyors)
 							if descendant:GetAttribute("NoFlip") then
 								print("Skipping", descendant:GetFullName(), "- NoFlip attribute set")
 								continue
 							end
-
-							-- EXTRA SAFETY: Skip ConvMerge by name
 							if descendant.Name == "ConvMerge" then
 								print("Skipping ConvMerge - cannot flip direction")
 								continue
@@ -64,7 +68,6 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 								warn("ConvVelo not found on Conv part!")
 							end
 
-							-- Reverse beam texture
 							local beam = descendant:FindFirstChildOfClass("Beam")
 							if beam then
 								print("Found Beam, TextureSpeed:", beam.TextureSpeed)
@@ -76,12 +79,11 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 					print("=== REVERSAL COMPLETE ===")
 				end
 
-				-- Parent AFTER reversing (before scripts run)
 				REAL_ITEM.Parent = PLACED_ITEMS
 
-				_G["global_data"][Plr.Name]["Items"][ITEM_INFO.ItemId]["Amount"] -= 1
+				-- FIXED: Changed item_info to ITEM_INFO and added tostring()
+				_G["global_data"][Plr.Name]["Items"][tostring(ITEM_INFO.ItemId)]["Amount"] -= 1
 
-				-- NOW enable scripts
 				spawn(function()
 					for E, DESCENDANT in pairs(REAL_ITEM:GetDescendants()) do
 						if DESCENDANT:IsA("Script") then
@@ -90,13 +92,7 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 						if E%50 == 0 then
 							wait()
 						end
-					end
-
-					-- NEW: Hide support poles if needed
-					local hideSupportScript = REAL_ITEM:FindFirstChild("HideSupportPoles", true)
-					if hideSupportScript and hideSupportScript:IsA("Script") then
-						hideSupportScript.Disabled = false
-					end
+					end					
 
 					RepStorage.Events.InventoryUpdate:FireClient(Plr)
 				end)
@@ -152,12 +148,67 @@ function SELL_ITEM(Plr, ITEMS)
 	if CASH then
 		local CANT_SELL_TYPES = {"special", "cantbuy"}
 		local ITEM_ID = ITEMS
-		local COST_VAL = 0
 		if type(ITEM_ID) ~= "table" then
 			ITEM_ID = {ITEM_ID}
 		end
+
+		-- Count items being sold by name
+		local itemsBeingSold = {}
 		for I, REAL_ID in pairs(ITEM_ID) do
-			-- CHECK IF IT'S A HOTSPOT MINER OR FURNACE (UPDATED!)
+			local ITEM_INFO = require(REAL_ID.ItemStats)
+			local itemName = MAIN_LIB.ITEM_FROM_ID(ITEM_INFO.ItemId).Name
+			itemsBeingSold[itemName] = (itemsBeingSold[itemName] or 0) + 1
+		end
+
+		-- Count TOTAL items (placed on plot + in inventory)
+		local PLR_PLOT = Plr.SetPlot.Value
+		local PLACED_ITEMS = PLR_PLOT:FindFirstChild("PlacedItems")
+		local totalItemCounts = {}
+
+		-- Count items placed on the plot
+		if PLACED_ITEMS then
+			for _, item in pairs(PLACED_ITEMS:GetChildren()) do
+				if item:FindFirstChild("ItemStats") then
+					local itemStats = require(item.ItemStats)
+					local itemName = MAIN_LIB.ITEM_FROM_ID(itemStats.ItemId).Name
+					totalItemCounts[itemName] = (totalItemCounts[itemName] or 0) + 1
+				end
+			end
+		end
+
+		-- ADD items in inventory
+		if _G["global_data"] and _G["global_data"][Plr.Name] and _G["global_data"][Plr.Name]["Items"] then
+			for itemId, itemData in pairs(_G["global_data"][Plr.Name]["Items"]) do
+				if itemData.Amount and itemData.Amount > 0 then
+					-- FIXED: itemId is now a string, convert to number for ITEM_FROM_ID
+					local item = MAIN_LIB.ITEM_FROM_ID(tonumber(itemId))
+					if item then
+						local itemName = item.Name
+						totalItemCounts[itemName] = (totalItemCounts[itemName] or 0) + itemData.Amount
+					end
+				end
+			end
+		end
+
+		-- Check if selling would drop below minimum for any item
+		for itemName, sellCount in pairs(itemsBeingSold) do
+			local minimumRequired = MINIMUM_ITEM_QUANTITIES[itemName]
+			if minimumRequired then
+				local totalOwned = totalItemCounts[itemName] or 0
+				local remainingAfterSale = totalOwned - sellCount
+
+				if remainingAfterSale < minimumRequired then
+					RepStorage.Events.MessageClient:FireClient(Plr, "screen", {
+						["message"] = "Cannot sell! You must keep at least " .. minimumRequired .. " " .. itemName .. "s."
+					})
+					return false
+				end
+			end
+		end
+
+		-- Proceed with selling
+		for I, REAL_ID in pairs(ITEM_ID) do
+			-- Check hotspot items
 			if REAL_ID:GetAttribute("HotspotMiner") == true then
 				warn("Cannot sell hotspot miner!")
 				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "Hotspot miners cannot be sold!"})
@@ -172,10 +223,9 @@ function SELL_ITEM(Plr, ITEMS)
 
 			local ITEM_INFO = require(REAL_ID.ItemStats)
 			if table.find(CANT_SELL_TYPES, ITEM_INFO.ItemType) == nil then
-				if CASH.Value >= math.floor(ITEM_INFO.Cost) then
-					CASH.Value += ITEM_INFO.Cost
-					REAL_ID:Destroy()
-				end
+				local sellValue = math.floor(ITEM_INFO.Cost * 0.3)  -- 30% of buy price
+				CASH.Value += sellValue
+				REAL_ID:Destroy()
 			end
 		end
 		return true
@@ -195,7 +245,6 @@ function WITHDRAW_ITEMS(Plr, ITEMS)
 	end
 	if Plr then
 		for I, ITEM in pairs(ITEMS) do
-			-- CHECK IF IT'S A HOTSPOT MINER OR FURNACE (UPDATED!)
 			if ITEM:GetAttribute("HotspotMiner") == true then
 				warn("Cannot withdraw hotspot miner!")
 				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "Hotspot miners cannot be moved!"})
@@ -209,7 +258,8 @@ function WITHDRAW_ITEMS(Plr, ITEMS)
 			end
 
 			local ITEM_INFO = require(ITEM.ItemStats)
-			_G["global_data"][Plr.Name]["Items"][ITEM_INFO.ItemId]["Amount"] += 1
+			-- FIXED: Changed item_info to ITEM_INFO and added tostring()
+			_G["global_data"][Plr.Name]["Items"][tostring(ITEM_INFO.ItemId)]["Amount"] += 1
 			ITEM:Destroy()
 		end
 		RepStorage.Events.InventoryUpdate:FireClient(Plr)
@@ -239,9 +289,10 @@ RepStorage.Events.BuyItem.OnServerInvoke = BUY_ITEM
 
 -- Server Locked Stuff
 function ItemGive(Plr, ITEM_ID, AMOUNT)
-	if _G["global_data"][Plr.Name]["Items"][ITEM_ID] then
-		_G["global_data"][Plr.Name]["Items"][ITEM_ID]["Amount"] += AMOUNT
-		RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = ""..AMOUNT.." "..MAIN_LIB.ITEM_FROM_ID(ITEM_ID).Name.."'s Added to your Inventory"})
+	-- FIXED: Added tostring() for item ID
+	if _G["global_data"][Plr.Name]["Items"][tostring(ITEM_ID)] then
+		_G["global_data"][Plr.Name]["Items"][tostring(ITEM_ID)]["Amount"] += AMOUNT
+		RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = ""..AMOUNT.." "..MAIN_LIB.ITEM_FROM_ID(ITEM_ID).Name.."'s added to your Inventory"})
 		RepStorage.Events.InventoryUpdate:FireClient(Plr)
 		return true
 	end
