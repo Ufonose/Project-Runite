@@ -440,7 +440,7 @@ function module.LOAD(MODULE_INFO)
 	-- Function to check if item matches search and category
 	local function SEARCH_ITEM(ITEM_BUTTON, ITEM_INFO)
 		-- Check if player owns the item
-		if not INV[ITEM_BUTTON:GetAttribute("ITEM_ID")] or INV[ITEM_BUTTON:GetAttribute("ITEM_ID")].Amount <= 0 then
+		if not INV[tostring(ITEM_BUTTON:GetAttribute("ITEM_ID"))] or INV[tostring(ITEM_BUTTON:GetAttribute("ITEM_ID"))].Amount <= 0 then
 			return false
 		end
 
@@ -495,7 +495,7 @@ function module.LOAD(MODULE_INFO)
 
 		for _, ITEM in pairs(RepStorage.Items:GetChildren()) do
 			local ITEM_INFO = require(ITEM.ItemStats)
-			local itemAmount = INV[ITEM_INFO.ItemId] and INV[ITEM_INFO.ItemId].Amount or 0
+			local itemAmount = INV[tostring(ITEM_INFO.ItemId)] and INV[tostring(ITEM_INFO.ItemId)].Amount or 0
 
 			-- Create item card with modern styling
 			local itemCard = Instance.new("Frame")
