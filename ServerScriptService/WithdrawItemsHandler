@@ -76,9 +76,9 @@ local function withdrawAllItems(player)
 
 					-- Add 1 of this item to player's inventory
 					if _G["global_data"] and _G["global_data"][player.Name] then
-						if _G["global_data"][player.Name]["Items"][itemId] then
-							_G["global_data"][player.Name]["Items"][itemId]["Amount"] = 
-								_G["global_data"][player.Name]["Items"][itemId]["Amount"] + 1
+						if _G["global_data"][player.Name]["Items"][tostring(itemId)] then
+							_G["global_data"][player.Name]["Items"][tostring(itemId)]["Amount"] = 
+								_G["global_data"][player.Name]["Items"][tostring(itemId)]["Amount"] + 1
 							itemsWithdrawn = itemsWithdrawn + 1
 						end
 					end
