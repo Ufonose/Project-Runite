@@ -11,7 +11,7 @@ local PLAYER_DATA_INFO = require(ServerStorage.Modules.PlayerDataInfo)
 local CASH_LIB = require(RepStorage.Modules.CashLib)
 local MainLib = require(RepStorage.Modules.MainLib)
 -- Constants
-local data_code = "map_v54"		-- Change this string to reset data map_36
+local data_code = "map_r4"		-- Change this string to reset data map_36
 
 if workspace:FindFirstChild("Items") then
 	workspace.Items.Parent = RepStorage
@@ -95,115 +95,130 @@ local function LOAD_DATA(Plr)
 	local plr_cash = Instance.new("NumberValue", ServerStorage.ServerLockedPlayerInfo.PlayerCash)
 	plr_cash.Name = Plr.Name
 	plr_cash.Value = plr_data["Cash"] or 250
+
 	-- Load the Player's Inventory!
 	local default_inv = {
-		[2] = { -- Item ID
+		["2"] = { -- String keys instead of numeric
 			["Amount"] = 20,
 			["Unlocked"] = true,  
 		},
-		[3] = { -- Item ID
+		["3"] = {
 			["Amount"] = 1,
 			["Unlocked"] = true,
 		},
-		[7] = { -- Item ID
+		["7"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[8] = { -- Item ID
+		["8"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[9] = { -- Item ID
+		["9"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[10] = { -- Item ID
+		["10"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[6] = { -- Item ID
+		["6"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[11] = { -- Item ID
+		["11"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[12] = { -- Item ID
+		["12"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[13] = { -- Item ID
+		["13"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[14] = { -- Item ID
+		["14"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[15] = { -- Item ID
+		["15"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[16] = { -- Item ID
+		["16"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[17] = { -- Item ID
+		["17"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[18] = { -- Item ID
+		["18"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[19] = { -- Item ID
+		["19"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[20] = { -- Item ID
+		["20"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[21] = { -- Item ID
+		["21"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[22] = { -- Item ID
+		["22"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
 		},
-		[23] = { -- Item ID
+		["23"] = {
 			["Amount"] = 20,
 			["Unlocked"] = true,
-		
+
 		},
 	}
 	_G["global_data"][Plr.Name]["Items"] = plr_data["InvItemSaveData"] or default_inv
 
+	-- DEBUG: Check what we loaded
+	print("=== ITEMS DEBUG ===")
+	print("plr_data['InvItemSaveData']:", plr_data["InvItemSaveData"])
+	print("Using default_inv?", plr_data["InvItemSaveData"] == nil)
+
+	local itemCount = 0
+	for itemId, itemData in pairs(_G["global_data"][Plr.Name]["Items"]) do
+		itemCount = itemCount + 1
+		print("  Item", itemId, "- Amount:", itemData.Amount, "Unlocked:", itemData.Unlocked)
+	end
+	print("Total items loaded:", itemCount)
+
 	-- THIS IS THE CHANGED PART - now checks default_inv for missing items
 	for _, item in pairs(RepStorage.Items:GetChildren()) do
 		local item_info = require(item.ItemStats)
-		if _G["global_data"][Plr.Name]["Items"][item_info.ItemId] == nil then
+		local itemKey = tostring(item_info.ItemId) -- CHANGED: Convert to string
+
+		if _G["global_data"][Plr.Name]["Items"][itemKey] == nil then
 			-- Check if this item is in default_inv (starting items)
-			if default_inv[item_info.ItemId] then
+			if default_inv[itemKey] then -- CHANGED: Use string key
 				-- It's a starting item, add it with the default values
-				_G["global_data"][Plr.Name]["Items"][item_info.ItemId] = {
-					["Unlocked"] = default_inv[item_info.ItemId]["Unlocked"],
-					["Amount"] = default_inv[item_info.ItemId]["Amount"],
+				_G["global_data"][Plr.Name]["Items"][itemKey] = { -- CHANGED: Use string key
+					["Unlocked"] = default_inv[itemKey]["Unlocked"],
+					["Amount"] = default_inv[itemKey]["Amount"],
 				}
 				print("Added new starting item to existing player:", item_info.ItemId)
 			else
 				-- It's not a starting item, add as locked with 0 amount
-				_G["global_data"][Plr.Name]["Items"][item_info.ItemId] = {
+				_G["global_data"][Plr.Name]["Items"][itemKey] = { -- CHANGED: Use string key
 					["Unlocked"] = false,
 					["Amount"] = 0,
 				}
 			end
 		else
 			-- Item already exists in player data, just ensure unlocked status
-			if _G["global_data"][Plr.Name]["Items"][item_info.ItemId]["Amount"] > 0 then
-				_G["global_data"][Plr.Name]["Items"][item_info.ItemId]["Unlocked"] = true
+			if _G["global_data"][Plr.Name]["Items"][itemKey]["Amount"] > 0 then -- CHANGED: Use string key
+				_G["global_data"][Plr.Name]["Items"][itemKey]["Unlocked"] = true -- CHANGED: Use string key
 			end
 		end
 	end
