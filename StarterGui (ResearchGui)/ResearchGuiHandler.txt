@@ -317,9 +317,14 @@ treeContainer.InputBegan:Connect(function(input)
 		dragConnection = UserInputService.InputChanged:Connect(function(inputChanged)
 			if inputChanged.UserInputType == Enum.UserInputType.MouseMovement and dragging then
 				local delta = dragStart - inputChanged.Position
+
+				-- Calculate max scroll values (ensure they're not negative)
+				local maxScrollX = math.max(0, treeContainer.CanvasSize.X.Offset - treeContainer.AbsoluteSize.X)
+				local maxScrollY = math.max(0, treeContainer.CanvasSize.Y.Offset - treeContainer.AbsoluteSize.Y)
+
 				local newCanvasPos = Vector2.new(
-					math.clamp(startCanvasPos.X + delta.X, 0, treeContainer.CanvasSize.X.Offset - treeContainer.AbsoluteSize.X),
-					math.clamp(startCanvasPos.Y + delta.Y, 0, treeContainer.CanvasSize.Y.Offset - treeContainer.AbsoluteSize.Y)
+					math.clamp(startCanvasPos.X + delta.X, 0, maxScrollX),
+					math.clamp(startCanvasPos.Y + delta.Y, 0, maxScrollY)
 				)
 				treeContainer.CanvasPosition = newCanvasPos
 			end
