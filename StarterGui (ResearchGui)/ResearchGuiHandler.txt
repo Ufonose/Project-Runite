@@ -1048,8 +1048,8 @@ function refreshAgeTabsAndTree()
 	-- Create age tabs (this would come from ResearchData.Ages)
 	local ages = {
 		{Id = 1, Name = "First Age", Description = "Master the basics", Icon = "🏔️", Color = Color3.fromRGB(120, 100, 80)},
-		{Id = 2, Name = "Second Age", Description = "Advanced production", Icon = "⚙️", Color = Color3.fromRGB(100, 120, 140)},
-		{Id = 3, Name = "Third Age", Description = "Powerful automation", Icon = "⚡", Color = Color3.fromRGB(140, 100, 140)},
+		{Id = 2, Name = "Second Age", Description = "Powerful automation", Icon = "⚙️", Color = Color3.fromRGB(100, 120, 140)},
+		{Id = 3, Name = "Third Age", Description = "Advanced production", Icon = "⚡", Color = Color3.fromRGB(140, 100, 140)},
 	}
 
 	for _, age in pairs(ages) do
