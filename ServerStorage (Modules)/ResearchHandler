@@ -180,8 +180,9 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 	-- Unlock machines
 	if objective.Rewards.UnlockMachines then
 		for _, machineId in pairs(objective.Rewards.UnlockMachines) do
-			if _G["global_data"][player.Name]["Items"][machineId] then
-				_G["global_data"][player.Name]["Items"][machineId]["Unlocked"] = true
+			local itemKey = tostring(machineId)
+			if _G["global_data"][player.Name]["Items"][itemKey] then
+				_G["global_data"][player.Name]["Items"][itemKey]["Unlocked"] = true
 				--print("Unlocked machine ID:", machineId)
 			end
 		end
