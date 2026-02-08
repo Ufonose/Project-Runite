@@ -741,8 +741,8 @@ function module.LOAD(MODULE_INFO)
 	end
 
 	local function IS_ITEM_UNLOCKED(ITEM_ID)
-		if INV and INV[ITEM_ID] then
-			return INV[ITEM_ID].Unlocked == true
+		if INV and INV[tostring(ITEM_ID)] then
+			return INV[tostring(ITEM_ID)].Unlocked == true
 		end
 		return false
 	end
