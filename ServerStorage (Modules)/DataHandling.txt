@@ -121,7 +121,7 @@ function DataHandling.LOAD_PLOT(Plr, PLOT_DATA)
 			ITEM_MODEL.Parent = PLR_PLOT.PlacedItems
 			LOAD_ITEM_BASICS(ITEM_MODEL)
 		else
-			_G["global_data"][Plr.Name]["Items"][item_data["ITEM_ID"]].Amount += 1
+			_G["global_data"][Plr.Name]["Items"][tostring(item_data["ITEM_ID"])].Amount += 1
 		end
 	end
 end
