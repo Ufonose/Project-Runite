@@ -32,184 +32,517 @@ ResearchData.Objectives = {
 	-- ============================================
 	{
 		Id = 1,
-		Name = "Iron Collector",
+		Name = "Iron Collector 1",
 		Description = "Collect raw iron ore",
 		Age = 1,
 		RequiredObjectives = {},
 		Requirements = {
-			{ItemName = "Iron Ore", Amount = 10},
+			{ItemName = "Iron Ore", Amount = 5},
 		},
 		Rewards = {
-			ResearchTokens = 99,
+			ResearchTokens = 1,
 			UnlockMachines = {}, -- Standard Refiner
 		},
-		Icon = "rbxassetid://7448167682",
 		TreePosition = {X = 1, Y = 1}, -- Starting position (column 1, row 1)
 	},
-
 	{
 		Id = 2,
 		Name = "Iron Collector 2",
-		Description = "Refine stone into processed ore",
+		Description = "Collect raw iron ore",
 		Age = 1,
-		RequiredObjectives = {1}, -- Requires Stone Collector
+		RequiredObjectives = {1},
 		Requirements = {
-			{ItemName = "Iron Ore", Amount = 10000},
+			{ItemName = "Iron Ore", Amount = 15},
 		},
 		Rewards = {
-			ResearchTokens = 8,
-			UnlockMachines = {}, -- Advanced machines
+			ResearchTokens = 0,
+			UnlockMachines = {18,15},
 		},
-		Icon = "rbxassetid://7435467441",
-		TreePosition = {X = 2, Y = 1}, -- Column 2, row 1
+		TreePosition = {X = 2, Y = 1}, -- (column 1, row 1)
 	},
-
 	{
 		Id = 3,
-		Name = "Master Stone Processor 1",
-		Description = "Process large quantities of plates with the rolling mill",
+		Name = "Gem Collector 1",
+		Description = "Collect an emerald gem",
 		Age = 1,
-		RequiredObjectives = {}, -- Requires Stone Refiner
+		RequiredObjectives = {1},
 		Requirements = {
-			{ItemName = "Iron Ore", Amount = 10},
-			{ItemName = "Diamond Gem", Amount = 100},
-			{ItemName = "Iron Ore Cleaned", Amount = 100},
+			{ItemName = "Emerald Gem", Amount = 1},
 		},
 		Rewards = {
-			ResearchTokens = 20,
-			UnlockMachines = {}, -- Unlock multiple machines
+			ResearchTokens = 3,
+			UnlockMachines = {},
 		},
-		Icon = "rbxassetid://7435467441",
-		TreePosition = {X = 1, Y = 2}, -- Column 3, row 1
+		TreePosition = {X = 1, Y = 2}, -- (column 1, row 1)
 	},
 	{
 		Id = 4,
-		Name = "Master Stone Processor 2",
-		Description = "Process large quantities of plates with the rolling mill",
+		Name = "Crush it 1",
+		Description = "Crush raw iron ore in an ore crusher",
 		Age = 1,
-		RequiredObjectives = {}, -- Requires Stone Refiner
+		RequiredObjectives = {2},
 		Requirements = {
-			{ItemName = "Iron Ore", Amount = 20000},
-			{ItemName = "Ruby Gem", Amount = 100},
-			{ItemName = "Iron Ore Cleaned", Amount = 100},
+			{ItemName = "Iron Ore_Crushed", Amount = 10},
 		},
 		Rewards = {
-			ResearchTokens = 20,
-			UnlockMachines = {}, -- Unlock multiple machines
+			ResearchTokens = 3,
+			UnlockMachines = {},
 		},
-		Icon = "rbxassetid://7435467441",
-		TreePosition = {X = 2, Y = 2}, -- Column 3, row 1
+		TreePosition = {X = 3, Y = 1}, -- (column 1, row 1)
 	},
 	{
 		Id = 5,
-		Name = "Master Stone Processor 3",
-		Description = "Process large quantities of plates with the rolling mill",
+		Name = "Crush It 2",
+		Description = "Crush raw iron ore in an ore crusher",
 		Age = 1,
-		RequiredObjectives = {}, -- Requires Stone Refiner
+		RequiredObjectives = {4},
 		Requirements = {
-			{ItemName = "Iron Ore", Amount = 20000},
-			{ItemName = "Iron Ore_Refined", Amount = 100},
+			{ItemName = "Iron Ore_Crushed", Amount = 15},
 		},
 		Rewards = {
-			ResearchTokens = 20,
-			UnlockMachines = {}, -- Unlock multiple machines
+			ResearchTokens = 0,
+			UnlockMachines = {10},
 		},
-		Icon = "rbxassetid://7435467441",
-		TreePosition = {X = 3, Y = 2}, -- Column 3, row 1
+		TreePosition = {X = 4, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 6,
+		Name = "Iron Collector 3",
+		Description = "Collect raw and crushed iron ore",
+		Age = 1,
+		RequiredObjectives = {5},
+		Requirements = {
+			{ItemName = "Iron Ore", Amount = 15},
+			{ItemName = "Iron Ore_Crushed", Amount = 15},
+		},
+		Rewards = {
+			ResearchTokens = 4,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 5, Y = 1}, -- (column 1, row 1)
 	},
 	
+	{
+		Id = 7,
+		Name = "Gem Collector 2",
+		Description = "Collect a ruby gem",
+		Age = 1,
+		RequiredObjectives = {4},
+		Requirements = {
+			{ItemName = "Ruby Gem", Amount = 1},
+		},
+		Rewards = {
+			ResearchTokens = 4,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 3, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 8,
+		Name = "Iron Collector 4",
+		Description = "Collect raw and crushed iron ore",
+		Age = 1,
+		RequiredObjectives = {6},
+		Requirements = {
+			{ItemName = "Iron Ore", Amount = 25},
+			{ItemName = "Iron Ore_Crushed", Amount = 25},
+		},
+		Rewards = {
+			ResearchTokens = 0,
+			UnlockMachines = {19},
+		},
+		TreePosition = {X = 6, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 9,
+		Name = "Ore Cleaner 1",
+		Description = "Pass crushed ores through a cleaning station",
+		Age = 1,
+		RequiredObjectives = {8},
+		Requirements = {
+			{ItemName = "Iron Ore_Cleaned", Amount = 40},
+		},
+		Rewards = {
+			ResearchTokens = 6,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 7, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 10,
+		Name = "Iron Collector 5",
+		Description = "Collect clean and crushed iron ore",
+		Age = 1,
+		RequiredObjectives = {9},
+		Requirements = {
+			{ItemName = "Iron Ore_Crushed", Amount = 30},
+			{ItemName = "Iron Ore_Cleaned", Amount = 30},
+		},
+		Rewards = {
+			ResearchTokens = 0,
+			UnlockMachines = {8},
+		},
+		TreePosition = {X = 8, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 12,
+		Name = "First Age Master",
+		Description = "Master the first age",
+		Age = 1,
+		RequiredObjectives = {10},
+		Requirements = {
+			{ItemName = "Iron Ore", Amount = 50},
+			{ItemName = "Iron Ore_Crushed", Amount = 50},
+			{ItemName = "Iron Ore_Cleaned", Amount = 50},
+		},
+		Rewards = {
+			ResearchTokens = 1,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 9, Y = 1}, -- (column 1, row 1)
+	},
 
 	-- ============================================
 	-- SECOND AGE - Advanced Production
 	-- ============================================
 	{
-		Id = 4,
-		Name = "Advanced Mining",
-		Description = "Unlock better mining techniques",
+		Id = 13,
+		Name = "Copper Collector 1",
+		Description = "Collect raw copper ore",
 		Age = 2,
-		RequiredObjectives = {3}, -- Requires completing First Age final objective
+		RequiredObjectives = {12}, 
 		Requirements = {
-			{ItemName = "StoneOreModel", Amount = 500},
+			{ItemName = "Copper Ore", Amount = 5},
 		},
 		Rewards = {
-			ResearchTokens = 50,
-			UnlockMachines = {8}, -- Better miners
+			ResearchTokens = 1,
+			UnlockMachines = {}, 
 		},
-		Icon = "rbxassetid://7435467441",
-		TreePosition = {X = 1, Y = 1}, -- Start of Second Age tree
+		TreePosition = {X = 1, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 14,
+		Name = "Crush It 3",
+		Description = "Crush raw copper ore in an ore crusher",
+		Age = 2,
+		RequiredObjectives = {13}, 
+		Requirements = {
+			{ItemName = "Copper Ore_Curshed", Amount = 15},
+		},
+		Rewards = {
+			ResearchTokens = 1,
+			UnlockMachines = {}, 
+		},
+		TreePosition = {X = 2, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 15,
+		Name = "Ore Cleaner 2",
+		Description = "Pass crushed ores through a cleaning station",
+		Age = 2,
+		RequiredObjectives = {14}, 
+		Requirements = {
+			{ItemName = "Copper Ore_Cleaned", Amount = 25},
+		},
+		Rewards = {
+			ResearchTokens = 0,
+			UnlockMachines = {6}, 
+		},
+		TreePosition = {X = 2, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 16,
+		Name = "Gem Collector 3",
+		Description = "Collect gems",
+		Age = 2,
+		RequiredObjectives = {15}, 
+		Requirements = {
+			{ItemName = "Emerald Gem", Amount = 5},
+			{ItemName = "Ruby Gem", Amount = 4},
+		},
+		Rewards = {
+			ResearchTokens = 1,
+			UnlockMachines = {}, 
+		},
+		TreePosition = {X = 2, Y = 3}, -- (column 1, row 1)
+	},
+	{
+		Id = 17,
+		Name = "Ore Collector 1",
+		Description = "Collect raw ores",
+		Age = 2,
+		RequiredObjectives = {14}, 
+		Requirements = {
+			{ItemName = "Iron Ore", Amount = 40},
+			{ItemName = "Copper Ore", Amount = 30},
+		},
+		Rewards = {
+			ResearchTokens = 1,
+			UnlockMachines = {}, 
+		},
+		TreePosition = {X = 3, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 18,
+		Name = "Crush It 4",
+		Description = "Crush raw ores in an ore crusher",
+		Age = 2,
+		RequiredObjectives = {17}, 
+		Requirements = {
+			{ItemName = "Iron Ore_Crushed", Amount = 40},
+			{ItemName = "Copper Ore_Crushed", Amount = 30},
+		},
+		Rewards = {
+			ResearchTokens = 0,
+			UnlockMachines = {14}, 
+		},
+		TreePosition = {X = 3, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 19,
+		Name = "Ore Collector 2",
+		Description = "Collect raw ores",
+		Age = 2,
+		RequiredObjectives = {17}, 
+		Requirements = {
+			{ItemName = "Iron Ore", Amount = 60},
+			{ItemName = "Copper Ore", Amount = 40},
+		},
+		Rewards = {
+			ResearchTokens = 0,
+			UnlockMachines = {20}, 
+		},
+		TreePosition = {X = 4, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 20,
+		Name = "The Smelter 1",
+		Description = "Proccess cleaned iron ore in the blast furnace",
+		Age = 2,
+		RequiredObjectives = {19}, 
+		Requirements = {
+			{ItemName = "Iron Ingot", Amount = 5},
+		},
+		Rewards = {
+			ResearchTokens = 1,
+			UnlockMachines = {}, 
+		},
+		TreePosition = {X = 5, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 21,
+		Name = "The Smelter 2",
+		Description = "Proccess cleaned copper ore in the blast furnace",
+		Age = 2,
+		RequiredObjectives = {20}, 
+		Requirements = {
+			{ItemName = "Copper Ingot", Amount = 5},
+		},
+		Rewards = {
+			ResearchTokens = 0,
+			UnlockMachines = {11}, 
+		},
+		TreePosition = {X = 5, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 22,
+		Name = "The Smelter 3",
+		Description = "Proccess cleaned ore in the blast furnace",
+		Age = 2,
+		RequiredObjectives = {21}, 
+		Requirements = {
+			{ItemName = "Iron Ingot", Amount = 15},
+			{ItemName = "Copper Ingot", Amount = 15},
+		},
+		Rewards = {
+			ResearchTokens = 1,
+			UnlockMachines = {}, 
+		},
+		TreePosition = {X = 5, Y = 3}, -- (column 1, row 1)
+	},
+	{
+		Id = 23,
+		Name = "Iron Collector 6",
+		Description = "Collect iron ores and ingots",
+		Age = 2,
+		RequiredObjectives = {20}, 
+		Requirements = {
+			{ItemName = "Iron Ore", Amount = 50},
+			{ItemName = "Iron Ingot", Amount = 10},
+		},
+		Rewards = {
+			ResearchTokens = 0,
+			UnlockMachines = {9}, 
+		},
+		TreePosition = {X = 6, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 24,
+		Name = "Copper Collector 2",
+		Description = "Collect copper ores and ingots",
+		Age = 2,
+		RequiredObjectives = {23}, 
+		Requirements = {
+			{ItemName = "Copper Ore", Amount = 40},
+			{ItemName = "Copper Ingot", Amount = 8},
+		},
+		Rewards = {
+			ResearchTokens = 0,
+			UnlockMachines = {12}, 
+		},
+		TreePosition = {X = 6, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 25,
+		Name = "Gem Collector 4",
+		Description = "Collect a diamond gem",
+		Age = 2,
+		RequiredObjectives = {24}, 
+		Requirements = {
+			{ItemName = "Diamond Gem", Amount = 1},
+		},
+		Rewards = {
+			ResearchTokens = 0,
+			UnlockMachines = {17}, 
+		},
+		TreePosition = {X = 6, Y = 3}, -- (column 1, row 1)
+	},
+	{
+		Id = 26,
+		Name = "Impure Collector 1",
+		Description = "Mix iron and copper cleaned ores together in the blast furnace",
+		Age = 2,
+		RequiredObjectives = {23}, 
+		Requirements = {
+			{ItemName = "Impure Ingot", Amount = 10},
+		},
+		Rewards = {
+			ResearchTokens = 1,
+			UnlockMachines = {}, 
+		},
+		TreePosition = {X = 7, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 27,
+		Name = "Ingot Collector 1",
+		Description = "Collect impure and iron ingots",
+		Age = 2,
+		RequiredObjectives = {26}, 
+		Requirements = {
+			{ItemName = "Impure Ingot", Amount = 8},
+			{ItemName = "Iron Ingot", Amount = 8},
+		},
+		Rewards = {
+			ResearchTokens = 1,
+			UnlockMachines = {}, 
+		},
+		TreePosition = {X = 7, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 28,
+		Name = "Ingot Collector 2",
+		Description = "Collect impure and copper ingots",
+		Age = 2,
+		RequiredObjectives = {27}, 
+		Requirements = {
+			{ItemName = "Impure Ingot", Amount = 8},
+			{ItemName = "Copper Ingot", Amount = 8},
+		},
+		Rewards = {
+			ResearchTokens = 0,
+			UnlockMachines = {}, 
+		},
+		TreePosition = {X = 7, Y = 3}, -- (column 1, row 1)
+	},
+	{
+		Id = 29,
+		Name = "Gem Colletor 5",
+		Description = "Collect gems",
+		Age = 2,
+		RequiredObjectives = {27}, 
+		Requirements = {
+			{ItemName = "Emerald Gem", Amount = 10},
+			{ItemName = "Ruby Gem", Amount = 8},
+			{ItemName = "Diamond Gem", Amount = 5},
+		},
+		Rewards = {
+			ResearchTokens = 0,
+			UnlockMachines = {22}, 
+		},
+		TreePosition = {X = 8, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 30,
+		Name = "Gem Colletor 6",
+		Description = "Process gems through the polishing machine",
+		Age = 2,
+		RequiredObjectives = {29}, 
+		Requirements = {
+			{ItemName = "Polished Emerald Gem", Amount = 5},
+			{ItemName = "Polished Ruby Gem", Amount = 4},
+			{ItemName = "Polished Diamond Gem", Amount = 3},
+		},
+		Rewards = {
+			ResearchTokens = 1,
+			UnlockMachines = {}, 
+		},
+		TreePosition = {X = 9, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 33,
+		Name = "Second Age Master",
+		Description = "Master the second age",
+		Age = 2,
+		RequiredObjectives = {30}, 
+		Requirements = {
+			{ItemName = "Copper Ingot", Amount = 25},
+			{ItemName = "Iron Ingot", Amount = 25},
+			{ItemName = "Impure Ingot", Amount = 15},
+		},
+		Rewards = {
+			ResearchTokens = 1,
+			UnlockMachines = {}, 
+		},
+		TreePosition = {X = 10, Y = 2}, -- (column 1, row 1)
 	},
 
-	{
-		Id = 5,
-		Name = "Efficiency Studies",
-		Description = "Improve production efficiency",
-		Age = 2,
-		RequiredObjectives = {4}, -- Requires Advanced Mining
-		Requirements = {
-			{ItemName = "StoneOreModel_Refined", Amount = 300},
-		},
-		Rewards = {
-			ResearchTokens = 60,
-			UnlockMachines = {9},
-		},
-		Icon = "rbxassetid://7435467441",
-		TreePosition = {X = 2, Y = 1},
-	},
 
-	{
-		Id = 6,
-		Name = "Automated Systems",
-		Description = "Begin automation research",
-		Age = 2,
-		RequiredObjectives = {5}, -- Requires Efficiency Studies
-		Requirements = {
-			{ItemName = "StoneOreModel", Amount = 1000},
-			{ItemName = "StoneOreModel_Refined", Amount = 500},
-		},
-		Rewards = {
-			ResearchTokens = 100,
-			UnlockMachines = {},
-		},
-		Icon = "rbxassetid://7435467441",
-		TreePosition = {X = 3, Y = 1},
-	},
+
 
 	-- ============================================
 	-- THIRD AGE - Powerful Automation
 	-- ============================================
 	{
-		Id = 7,
+		Id = 1340,
 		Name = "Industrial Revolution",
 		Description = "Unlock industrial-scale production",
 		Age = 3,
-		RequiredObjectives = {6}, -- Requires completing Second Age final objective
+		RequiredObjectives = {}, -- Requires completing Second Age final objective
 		Requirements = {
 			{ItemName = "StoneOreModel", Amount = 2000},
-			{ItemName = "StoneOreModel_Refined", Amount = 1000},
+			{ItemName = "StoneOreModel_Crushed", Amount = 1000},
 		},
 		Rewards = {
 			ResearchTokens = 150,
 			UnlockMachines = {},
 		},
-		Icon = "rbxassetid://7435467441",
 		TreePosition = {X = 1, Y = 1}, -- Start of Third Age tree
 	},
 
 	{
-		Id = 8,
+		Id = 1341,
 		Name = "Mega Automation",
 		Description = "Ultimate automation capabilities",
 		Age = 3,
-		RequiredObjectives = {7}, -- Requires Industrial Revolution
+		RequiredObjectives = {}, -- Requires Industrial Revolution
 		Requirements = {
 			{ItemName = "StoneOreModel", Amount = 5000},
-			{ItemName = "StoneOreModel_Refined", Amount = 2500},
+			{ItemName = "StoneOreModel_Crushed", Amount = 2500},
 		},
 		Rewards = {
 			ResearchTokens = 250,
 			UnlockMachines = {},
 		},
-		Icon = "rbxassetid://7435467441",
 		TreePosition = {X = 2, Y = 1},
 	},
 }
