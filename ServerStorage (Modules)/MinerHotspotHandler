@@ -9,13 +9,13 @@ MinerHotspotHandler.HotspotConfigs = {
 	[1] = {
 		Id = 1,
 		MinerName = "Iron Mine 1",
-		Cost = 0, -- Free starter mine
+		Cost = 4, -- Free starter mine
 		Description = "",
 	},
 	[2] = {
 		Id = 2,
 		MinerName = "Iron Mine 2",
-		Cost = 0,
+		Cost = 10,
 		Description = "",
 	},
 	[3] = {
@@ -50,7 +50,19 @@ MinerHotspotHandler.HotspotConfigs = {
 	},
 	[8] = {
 		Id = 8,
-		MinerName = "Gold Mine 1",
+		MinerName = "Gold Mine 2",
+		Cost = 0,
+		Description = "",
+	},
+	[9] = {
+		Id = 9,
+		MinerName = "Iron Mine 4",
+		Cost = 0,
+		Description = "",
+	},
+	[10] = {
+		Id = 10,
+		MinerName = "Iron Mine 5",
 		Cost = 0,
 		Description = "",
 	},
