@@ -443,44 +443,48 @@ function module.LOAD(MODULE_INFO)
 		if not INV[tostring(ITEM_BUTTON:GetAttribute("ITEM_ID"))] or INV[tostring(ITEM_BUTTON:GetAttribute("ITEM_ID"))].Amount <= 0 then
 			return false
 		end
-
 		local CAN_SHOW = true
-
 		-- Hide hotspot-only items
 		if ITEM_INFO.SpecialTags and ITEM_INFO.SpecialTags.HotspotOnly then
 			return false
 		end
-
 		-- Search filter
 		if string.len(searchBox.Text) > 0 then
 			if not string.find(string.lower(ITEM_BUTTON:GetAttribute("ITEM_NAME")), string.lower(searchBox.Text)) then
 				CAN_SHOW = false
 			end
 		end
-
-		-- Category filter (check both ways for singular/plural matching)
+		-- Category filter (supports multiple categories and singular/plural matching)
 		if CAN_SHOW and CURRENT_ITEM_FILTER ~= "All" then
-			local tabItem = string.lower(ITEM_INFO.TabItem or "")
 			local filter = string.lower(CURRENT_ITEM_FILTER)
-
-			-- Check if either contains the other (handles singular/plural)
-			if not (string.find(tabItem, filter) or string.find(filter, tabItem)) then
+			local matchFound = false
+			-- Check if TabItem is a table (multiple categories)
+			if type(ITEM_INFO.TabItem) == "table" then
+				for _, tabItem in ipairs(ITEM_INFO.TabItem) do
+					local tabItemLower = string.lower(tabItem)
+					-- Check if either contains the other (handles singular/plural)
+					if string.find(tabItemLower, filter) or string.find(filter, tabItemLower) then
+						matchFound = true
+						break
+					end
+				end
+			else
+				-- Single category - normal string matching
+				local tabItem = string.lower(ITEM_INFO.TabItem or "")
+				if string.find(tabItem, filter) or string.find(filter, tabItem) then
+					matchFound = true
+				end
+			end
+			if not matchFound then
 				CAN_SHOW = false
 			end
 		end
 
-		return CAN_SHOW
+		return CAN_SHOW 
 	end
 
 	local function GET_ORDER(ITEM, ITEM_INFO)
-		local TIER_NAME, TIER_INFO = MainLib.GET_ITEM_TIER_INFO(ITEM.Name)
-		if Plr.InvSort.Value == "Newest" then
-			return -ITEM_INFO.ItemId
-		elseif Plr.InvSort.Value == "Tier" then
-			return -TIER_INFO["TIER_ID"]
-		elseif Plr.InvSort.Value == "Oldest" then
-			return ITEM_INFO.ItemId
-		end
+		return ITEM_INFO.Cost  -- Sort by price, lowest first (ascending)
 	end
 
 	LOAD_INV = function()
