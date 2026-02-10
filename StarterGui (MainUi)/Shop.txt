@@ -730,10 +730,19 @@ function module.LOAD(MODULE_INFO)
 			end
 		end
 
-		-- Category filter
+		-- Category filter (supports multiple categories)
 		if CAN_SHOW and CURRENT_TAB ~= "AllTab" then
-			if CURRENT_TAB ~= ITEM_INFO.ItemType then
-				CAN_SHOW = false
+			-- Check if ItemType is a table (multiple categories)
+			if type(ITEM_INFO.ItemType) == "table" then
+				-- Check if current tab is in the array
+				if not table.find(ITEM_INFO.ItemType, CURRENT_TAB) then
+					CAN_SHOW = false
+				end
+			else
+				-- Single category - direct comparison
+				if ITEM_INFO.ItemType ~= CURRENT_TAB then
+					CAN_SHOW = false
+				end
 			end
 		end
 
