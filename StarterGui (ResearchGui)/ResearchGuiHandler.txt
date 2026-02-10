@@ -635,13 +635,45 @@ local function createObjectiveCard(objectiveData, researchData, position)
 		statusIcon = statusIcon
 	}
 
-	-- TOKEN REWARD DISPLAY (show for all objectives with tokens)
-	if objectiveData.Rewards.ResearchTokens and objectiveData.Rewards.ResearchTokens > 0 then
+	-- TOKEN REWARD DISPLAY (show for objectives with tokens, but NOT if it's just an age unlock with machines)
+	local hasTokens = objectiveData.Rewards and objectiveData.Rewards.ResearchTokens and objectiveData.Rewards.ResearchTokens > 0
+	local isMainObjective = objectiveData.IsMainObjective or false
+	local hasMachineUnlocks = objectiveData.Rewards and objectiveData.Rewards.UnlockMachines and #objectiveData.Rewards.UnlockMachines > 0
+
+	-- Only show token reward label if there are tokens, or if it's a main objective WITHOUT machine unlocks
+	if hasTokens or (isMainObjective and not hasMachineUnlocks) then
 		local rewardLabel = Instance.new("TextLabel")
 		rewardLabel.Size = UDim2.new(0.9273, 0, 0.0909, 0)
-		rewardLabel.Position = UDim2.new(0.0364, 0, 0.7, 0)  -- Adjusted position
+		rewardLabel.Position = UDim2.new(0.0364, 0, 0.7, 0)
 		rewardLabel.BackgroundTransparency = 1
-		rewardLabel.Text = "+" .. objectiveData.Rewards.ResearchTokens .. " Research Tokens"
+
+		-- Build reward text
+		local rewardText = ""
+
+		-- Add token text if there are tokens
+		if hasTokens then
+			rewardText = "+" .. objectiveData.Rewards.ResearchTokens .. " Research Tokens"
+		end
+
+		-- Add "unlock next age" text only if NO machine unlocks
+		if isMainObjective and not hasMachineUnlocks then
+			local nextAgeId = objectiveData.Age + 1
+			local ageNames = {
+				[2] = "Second Age",
+				[3] = "Third Age",
+				[4] = "Fourth Age",
+			}
+
+			if ageNames[nextAgeId] then
+				if rewardText ~= "" then
+					rewardText = rewardText .. " + " .. ageNames[nextAgeId]
+				else
+					rewardText = "🔓 Unlock " .. ageNames[nextAgeId]
+				end
+			end
+		end
+
+		rewardLabel.Text = rewardText
 		rewardLabel.TextColor3 = Color3.fromRGB(150, 220, 255)
 		rewardLabel.TextSize = 12
 		rewardLabel.Font = Enum.Font.GothamBold
@@ -656,145 +688,173 @@ local function createObjectiveCard(objectiveData, researchData, position)
 		rewardConstraint.Parent = rewardLabel
 	end
 
-	-- Unlocks section (machines)
-	if objectiveData.Rewards.UnlockMachines and #objectiveData.Rewards.UnlockMachines > 0 then
-		local unlocksLabel = Instance.new("TextLabel")
-		unlocksLabel.Size = UDim2.new(0.32, 0, 0.18, 0)  -- 60/220 = 0.2727, 32/220 = 0.1455
-		unlocksLabel.Position = UDim2.new(0.0364, 0, 0.67, 0)  -- Adjusted position
-		unlocksLabel.BackgroundTransparency = 1
-		unlocksLabel.Text = "🔓Unlocks:"
-		unlocksLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
-		unlocksLabel.TextSize = 12
-		unlocksLabel.Font = Enum.Font.GothamBold
-		unlocksLabel.TextXAlignment = Enum.TextXAlignment.Left
-		unlocksLabel.TextYAlignment = Enum.TextYAlignment.Center
-		unlocksLabel.TextScaled = true
-		unlocksLabel.ZIndex = 3
-		unlocksLabel.Parent = card
+	-- Unlocks section (machines + age unlock on same line)
+	-- Wrap in pcall to prevent errors from stopping card creation
+	local unlocksSuccess = pcall(function()
+		if hasMachineUnlocks then
+			local unlocksLabel = Instance.new("TextLabel")
+			unlocksLabel.Size = UDim2.new(0.32, 0, 0.18, 0)
+			unlocksLabel.Position = UDim2.new(0.0364, 0, 0.67, 0)
+			unlocksLabel.BackgroundTransparency = 1
+			unlocksLabel.Text = "🔓Unlocks:"
+			unlocksLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
+			unlocksLabel.TextSize = 12
+			unlocksLabel.Font = Enum.Font.GothamBold
+			unlocksLabel.TextXAlignment = Enum.TextXAlignment.Left
+			unlocksLabel.TextYAlignment = Enum.TextYAlignment.Center
+			unlocksLabel.TextScaled = true
+			unlocksLabel.ZIndex = 3
+			unlocksLabel.Parent = card
 
-		local unlocksConstraint = Instance.new("UITextSizeConstraint")
-		unlocksConstraint.MaxTextSize = 24
-		unlocksConstraint.Parent = unlocksLabel
+			local unlocksConstraint = Instance.new("UITextSizeConstraint")
+			unlocksConstraint.MaxTextSize = 24
+			unlocksConstraint.Parent = unlocksLabel
 
-		-- Display unlocked machines (next to the label)
-		local iconStartX = 0.38  -- 73/220 = 0.3318
-		local iconSpacing = 0.1682  -- 37/220 = 0.1682
-		local iconSize = 0.14  -- 32/220 = 0.1455
-		local currentIconX = iconStartX
+			-- Display unlocked machines (next to the label)
+			local iconStartX = 0.38
+			local iconSpacing = 0.1682
+			local iconSize = 0.14
+			local currentIconX = iconStartX
 
-		for _, machineId in pairs(objectiveData.Rewards.UnlockMachines) do
-			-- Find the machine in RepStorage.Items
-			for _, item in pairs(RepStorage.Items:GetChildren()) do
-				local itemInfo = require(item.ItemStats)
-				if itemInfo.ItemId == machineId then
-					-- Create icon button for hover detection
-					local iconButton = Instance.new("ImageButton")
-					iconButton.Size = UDim2.new(iconSize, 0, iconSize, 0)
-					iconButton.Position = UDim2.new(currentIconX, 0, 0.685, 0)  -- Adjusted position
-					iconButton.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-					iconButton.BorderSizePixel = 0
-					iconButton.Image = itemInfo.ThumbnailId
-					iconButton.ZIndex = 3
-					iconButton.AutoButtonColor = false
-					iconButton.Parent = card
+			for _, machineId in pairs(objectiveData.Rewards.UnlockMachines) do
+				local machineFound = false
 
-					local iconCorner = Instance.new("UICorner")
-					iconCorner.CornerRadius = UDim.new(0.15, 0)  -- 6/32 = 0.1875, use 0.15 for slightly less rounding
-					iconCorner.Parent = iconButton
+				-- Find the machine in RepStorage.Items
+				for _, item in pairs(RepStorage.Items:GetChildren()) do
+					if not machineFound then
+						local success, itemInfo = pcall(function()
+							return require(item.ItemStats)
+						end)
 
-					-- Create tooltip (scaled for screen size)
-					local tooltipWidth = math.max(150, 200 * SCALE_FACTOR)
-					local tooltipHeight = math.max(60, 80 * SCALE_FACTOR)
+						if success and itemInfo and itemInfo.ItemId == machineId then
+							machineFound = true
 
-					local tooltip = Instance.new("Frame")
-					tooltip.Name = "Tooltip"
-					tooltip.Size = UDim2.new(0, tooltipWidth, 0, tooltipHeight)
-					tooltip.Position = UDim2.new(0.5, 0, 0, -(tooltipHeight + 5))
-					tooltip.AnchorPoint = Vector2.new(0.5, 0)
-					tooltip.BackgroundColor3 = Color3.fromRGB(29, 29, 33)
-					tooltip.BorderSizePixel = 0
-					tooltip.Visible = false
-					tooltip.ZIndex = 10
-					tooltip.Parent = iconButton
+							-- Create icon button for hover detection
+							local iconButton = Instance.new("ImageButton")
+							iconButton.Size = UDim2.new(iconSize, 0, iconSize, 0)
+							iconButton.Position = UDim2.new(currentIconX, 0, 0.685, 0)
+							iconButton.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+							iconButton.BorderSizePixel = 0
+							iconButton.Image = itemInfo.ThumbnailId or ""
+							iconButton.ZIndex = 3
+							iconButton.AutoButtonColor = false
+							iconButton.Parent = card
 
-					local tooltipCorner = Instance.new("UICorner")
-					tooltipCorner.CornerRadius = UDim.new(0.04, 0)  -- 8/200 = 0.04
-					tooltipCorner.Parent = tooltip
+							local iconCorner = Instance.new("UICorner")
+							iconCorner.CornerRadius = UDim.new(0.15, 0)
+							iconCorner.Parent = iconButton
 
-					-- Item name
-					local tooltipName = Instance.new("TextLabel")
-					tooltipName.Size = UDim2.new(0.95, 0, 0.25, 0)  -- (200-10)/200 = 0.95, 20/80 = 0.25
-					tooltipName.Position = UDim2.new(0.025, 0, 0.0625, 0)  -- 5/200 = 0.025, 5/80 = 0.0625
-					tooltipName.BackgroundTransparency = 1
-					tooltipName.Text = item.Name
-					tooltipName.TextColor3 = Color3.fromRGB(255, 255, 255)
-					tooltipName.TextSize = math.max(10, 13 * SCALE_FACTOR)
-					tooltipName.Font = Enum.Font.GothamBold
-					tooltipName.TextXAlignment = Enum.TextXAlignment.Left
-					tooltipName.TextScaled = true
-					tooltipName.ZIndex = 10
-					tooltipName.Parent = tooltip
+							-- Create tooltip (scaled for screen size)
+							local tooltipWidth = math.max(150, 200 * SCALE_FACTOR)
+							local tooltipHeight = math.max(60, 80 * SCALE_FACTOR)
 
-					local tooltipNameConstraint = Instance.new("UITextSizeConstraint")
-					tooltipNameConstraint.MaxTextSize = math.max(10, 13 * SCALE_FACTOR)
-					tooltipNameConstraint.Parent = tooltipName
+							local tooltip = Instance.new("Frame")
+							tooltip.Name = "Tooltip"
+							tooltip.Size = UDim2.new(0, tooltipWidth, 0, tooltipHeight)
+							tooltip.Position = UDim2.new(0.5, 0, 1.1, 0)
+							tooltip.AnchorPoint = Vector2.new(0.5, 0)
+							tooltip.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+							tooltip.BorderSizePixel = 0
+							tooltip.Visible = false
+							tooltip.ZIndex = 10
+							tooltip.Parent = iconButton
 
-					-- Get tier info from MainLib
-					local MainLib = require(RepStorage.Modules.MainLib)
-					local tierName, tierData = MainLib.GET_ITEM_TIER_INFO(item.Name)
+							local tooltipCorner = Instance.new("UICorner")
+							tooltipCorner.CornerRadius = UDim.new(0, math.max(4, 6 * SCALE_FACTOR))
+							tooltipCorner.Parent = tooltip
 
-					-- Tier info
-					local tooltipTier = Instance.new("TextLabel")
-					tooltipTier.Size = UDim2.new(0.95, 0, 0.1875, 0)  -- 15/80 = 0.1875
-					tooltipTier.Position = UDim2.new(0.025, 0, 0.3375, 0)  -- 27/80 = 0.3375
-					tooltipTier.BackgroundTransparency = 1
-					tooltipTier.Text = tierName or ("Tier " .. itemInfo.TierId)
-					tooltipTier.TextColor3 = tierData and tierData["TIER_COLOR"] or Color3.fromRGB(150, 150, 150)
-					tooltipTier.TextSize = math.max(8, 11 * SCALE_FACTOR)
-					tooltipTier.Font = Enum.Font.GothamBold
-					tooltipTier.TextXAlignment = Enum.TextXAlignment.Left
-					tooltipTier.TextScaled = true
-					tooltipTier.ZIndex = 10
-					tooltipTier.Parent = tooltip
+							local tooltipStroke = Instance.new("UIStroke")
+							tooltipStroke.Color = Color3.fromRGB(60, 60, 80)
+							tooltipStroke.Thickness = 1
+							tooltipStroke.Transparency = 0.6
+							tooltipStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+							tooltipStroke.Parent = tooltip
 
-					local tooltipTierConstraint = Instance.new("UITextSizeConstraint")
-					tooltipTierConstraint.MaxTextSize = math.max(8, 11 * SCALE_FACTOR)
-					tooltipTierConstraint.Parent = tooltipTier
+							local tooltipTitle = Instance.new("TextLabel")
+							tooltipTitle.Size = UDim2.new(0.9, 0, 0.4, 0)
+							tooltipTitle.Position = UDim2.new(0.05, 0, 0.05, 0)
+							tooltipTitle.BackgroundTransparency = 1
+							tooltipTitle.Text = itemInfo.Name or "Unknown"
+							tooltipTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+							tooltipTitle.TextSize = math.max(8, 12 * SCALE_FACTOR)
+							tooltipTitle.Font = Enum.Font.GothamBold
+							tooltipTitle.TextXAlignment = Enum.TextXAlignment.Left
+							tooltipTitle.TextScaled = true
+							tooltipTitle.ZIndex = 10
+							tooltipTitle.Parent = tooltip
 
-					-- Description
-					local tooltipDesc = Instance.new("TextLabel")
-					tooltipDesc.Size = UDim2.new(0.95, 0, 0.4375, 0)  -- 35/80 = 0.4375
-					tooltipDesc.Position = UDim2.new(0.025, 0, 0.525, 0)  -- 42/80 = 0.525
-					tooltipDesc.BackgroundTransparency = 1
-					tooltipDesc.Text = itemInfo.Description
-					tooltipDesc.TextColor3 = Color3.fromRGB(200, 200, 200)
-					tooltipDesc.TextSize = math.max(7, 10 * SCALE_FACTOR)
-					tooltipDesc.Font = Enum.Font.Gotham
-					tooltipDesc.TextWrapped = true
-					tooltipDesc.TextXAlignment = Enum.TextXAlignment.Left
-					tooltipDesc.TextYAlignment = Enum.TextYAlignment.Top
-					tooltipDesc.TextScaled = true
-					tooltipDesc.ZIndex = 10
-					tooltipDesc.Parent = tooltip
+							local tooltipTitleConstraint = Instance.new("UITextSizeConstraint")
+							tooltipTitleConstraint.MaxTextSize = math.max(8, 12 * SCALE_FACTOR)
+							tooltipTitleConstraint.Parent = tooltipTitle
 
-					local tooltipDescConstraint = Instance.new("UITextSizeConstraint")
-					tooltipDescConstraint.MaxTextSize = math.max(7, 10 * SCALE_FACTOR)
-					tooltipDescConstraint.Parent = tooltipDesc
+							local tooltipDesc = Instance.new("TextLabel")
+							tooltipDesc.Size = UDim2.new(0.9, 0, 0.5, 0)
+							tooltipDesc.Position = UDim2.new(0.05, 0, 0.45, 0)
+							tooltipDesc.BackgroundTransparency = 1
+							tooltipDesc.Text = itemInfo.Description or "No description"
+							tooltipDesc.TextColor3 = Color3.fromRGB(180, 180, 180)
+							tooltipDesc.TextSize = math.max(7, 10 * SCALE_FACTOR)
+							tooltipDesc.Font = Enum.Font.Gotham
+							tooltipDesc.TextWrapped = true
+							tooltipDesc.TextXAlignment = Enum.TextXAlignment.Left
+							tooltipDesc.TextYAlignment = Enum.TextYAlignment.Top
+							tooltipDesc.TextScaled = true
+							tooltipDesc.ZIndex = 10
+							tooltipDesc.Parent = tooltip
 
-					-- Hover events
-					iconButton.MouseEnter:Connect(function()
-						tooltip.Visible = true
-					end)
+							local tooltipDescConstraint = Instance.new("UITextSizeConstraint")
+							tooltipDescConstraint.MaxTextSize = math.max(7, 10 * SCALE_FACTOR)
+							tooltipDescConstraint.Parent = tooltipDesc
 
-					iconButton.MouseLeave:Connect(function()
-						tooltip.Visible = false
-					end)
+							-- Hover events
+							iconButton.MouseEnter:Connect(function()
+								tooltip.Visible = true
+							end)
 
-					currentIconX = currentIconX + iconSpacing
-					break
+							iconButton.MouseLeave:Connect(function()
+								tooltip.Visible = false
+							end)
+
+							currentIconX = currentIconX + iconSpacing
+						end
+					end
+				end
+			end
+
+			-- Add age unlock text after the machine icons (if this is a main objective)
+			if isMainObjective then
+				local nextAgeId = objectiveData.Age + 1
+				local ageNames = {
+					[2] = "Second Age",
+					[3] = "Third Age",
+					[4] = "Fourth Age",
+				}
+
+				if ageNames[nextAgeId] then
+					local ageUnlockLabel = Instance.new("TextLabel")
+					ageUnlockLabel.Size = UDim2.new(0.4, 0, 0.1, 0)
+					ageUnlockLabel.Position = UDim2.new(currentIconX, 0, 0.71, 0)
+					ageUnlockLabel.BackgroundTransparency = 1
+					ageUnlockLabel.Text = "+ " .. ageNames[nextAgeId]
+					ageUnlockLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
+					ageUnlockLabel.TextSize = 8
+					ageUnlockLabel.Font = Enum.Font.GothamBold
+					ageUnlockLabel.TextXAlignment = Enum.TextXAlignment.Left
+					ageUnlockLabel.TextYAlignment = Enum.TextYAlignment.Center
+					ageUnlockLabel.TextScaled = true
+					ageUnlockLabel.ZIndex = 3
+					ageUnlockLabel.Parent = card
+
+					local ageUnlockConstraint = Instance.new("UITextSizeConstraint")
+					ageUnlockConstraint.MaxTextSize = 14
+					ageUnlockConstraint.Parent = ageUnlockLabel
 				end
 			end
 		end
+	end)
+
+	if not unlocksSuccess then
+		warn("Error creating unlocks section for objective:", objectiveData.Id)
 	end
 
 	-- Action button
