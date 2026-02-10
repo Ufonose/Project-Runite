@@ -23,6 +23,13 @@ ResearchData.Ages = {
 		Icon = "⚡",
 		Color = Color3.fromRGB(140, 100, 140),
 	},
+	{
+		Id = 4,
+		Name = "Fourth Age",
+		Description = "Master ultimate production",  -- Your description
+		Icon = "🔮",  -- Choose your icon
+		Color = Color3.fromRGB(143, 143, 0),  -- Choose your color
+	},
 }
 
 -- Define all research objectives with Age assignments
@@ -848,7 +855,44 @@ ResearchData.Objectives = {
 		TreePosition = {X = 12, Y = 2}, -- (column 1, row 1)
 	},
 
+	-- ============================================
+	-- FOURTH AGE - Bulk PROCESSING
+	-- ============================================
 
+
+	{
+		Id = 56, 
+		Name = "Iron Master 1",
+		Description = "Deposit iron",
+		Age = 4,
+		RequiredObjectives = {55}, 
+		Requirements = {
+			{ItemName = "Iron Ore", Amount = 1000},
+			{ItemName = "Iron Ore_Crushed", Amount = 1000},
+			{ItemName = "Iron Ore_Cleaned", Amount = 1000},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 1, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 57, 
+		Name = "Iron Master 2",
+		Description = "Deposit iron",
+		Age = 4,
+		RequiredObjectives = {57}, 
+		Requirements = {
+			{ItemName = "Iron Ingot", Amount = 1000},
+			{ItemName = "Iron Plate", Amount = 1000},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 1, Y = 1}, -- (column 1, row 1)
+	},
 
 
 }
