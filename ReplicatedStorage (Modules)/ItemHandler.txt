@@ -20,26 +20,7 @@ if success then
 end
 
 function module.GET_REAL_TIER(ITEM_INFO)
-	local SHOP_TYPES = {"MineTab", "MachineTab", "ProcessorTab", "DecorTab"}
-	local TIER_ID = ITEM_INFO.TierId
-	if table.find(SHOP_TYPES, ITEM_INFO.ItemType) then
-		if ITEM_INFO.Cost >= 1000000000 then
-			TIER_ID = 7
-		elseif ITEM_INFO.Cost >= 100000000 then
-			TIER_ID = 6
-		elseif ITEM_INFO.Cost >= 10000000 then
-			TIER_ID = 5
-		elseif ITEM_INFO.Cost >= 1250000 then
-			TIER_ID = 4
-		elseif ITEM_INFO.Cost >= 750000 then
-			TIER_ID = 3
-		elseif ITEM_INFO.Cost >= 300000 then
-			TIER_ID = 2
-		elseif ITEM_INFO.Cost >= 75000 then
-			TIER_ID = 1
-		end
-	end
-	return TIER_ID
+	return ITEM_INFO.TierId  -- Just use what you set!
 end
 
 -- MODIFIED: Added optional CUSTOM_ORE_NAME parameter for rarity system
