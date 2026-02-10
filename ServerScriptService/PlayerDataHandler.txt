@@ -11,7 +11,7 @@ local PLAYER_DATA_INFO = require(ServerStorage.Modules.PlayerDataInfo)
 local CASH_LIB = require(RepStorage.Modules.CashLib)
 local MainLib = require(RepStorage.Modules.MainLib)
 -- Constants
-local data_code = "map_r4"		-- Change this string to reset data map_36
+local data_code = "map_r14"		-- Change this string to reset data map_r14
 
 if workspace:FindFirstChild("Items") then
 	workspace.Items.Parent = RepStorage
@@ -94,91 +94,19 @@ local function LOAD_DATA(Plr)
 	-- Cash Loading
 	local plr_cash = Instance.new("NumberValue", ServerStorage.ServerLockedPlayerInfo.PlayerCash)
 	plr_cash.Name = Plr.Name
-	plr_cash.Value = plr_data["Cash"] or 250
+	plr_cash.Value = plr_data["Cash"] or 400
 
 	-- Load the Player's Inventory!
 	local default_inv = {
 		["2"] = { -- String keys instead of numeric
-			["Amount"] = 20,
+			["Amount"] = 18,
 			["Unlocked"] = true,  
 		},
-		["3"] = {
-			["Amount"] = 1,
-			["Unlocked"] = true,
-		},
 		["7"] = {
-			["Amount"] = 20,
+			["Amount"] = 4,
 			["Unlocked"] = true,
 		},
-		["8"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["9"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["10"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["6"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["11"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["12"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["13"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["14"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["15"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["16"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["17"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["18"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["19"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["20"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["21"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["22"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
-		},
-		["23"] = {
-			["Amount"] = 20,
-			["Unlocked"] = true,
 
-		},
 	}
 	_G["global_data"][Plr.Name]["Items"] = plr_data["InvItemSaveData"] or default_inv
 
