@@ -1,4 +1,4 @@
--- ServerScriptService/SlopedConveyorManager.txt (FIXED)
+-- ServerScriptService/SlopedConveyorManager
 
 local RunService = game:GetService("RunService")
 
@@ -58,9 +58,9 @@ local function registerSlopedConveyor(conveyorPart)
 		speed = itemInfo.ConveyorSpeed
 	end
 
-	-- Check if this conveyor can flip (has ConvVelo)
+	-- Check if this conveyor can flip (has ConvVelo AND is NOT ConvSlopeMerge)
 	local convVelo = conveyorPart:FindFirstChild("ConvVelo")
-	if convVelo then
+	if convVelo and conveyorPart.Name ~= "ConvSlopeMerge" then
 		canFlip = true
 		speed = convVelo -- Use the value object instead
 	end
@@ -78,17 +78,17 @@ end
 local function unregisterSlopedConveyor(conveyorPart)
 	for i, data in ipairs(slopedConveyors) do
 		if data.part == conveyorPart then
-			table.remove(conveyorParts, i)
+			table.remove(slopedConveyors, i)
 			break
 		end
 	end
 end
 
--- Find all existing sloped conveyors (ONLY ConvSlope parts)
+-- Find all existing sloped conveyors (ConvSlope and ConvSlopeMerge parts)
 for _, plot in pairs(workspace.Plots:GetChildren()) do
 	for _, item in pairs(plot.PlacedItems:GetChildren()) do
 		for _, descendant in pairs(item:GetDescendants()) do
-			if descendant:IsA("BasePart") and descendant.Name == "ConvSlope" then
+			if descendant:IsA("BasePart") and (descendant.Name == "ConvSlope" or descendant.Name == "ConvSlopeMerge") then
 				registerSlopedConveyor(descendant)
 			end
 		end
@@ -97,14 +97,14 @@ end
 
 -- Monitor for new sloped conveyors
 workspace.DescendantAdded:Connect(function(descendant)
-	if descendant:IsA("BasePart") and descendant.Name == "ConvSlope" then
+	if descendant:IsA("BasePart") and (descendant.Name == "ConvSlope" or descendant.Name == "ConvSlopeMerge") then
 		task.wait(0.1)
 		registerSlopedConveyor(descendant)
 	end
 end)
 
 workspace.DescendantRemoving:Connect(function(descendant)
-	if descendant:IsA("BasePart") and descendant.Name == "ConvSlope" then
+	if descendant:IsA("BasePart") and (descendant.Name == "ConvSlope" or descendant.Name == "ConvSlopeMerge") then
 		unregisterSlopedConveyor(descendant)
 	end
 end)
