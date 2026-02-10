@@ -33,7 +33,7 @@ ResearchData.Objectives = {
 	{
 		Id = 1,
 		Name = "Iron Collector 1",
-		Description = "Collect raw iron ore",
+		Description = "Deposit raw iron ore",
 		Age = 1,
 		RequiredObjectives = {},
 		Requirements = {
@@ -48,7 +48,7 @@ ResearchData.Objectives = {
 	{
 		Id = 2,
 		Name = "Iron Collector 2",
-		Description = "Collect raw iron ore",
+		Description = "Deposit raw iron ore",
 		Age = 1,
 		RequiredObjectives = {1},
 		Requirements = {
@@ -63,7 +63,7 @@ ResearchData.Objectives = {
 	{
 		Id = 3,
 		Name = "Gem Collector 1",
-		Description = "Collect an emerald gem",
+		Description = "Deposit an emerald gem",
 		Age = 1,
 		RequiredObjectives = {1},
 		Requirements = {
@@ -108,7 +108,7 @@ ResearchData.Objectives = {
 	{
 		Id = 6,
 		Name = "Iron Collector 3",
-		Description = "Collect raw and crushed iron ore",
+		Description = "Deposit raw and crushed iron ore",
 		Age = 1,
 		RequiredObjectives = {5},
 		Requirements = {
@@ -121,11 +121,11 @@ ResearchData.Objectives = {
 		},
 		TreePosition = {X = 5, Y = 1}, -- (column 1, row 1)
 	},
-	
+
 	{
 		Id = 7,
 		Name = "Gem Collector 2",
-		Description = "Collect a ruby gem",
+		Description = "Deposit a ruby gem",
 		Age = 1,
 		RequiredObjectives = {4},
 		Requirements = {
@@ -140,7 +140,7 @@ ResearchData.Objectives = {
 	{
 		Id = 8,
 		Name = "Iron Collector 4",
-		Description = "Collect raw and crushed iron ore",
+		Description = "Deposit raw and crushed iron ore",
 		Age = 1,
 		RequiredObjectives = {6},
 		Requirements = {
@@ -156,7 +156,7 @@ ResearchData.Objectives = {
 	{
 		Id = 9,
 		Name = "Ore Cleaner 1",
-		Description = "Pass crushed ores through a cleaning station",
+		Description = "Pass crushed iron ores through a cleaning station",
 		Age = 1,
 		RequiredObjectives = {8},
 		Requirements = {
@@ -171,7 +171,7 @@ ResearchData.Objectives = {
 	{
 		Id = 10,
 		Name = "Iron Collector 5",
-		Description = "Collect clean and crushed iron ore",
+		Description = "Deposit clean and crushed iron ore",
 		Age = 1,
 		RequiredObjectives = {9},
 		Requirements = {
@@ -190,13 +190,14 @@ ResearchData.Objectives = {
 		Description = "Master the first age",
 		Age = 1,
 		RequiredObjectives = {10},
+		IsMainObjective = true,
 		Requirements = {
 			{ItemName = "Iron Ore", Amount = 50},
 			{ItemName = "Iron Ore_Crushed", Amount = 50},
 			{ItemName = "Iron Ore_Cleaned", Amount = 50},
 		},
 		Rewards = {
-			ResearchTokens = 1,
+			ResearchTokens = 20,
 			UnlockMachines = {},
 		},
 		TreePosition = {X = 9, Y = 1}, -- (column 1, row 1)
@@ -208,14 +209,14 @@ ResearchData.Objectives = {
 	{
 		Id = 13,
 		Name = "Copper Collector 1",
-		Description = "Collect raw copper ore",
+		Description = "Deposit raw copper ore",
 		Age = 2,
 		RequiredObjectives = {12}, 
 		Requirements = {
 			{ItemName = "Copper Ore", Amount = 5},
 		},
 		Rewards = {
-			ResearchTokens = 1,
+			ResearchTokens = 3,
 			UnlockMachines = {}, 
 		},
 		TreePosition = {X = 1, Y = 1}, -- (column 1, row 1)
@@ -227,10 +228,10 @@ ResearchData.Objectives = {
 		Age = 2,
 		RequiredObjectives = {13}, 
 		Requirements = {
-			{ItemName = "Copper Ore_Curshed", Amount = 15},
+			{ItemName = "Copper Ore_Crushed", Amount = 15},
 		},
 		Rewards = {
-			ResearchTokens = 1,
+			ResearchTokens = 5,
 			UnlockMachines = {}, 
 		},
 		TreePosition = {X = 2, Y = 1}, -- (column 1, row 1)
@@ -238,7 +239,7 @@ ResearchData.Objectives = {
 	{
 		Id = 15,
 		Name = "Ore Cleaner 2",
-		Description = "Pass crushed ores through a cleaning station",
+		Description = "Pass crushed copper ores through a cleaning station",
 		Age = 2,
 		RequiredObjectives = {14}, 
 		Requirements = {
@@ -253,7 +254,7 @@ ResearchData.Objectives = {
 	{
 		Id = 16,
 		Name = "Gem Collector 3",
-		Description = "Collect gems",
+		Description = "Deposit gems",
 		Age = 2,
 		RequiredObjectives = {15}, 
 		Requirements = {
@@ -261,7 +262,7 @@ ResearchData.Objectives = {
 			{ItemName = "Ruby Gem", Amount = 4},
 		},
 		Rewards = {
-			ResearchTokens = 1,
+			ResearchTokens = 8,
 			UnlockMachines = {}, 
 		},
 		TreePosition = {X = 2, Y = 3}, -- (column 1, row 1)
@@ -269,7 +270,7 @@ ResearchData.Objectives = {
 	{
 		Id = 17,
 		Name = "Ore Collector 1",
-		Description = "Collect raw ores",
+		Description = "Deposit raw ores",
 		Age = 2,
 		RequiredObjectives = {14}, 
 		Requirements = {
@@ -277,7 +278,7 @@ ResearchData.Objectives = {
 			{ItemName = "Copper Ore", Amount = 30},
 		},
 		Rewards = {
-			ResearchTokens = 1,
+			ResearchTokens = 7,
 			UnlockMachines = {}, 
 		},
 		TreePosition = {X = 3, Y = 1}, -- (column 1, row 1)
@@ -301,7 +302,7 @@ ResearchData.Objectives = {
 	{
 		Id = 19,
 		Name = "Ore Collector 2",
-		Description = "Collect raw ores",
+		Description = "Deposit raw ores",
 		Age = 2,
 		RequiredObjectives = {17}, 
 		Requirements = {
@@ -317,14 +318,14 @@ ResearchData.Objectives = {
 	{
 		Id = 20,
 		Name = "The Smelter 1",
-		Description = "Proccess cleaned iron ore in the blast furnace",
+		Description = "Process cleaned iron ore in the blast furnace",
 		Age = 2,
 		RequiredObjectives = {19}, 
 		Requirements = {
 			{ItemName = "Iron Ingot", Amount = 5},
 		},
 		Rewards = {
-			ResearchTokens = 1,
+			ResearchTokens = 12,
 			UnlockMachines = {}, 
 		},
 		TreePosition = {X = 5, Y = 1}, -- (column 1, row 1)
@@ -332,7 +333,7 @@ ResearchData.Objectives = {
 	{
 		Id = 21,
 		Name = "The Smelter 2",
-		Description = "Proccess cleaned copper ore in the blast furnace",
+		Description = "Process cleaned copper ore in the blast furnace",
 		Age = 2,
 		RequiredObjectives = {20}, 
 		Requirements = {
@@ -347,7 +348,7 @@ ResearchData.Objectives = {
 	{
 		Id = 22,
 		Name = "The Smelter 3",
-		Description = "Proccess cleaned ore in the blast furnace",
+		Description = "Process cleaned ore in the blast furnace",
 		Age = 2,
 		RequiredObjectives = {21}, 
 		Requirements = {
@@ -355,7 +356,7 @@ ResearchData.Objectives = {
 			{ItemName = "Copper Ingot", Amount = 15},
 		},
 		Rewards = {
-			ResearchTokens = 1,
+			ResearchTokens = 14,
 			UnlockMachines = {}, 
 		},
 		TreePosition = {X = 5, Y = 3}, -- (column 1, row 1)
@@ -363,7 +364,7 @@ ResearchData.Objectives = {
 	{
 		Id = 23,
 		Name = "Iron Collector 6",
-		Description = "Collect iron ores and ingots",
+		Description = "Deposit iron ores and ingots",
 		Age = 2,
 		RequiredObjectives = {20}, 
 		Requirements = {
@@ -379,7 +380,7 @@ ResearchData.Objectives = {
 	{
 		Id = 24,
 		Name = "Copper Collector 2",
-		Description = "Collect copper ores and ingots",
+		Description = "Deposit copper ores and ingots",
 		Age = 2,
 		RequiredObjectives = {23}, 
 		Requirements = {
@@ -395,7 +396,7 @@ ResearchData.Objectives = {
 	{
 		Id = 25,
 		Name = "Gem Collector 4",
-		Description = "Collect a diamond gem",
+		Description = "Deposit a diamond gem",
 		Age = 2,
 		RequiredObjectives = {24}, 
 		Requirements = {
@@ -417,7 +418,7 @@ ResearchData.Objectives = {
 			{ItemName = "Impure Ingot", Amount = 10},
 		},
 		Rewards = {
-			ResearchTokens = 1,
+			ResearchTokens = 15,
 			UnlockMachines = {}, 
 		},
 		TreePosition = {X = 7, Y = 1}, -- (column 1, row 1)
@@ -425,7 +426,7 @@ ResearchData.Objectives = {
 	{
 		Id = 27,
 		Name = "Ingot Collector 1",
-		Description = "Collect impure and iron ingots",
+		Description = "Deposit impure and iron ingots",
 		Age = 2,
 		RequiredObjectives = {26}, 
 		Requirements = {
@@ -433,7 +434,7 @@ ResearchData.Objectives = {
 			{ItemName = "Iron Ingot", Amount = 8},
 		},
 		Rewards = {
-			ResearchTokens = 1,
+			ResearchTokens = 18,
 			UnlockMachines = {}, 
 		},
 		TreePosition = {X = 7, Y = 2}, -- (column 1, row 1)
@@ -441,7 +442,7 @@ ResearchData.Objectives = {
 	{
 		Id = 28,
 		Name = "Ingot Collector 2",
-		Description = "Collect impure and copper ingots",
+		Description = "Deposit impure and copper ingots",
 		Age = 2,
 		RequiredObjectives = {27}, 
 		Requirements = {
@@ -449,7 +450,7 @@ ResearchData.Objectives = {
 			{ItemName = "Copper Ingot", Amount = 8},
 		},
 		Rewards = {
-			ResearchTokens = 0,
+			ResearchTokens = 21,
 			UnlockMachines = {}, 
 		},
 		TreePosition = {X = 7, Y = 3}, -- (column 1, row 1)
@@ -457,13 +458,13 @@ ResearchData.Objectives = {
 	{
 		Id = 29,
 		Name = "Gem Colletor 5",
-		Description = "Collect gems",
+		Description = "Deposit gems",
 		Age = 2,
 		RequiredObjectives = {27}, 
 		Requirements = {
-			{ItemName = "Emerald Gem", Amount = 10},
-			{ItemName = "Ruby Gem", Amount = 8},
-			{ItemName = "Diamond Gem", Amount = 5},
+			{ItemName = "Emerald Gem", Amount = 7},
+			{ItemName = "Ruby Gem", Amount = 5},
+			{ItemName = "Diamond Gem", Amount = 1},
 		},
 		Rewards = {
 			ResearchTokens = 0,
@@ -478,32 +479,33 @@ ResearchData.Objectives = {
 		Age = 2,
 		RequiredObjectives = {29}, 
 		Requirements = {
-			{ItemName = "Polished Emerald Gem", Amount = 5},
-			{ItemName = "Polished Ruby Gem", Amount = 4},
-			{ItemName = "Polished Diamond Gem", Amount = 3},
+			{ItemName = "Polished Emerald Gem", Amount = 9},
+			{ItemName = "Polished Ruby Gem", Amount = 6},
+			{ItemName = "Polished Diamond Gem", Amount = 2},
 		},
 		Rewards = {
-			ResearchTokens = 1,
+			ResearchTokens = 25,
 			UnlockMachines = {}, 
 		},
-		TreePosition = {X = 9, Y = 2}, -- (column 1, row 1)
+		TreePosition = {X = 8, Y = 3}, -- (column 1, row 1)
 	},
 	{
 		Id = 33,
 		Name = "Second Age Master",
 		Description = "Master the second age",
 		Age = 2,
-		RequiredObjectives = {30}, 
+		RequiredObjectives = {26}, 
+		IsMainObjective = true,
 		Requirements = {
 			{ItemName = "Copper Ingot", Amount = 25},
 			{ItemName = "Iron Ingot", Amount = 25},
 			{ItemName = "Impure Ingot", Amount = 15},
 		},
 		Rewards = {
-			ResearchTokens = 1,
+			ResearchTokens = 150,
 			UnlockMachines = {}, 
 		},
-		TreePosition = {X = 10, Y = 2}, -- (column 1, row 1)
+		TreePosition = {X = 8, Y = 1}, -- (column 1, row 1)
 	},
 
 
@@ -513,38 +515,342 @@ ResearchData.Objectives = {
 	-- THIRD AGE - Powerful Automation
 	-- ============================================
 	{
-		Id = 1340,
-		Name = "Industrial Revolution",
-		Description = "Unlock industrial-scale production",
+		Id = 34,
+		Name = "Gold Collector 1",
+		Description = "Deposit raw gold ore",
 		Age = 3,
-		RequiredObjectives = {}, -- Requires completing Second Age final objective
+		RequiredObjectives = {33},
 		Requirements = {
-			{ItemName = "StoneOreModel", Amount = 2000},
-			{ItemName = "StoneOreModel_Crushed", Amount = 1000},
+			{ItemName = "Gold Ore", Amount = 10},
 		},
 		Rewards = {
-			ResearchTokens = 150,
+			ResearchTokens = 10,
 			UnlockMachines = {},
 		},
-		TreePosition = {X = 1, Y = 1}, -- Start of Third Age tree
+		TreePosition = {X = 1, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 35,
+		Name = "Crush It 5",
+		Description = "Crush raw gold ore in an ore crusher",
+		Age = 3,
+		RequiredObjectives = {34},
+		Requirements = {
+			{ItemName = "Gold Ore_Crushed", Amount = 25},
+		},
+		Rewards = {
+			ResearchTokens = 12,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 1, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 36,
+		Name = "Ore Cleaner 3",
+		Description = "Pass crushed gold ores through a cleaning station",
+		Age = 3,
+		RequiredObjectives = {35},
+		Requirements = {
+			{ItemName = "Gold Ore_Cleaned", Amount = 40},
+		},
+		Rewards = {
+			ResearchTokens = 15,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 1, Y = 3}, -- (column 1, row 1)
+	},
+	{
+		Id = 37,
+		Name = "The Smelter 4",
+		Description = "Process cleaned gold ore in the blast furnace",
+		Age = 3,
+		RequiredObjectives = {34},
+		Requirements = {
+			{ItemName = "Gold Ingot", Amount = 5},
+		},
+		Rewards = {
+			ResearchTokens = 0,
+			UnlockMachines = {21},
+		},
+		TreePosition = {X = 2, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 38,
+		Name = "Plate Collector 1",
+		Description = "Process gold ingots through the rolling mill",
+		Age = 3,
+		RequiredObjectives = {37},
+		Requirements = {
+			{ItemName = "Gold Plate", Amount = 5},
+		},
+		Rewards = {
+			ResearchTokens = 20,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 3, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 39,
+		Name = "Plate Collector 2",
+		Description = "Process ingots through the rolling mill",
+		Age = 3,
+		RequiredObjectives = {38},
+		Requirements = {
+			{ItemName = "Iron Plate", Amount = 25},
+			{ItemName = "Copper Plate", Amount = 25},
+		},
+		Rewards = {
+			ResearchTokens = 26,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 3, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 40,
+		Name = "Plate Collector 3",
+		Description = "Process impure ingots through the rolling mill",
+		Age = 3,
+		RequiredObjectives = {39},
+		Requirements = {
+			{ItemName = "Impure Plate", Amount = 25},
+		},
+		Rewards = {
+			ResearchTokens = 32,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 3, Y = 3}, -- (column 1, row 1)
+	},
+	{
+		Id = 42,
+		Name = "Plate Collector 4",
+		Description = "Process ingots through the rolling mill",
+		Age = 3,
+		RequiredObjectives = {38},
+		Requirements = {
+			{ItemName = "Iron Plate", Amount = 20},
+			{ItemName = "Copper Plate", Amount = 20},
+			{ItemName = "Gold Plate", Amount = 7},
+		},
+		Rewards = {
+			ResearchTokens = 0,
+			UnlockMachines = {23},
+		},
+		TreePosition = {X = 4, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 43,
+		Name = "Plate Processor 1",
+		Description = "Make iron gears in the plate processor",
+		Age = 3,
+		RequiredObjectives = {42},
+		Requirements = {
+			{ItemName = "Iron Gear", Amount = 20},
+		},
+		Rewards = {
+			ResearchTokens = 36,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 5, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 44,
+		Name = "Gem Collector 7",
+		Description = "Process gems through the polishing machine",
+		Age = 3,
+		RequiredObjectives = {43},
+		Requirements = {
+			{ItemName = "Polished Emerald Gem", Amount = 12},
+			{ItemName = "Polished Ruby Gem", Amount = 8},
+			{ItemName = "Polished Diamond Gem", Amount = 4},
+		},
+		Rewards = {
+			ResearchTokens = 50,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 5, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 45,
+		Name = "Copper Collector 3",
+		Description = "Deposit copper plates and gears",
+		Age = 3,
+		RequiredObjectives = {43},
+		Requirements = {
+			{ItemName = "Copper Plate", Amount = 15},
+			{ItemName = "Copper Gear", Amount = 15},
+		},
+		Rewards = {
+			ResearchTokens = 42,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 6, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 46,
+		Name = "Copper Collector 4",
+		Description = "Deposit copper plates and ingots",
+		Age = 3,
+		RequiredObjectives = {45},
+		Requirements = {
+			{ItemName = "Copper Ingot", Amount = 20},
+			{ItemName = "Copper Plate", Amount = 20},
+		},
+		Rewards = {
+			ResearchTokens = 46,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 6, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 47,
+		Name = "Plate Processor 2",
+		Description = "Deposit iron, copper and gold gears",
+		Age = 3,
+		RequiredObjectives = {45},
+		Requirements = {
+			{ItemName = "Iron Gear", Amount = 20},
+			{ItemName = "Copper Gear", Amount = 20},
+			{ItemName = "Gold Gear", Amount = 15},
+		},
+		Rewards = {
+			ResearchTokens = 53,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 7, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 48,
+		Name = "Plate Processor 3",
+		Description = "Make copper coils in the plate processor",
+		Age = 3,
+		RequiredObjectives = {47},
+		Requirements = {
+			{ItemName = "Copper Coil", Amount = 25},
+		},
+		Rewards = {
+			ResearchTokens = 58,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 8, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 49,
+		Name = "Iron Collector 7",
+		Description = "Deposit iron plates and ingots",
+		Age = 3,
+		RequiredObjectives = {48},
+		Requirements = {
+			{ItemName = "Iron Ingot", Amount = 30},
+			{ItemName = "Iron Plate", Amount = 30},
+		},
+		Rewards = {
+			ResearchTokens = 64,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 8, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 50,
+		Name = "Plate Processor 4",
+		Description = "Make impure coils in the plate processor",
+		Age = 3,
+		RequiredObjectives = {48},
+		Requirements = {
+			{ItemName = "Impure Coil", Amount = 20},
+		},
+		Rewards = {
+			ResearchTokens = 68,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 9, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 51,
+		Name = "Plate Processor 5",
+		Description = "Make gold pipes in the plate processor",
+		Age = 3,
+		RequiredObjectives = {50},
+		Requirements = {
+			{ItemName = "Gold Pipe", Amount = 20},
+		},
+		Rewards = {
+			ResearchTokens = 74,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 10, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 52,
+		Name = "Plate Processor 6",
+		Description = "Make iron gears and coper coils in the plate processor",
+		Age = 3,
+		RequiredObjectives = {51},
+		Requirements = {
+			{ItemName = "Iron Gear", Amount = 35},
+			{ItemName = "Copper Coil", Amount = 35},
+		},
+		Rewards = {
+			ResearchTokens = 79,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 11, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 53,
+		Name = "Gold Collector 2",
+		Description = "Make iron gears and coper coils in the plate processor",
+		Age = 3,
+		RequiredObjectives = {52},
+		Requirements = {
+			{ItemName = "Gold Ore", Amount = 50},
+			{ItemName = "Gold Ingot", Amount = 30},
+			{ItemName = "Gold Plate", Amount = 30},
+		},
+		Rewards = {
+			ResearchTokens = 85,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 11, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 54,
+		Name = "Gem Collector 8",
+		Description = "Process gems through the polishing machine",
+		Age = 3,
+		RequiredObjectives = {53},
+		Requirements = {
+			{ItemName = "Polished Emerald Gem", Amount = 20},
+			{ItemName = "Polished Ruby Gem", Amount = 16},
+			{ItemName = "Polished Diamond Gem", Amount = 8},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 11, Y = 3}, -- (column 1, row 1)
+	},
+	{
+		Id = 55,
+		Name = "Third Age Master",
+		Description = "Master the third age",
+		Age = 3,
+		RequiredObjectives = {53},
+		IsMainObjective = true,
+		Requirements = {
+			{ItemName = "Iron Gear", Amount = 50},
+			{ItemName = "Copper Coil", Amount = 50},
+			{ItemName = "Gold Pipe", Amount = 50},
+		},
+		Rewards = {
+			ResearchTokens = 0,
+			UnlockMachines = {16},
+		},
+		TreePosition = {X = 12, Y = 2}, -- (column 1, row 1)
 	},
 
-	{
-		Id = 1341,
-		Name = "Mega Automation",
-		Description = "Ultimate automation capabilities",
-		Age = 3,
-		RequiredObjectives = {}, -- Requires Industrial Revolution
-		Requirements = {
-			{ItemName = "StoneOreModel", Amount = 5000},
-			{ItemName = "StoneOreModel_Crushed", Amount = 2500},
-		},
-		Rewards = {
-			ResearchTokens = 250,
-			UnlockMachines = {},
-		},
-		TreePosition = {X = 2, Y = 1},
-	},
+
+
+
 }
 
 -- Get objective by ID
@@ -578,17 +884,20 @@ function ResearchData.GetAge(ageId)
 	return nil
 end
 
--- Check if an age is unlocked (all previous ages completed)
+-- Check if an age is unlocked (main objectives from previous age completed)
 function ResearchData.IsAgeUnlocked(ageId, completedObjectives)
 	if ageId == 1 then return true end
 
-	-- Check if all objectives from previous age are completed
+	-- Check if all MAIN objectives from previous age are completed
 	local previousAge = ageId - 1
 	local previousObjectives = ResearchData.GetObjectivesByAge(previousAge)
 
 	for _, obj in pairs(previousObjectives) do
-		if not table.find(completedObjectives, obj.Id) then
-			return false
+		-- Only check main objectives
+		if obj.IsMainObjective then
+			if not table.find(completedObjectives, obj.Id) then
+				return false
+			end
 		end
 	end
 
