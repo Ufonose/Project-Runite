@@ -247,6 +247,10 @@ local function StartLoadingSequence()
 	-- Phase 3: Wait for modules to load (40-70%)
 	UpdateProgress(statusText, progressFill, percentText, 45, "Loading game modules...")
 
+	-- Initialize UserInputService before enabling MainUi (ensures proper touch detection)
+	local UserInputService = game:GetService("UserInputService")
+	task.wait(0.05)  -- Brief delay for Studio emulator to register input mode
+
 	-- Enable MainUi and ModuleLoader
 	script.Parent.Parent.MainUi.Enabled = true
 	script.Parent.Parent.MainUi.Scripts.ModuleLoader.Disabled = false
