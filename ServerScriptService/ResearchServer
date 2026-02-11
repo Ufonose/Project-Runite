@@ -1,3 +1,5 @@
+-- ServerScriptService/ResearchServer (WITH ITEMSCOLLECTED)
+
 local RepStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local ResearchHandler = require(ServerStorage.Modules.ResearchHandler)
@@ -13,6 +15,7 @@ RepStorage.Events.GetResearchData.OnServerInvoke = function(player)
 		ObjectiveProgress = research.ObjectiveProgress,
 		ResearchTokens = player.ResearchTokens.Value,
 		AllObjectives = ResearchData.Objectives,
+		ItemsCollected = research.ItemsCollected,  -- NEW: Include statistics
 	}
 end
 
@@ -20,8 +23,6 @@ end
 RepStorage.Events.StartObjective.OnServerInvoke = function(player, objectiveId)
 	return ResearchHandler.StartObjective(player, objectiveId)
 end
-
--- REMOVED: ToggleResearchMode function (no longer needed - always both modes)
 
 -- Get which research unlocks a specific item
 RepStorage.Events.GetItemUnlockRequirement.OnServerInvoke = function(player, itemId)
