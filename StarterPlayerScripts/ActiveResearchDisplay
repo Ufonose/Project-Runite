@@ -1,6 +1,6 @@
 -- ActiveResearchDisplay
 -- Shows current active research on the side of the screen
--- FIXED: Now properly detects screen size changes
+-- FIXED: Added scrolling support for many objectives
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,7 +24,7 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ActiveResearchDisplay"
 screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.ScreenInsets = Enum.ScreenInsets.None  -- Disable safe insets to allow positioning at top
+screenGui.ScreenInsets = Enum.ScreenInsets.None
 screenGui.Parent = playerGui
 
 -- Title label (directly in screenGui)
@@ -48,14 +48,21 @@ titleConstraint.MaxTextSize = titleFontSize
 titleConstraint.MinTextSize = 8
 titleConstraint.Parent = titleLabel
 
--- Container for research items (directly in screenGui)
-local researchContainer = Instance.new("Frame")
+-- Container for research items (NOW A SCROLLING FRAME)
+local researchContainer = Instance.new("ScrollingFrame")
 researchContainer.Name = "ResearchContainer"
 researchContainer.AnchorPoint = Vector2.new(1, 0)
 researchContainer.Size = UDim2.new(containerWidth, 0, 0, 100)
 researchContainer.Position = UDim2.new(rightPosition, 0, 0.116, 0)
 researchContainer.BackgroundTransparency = 1
+researchContainer.BorderSizePixel = 0
 researchContainer.Visible = false
+researchContainer.ScrollBarThickness = 4
+researchContainer.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
+researchContainer.ScrollBarImageTransparency = 0.7
+researchContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+researchContainer.ScrollingDirection = Enum.ScrollingDirection.Y
+researchContainer.ElasticBehavior = Enum.ElasticBehavior.Never
 researchContainer.Parent = screenGui
 
 local containerLayout = Instance.new("UIListLayout")
@@ -67,6 +74,7 @@ containerLayout.Parent = researchContainer
 local function updateResponsiveValues()
 	local viewport = workspace.CurrentCamera.ViewportSize
 	local screenWidth = viewport.X
+	local screenHeight = viewport.Y
 
 	-- Update isMobile flag and all responsive values
 	isMobile = screenWidth < 900
@@ -78,11 +86,14 @@ local function updateResponsiveValues()
 		progressFontSize = 8
 		headerFontSize = 11
 		rightPosition = 0.99
-		topPosition = 0.055  -- Title position - change this to move title higher/lower
+		topPosition = 0.055
 
-		-- Container position - independent of title position on mobile
-		local containerTopPosition = 0.1  -- Change this to move objectives higher/lower
+		-- Container position and max height for mobile
+		local containerTopPosition = 0.1
+		local maxHeight = screenHeight * 0.7  -- Max 70% of screen height
 		researchContainer.Position = UDim2.new(rightPosition, 0, containerTopPosition, 0)
+		researchContainer.Size = UDim2.new(containerWidth, 0, 0, maxHeight)
+		researchContainer.ScrollBarThickness = 3
 	else
 		containerWidth = 0.13
 		titleFontSize = 17
@@ -92,8 +103,11 @@ local function updateResponsiveValues()
 		rightPosition = 0.99
 		topPosition = 0.25
 
-		-- Desktop uses offset from title
+		-- Desktop max height
+		local maxHeight = screenHeight * 0.6  -- Max 60% of screen height
 		researchContainer.Position = UDim2.new(rightPosition, 0, 0.275, 0)
+		researchContainer.Size = UDim2.new(containerWidth, 0, 0, maxHeight)
+		researchContainer.ScrollBarThickness = 4
 	end
 
 	-- Update title label
@@ -101,9 +115,6 @@ local function updateResponsiveValues()
 	titleLabel.Position = UDim2.new(rightPosition, 0, topPosition, 0)
 	titleLabel.TextSize = titleFontSize
 	titleConstraint.MaxTextSize = titleFontSize
-
-	-- Update research container size
-	researchContainer.Size = UDim2.new(containerWidth, 0, 0, researchContainer.Size.Y.Offset)
 
 	-- Update container layout padding
 	containerLayout.Padding = UDim.new(0, isMobile and 6 or 10)
@@ -402,7 +413,7 @@ function updateDisplay()
 		end
 	end
 
-	-- Calculate total height for the container
+	-- Calculate total height for the canvas
 	local lineHeight = isMobile and 25 or 35
 	local baseHeight = isMobile and 28 or 40
 	local spacing = isMobile and 6 or 10
@@ -414,15 +425,15 @@ function updateDisplay()
 			if obj.Id == activeId then
 				local numRequirements = #obj.Requirements
 				local itemHeight = baseHeight + (numRequirements * lineHeight)
-				totalHeight = totalHeight + itemHeight + spacing -- Item + spacing
+				totalHeight = totalHeight + itemHeight + spacing
 				break
 			end
 		end
 	end
 	totalHeight = totalHeight - spacing -- Remove last spacing
 
-	-- Update container size (width scale, height offset)
-	researchContainer.Size = UDim2.new(containerWidth, 0, 0, totalHeight)
+	-- Update canvas size to fit all content
+	researchContainer.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
 end
 
 -- Auto-update loop
