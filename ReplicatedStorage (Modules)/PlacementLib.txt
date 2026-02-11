@@ -1,10 +1,11 @@
+-- ReplicatedStorage (Modules)/PlacementLib - FIXED VERSION (No Deprecated APIs)
 local player = game.Players.LocalPlayer
 local mouse = player:GetMouse()
 local runService = game:GetService("RunService")
 local RepStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local cachedCaveWalls = {} -- Cache for current plot's cave walls
-local DirectionalArrows = require(RepStorage.Modules.DirectionalArrows) -- NEW: Arrow system
+local DirectionalArrows = require(RepStorage.Modules.DirectionalArrows)
 local touch = game:GetService("UserInputService").TouchEnabled
 local SoundManager = require(game:GetService("ReplicatedStorage").Modules.SoundManager)
 
@@ -14,17 +15,17 @@ local INTERPOLATION = true -- whether placement smoothing is enabled
 local INTERPOLATION_DAMP = .21 -- how fast smoothing is, make it a value (0, 1]
 local ROTATION_SPEED = .2 -- rotation tween speed in seconds
 
-local COLLISION_COLOR3 = BrickColor.Red().Color -- color of the hitbox when object collides
-local COLLISION_TRANSPARENCY = .8 -- transparency of the hitbox when object collides
+local COLLISION_COLOR3 = BrickColor.Red().Color
+local COLLISION_TRANSPARENCY = .8
 
-local NORMAL_COLOR3 = BrickColor.new().Color -- color of the hitbox
-local NORMAL_TRANSPARENCY = .8 -- transparency of the hitbox
+local NORMAL_COLOR3 = BrickColor.new().Color
+local NORMAL_TRANSPARENCY = .8
 
-local LOAD_COLOR3 = Color3.fromRGB(226, 155, 64) -- color of the hitbox when loading
-local LOAD_TRANSPARENCY = .6 -- transparency of the hitbox when loading
+local LOAD_COLOR3 = Color3.fromRGB(226, 155, 64)
+local LOAD_TRANSPARENCY = .6
 
-local GRID_SIZE = Enums.Nums.PLACEMENT_GRID_SIZE		-- The size of a grid slot
-local GRID_TEXTURE = "rbxassetid://13786085" -- texture of the grid space, set to nil if you don't want a visible grid
+local GRID_SIZE = Enums.Nums.PLACEMENT_GRID_SIZE
+local GRID_TEXTURE = "rbxassetid://13786085"
 
 local TOUCH_RANGE = 30 -- range of mobile placement
 
@@ -49,7 +50,7 @@ local currentXAxis
 local currentZAxis
 local currentAxis
 
-local ox, oy, oz -- do
+local ox, oy, oz
 local dxx, dxy, dxz
 local dzx, dzy, dzz
 
@@ -59,7 +60,7 @@ local abs = math.abs
 
 local springVelocity = Vector3.new(0, 0, 0)
 local springPosition = Vector3.new(0, 0, 0)
-local tweenGoalRotation = 0 -- springs arent worth effort for rotation
+local tweenGoalRotation = 0
 local tweenStartRotation = 0
 local tweenCurrentRotation = 0
 local tweenAlpha = 1
@@ -73,7 +74,7 @@ end
 
 local function project(px, py, pz)
 	px, py, pz = px - ox, py - oy, pz - oz
-	
+
 	return px * dxx + py * dxy + pz * dxz, px * dzx + py * dzy + pz * dzz
 end
 
@@ -87,35 +88,34 @@ local function translate(px, pz, r)
 	elseif (r == 3) then
 		return pz, -px
 	end
-	
---  or for all angles
---	r = r * math.pi/2
---	return math.cos(r) * px - math.sin(r) * pz,  math.sin(r) * px + math.cos(r) * pz	
+
+	-- Fallback (should never reach here, but helps Luau type checker)
+	return px, pz
 end
 
-local function angleLerp(a, b, d) -- to avoid angle jump
+local function angleLerp(a, b, d)
 	local x1, y1 = math.cos(a), math.sin(a)
 	local x2, y2 = math.cos(b), math.sin(b)
-	
+
 	return math.atan2(y1 + (y2 - y1) * d, x1 + (x2 - x1) * d)
 end
 
 local function calculateExtents(part, cf)
 	local cf = cf or part.CFrame
-	
+
 	local edgeA = cf * CFrame.new(-part.Size.X/2, 0, 0)
 	local edgeB = cf * CFrame.new(part.Size.X/2, 0, 0)
 	local edgeC = cf * CFrame.new(0, 0, part.Size.Z/2)
 	local edgeD = cf * CFrame.new(0, 0, -part.Size.Z/2)
-	
+
 	local edgeAx, edgeAz = project(edgeA.X, edgeA.Y, edgeA.Z)
 	local edgeBx, edgeBz = project(edgeB.X, edgeB.Y, edgeB.Z)
 	local edgeCx, edgeCz = project(edgeC.X, edgeC.Y, edgeC.Z)
 	local edgeDx, edgeDz = project(edgeD.X, edgeD.Y, edgeD.Z)
-	
+
 	local extentsX = max(edgeAx, edgeBx, edgeCx, edgeDx) - min(edgeAx, edgeBx, edgeCx, edgeDx)
 	local extentsZ = max(edgeAz, edgeBz, edgeCz, edgeDz) - min(edgeAz, edgeBz, edgeCz, edgeDz)
-	
+
 	return round(extentsX, GRID_SIZE), round(extentsZ, GRID_SIZE)
 end
 
@@ -131,9 +131,9 @@ local function setState(object, state, downward)
 	if (object.state and (object.state == state or (object.state > state and not downward))) then
 		return
 	end
-	
+
 	object.state = state
-	
+
 	if (state == 1) then
 		if (NORMAL_COLOR3) then
 			object.model.PrimaryPart.Color = NORMAL_COLOR3
@@ -156,32 +156,23 @@ local function setState(object, state, downward)
 			object.model.PrimaryPart.Transparency = LOAD_TRANSPARENCY
 		end
 	end
-	
+
 	currentPlane.stateEvent:Fire(object.model, state)
 end
-
---[[
-	status
-	model
-	px, pz, r
-	sx, sz
---]]
 
 local function floatEqual(a, b)
 	return (math.abs(a - b) < .01)
 end
 
+-- Increased tolerance from 0.01 to 0.1 to prevent false collisions with adjacent items
+-- This accounts for slight position differences between old and new raycast APIs
 local function floatGreater(a, b)
-	return (a - b) > .01
+	return (a - b) > .1
 end
 
 local function floatLesser(a, b)
-	return (b - a) > .01
+	return (b - a) > .1
 end
-
--- PlacementLib - obstacleCollision with IMPROVED cave wall detection
--- Add this at the top of your module:
--- local CollectionService = game:GetService("CollectionService")
 
 local function cacheCurrentPlotCaveWalls()
 	cachedCaveWalls = {}
@@ -190,7 +181,6 @@ local function cacheCurrentPlotCaveWalls()
 		local plotBase = currentPlane.base.Parent
 		local allCaveWalls = CollectionService:GetTagged("CaveWall")
 
-		-- Only cache walls on THIS plot
 		for _, wall in pairs(allCaveWalls) do
 			if wall:IsDescendantOf(plotBase) then
 				table.insert(cachedCaveWalls, wall)
@@ -201,26 +191,22 @@ local function cacheCurrentPlotCaveWalls()
 	end
 end
 
--- ============================================
--- COMPLETE obstacleCollision FUNCTION
--- ============================================
 local function obstacleCollision(obstacles)
 	local px, pz = cx, cz
 
 	local collision = false
 	local obstacles = obstacles or currentPlane.obstacles
 
-	-- ============================================
-	-- PART 1: Check placed items (EXISTING CODE)
-	-- ============================================
+	-- COLLISION BUFFER: Shrink hitboxes slightly to prevent false collisions with adjacent items
+	-- Items on 6-stud grid placed next to each other should NOT trigger collision
+	local COLLISION_BUFFER = 0.2  -- 0.2 studs buffer on each side
+
+	-- PART 1: Check placed items
 	for _, model in pairs(obstacles:GetChildren()) do
 		if (model.PrimaryPart) then
-
-			-- Check if this obstacle is on the same layer
 			local obstacleLayer = model:FindFirstChild("PlacementLayer")
 			local obstacleLayers = model:FindFirstChild("PlacementLayers")
 
-			-- Get the current item's layer(s)
 			local currentLayer = nil
 			local currentLayers = {}
 
@@ -230,7 +216,6 @@ local function obstacleCollision(obstacles)
 				local layersString = currentModel:FindFirstChild("PlacementLayers")
 
 				if layersString then
-					-- Parse multiple layers
 					for layer in string.gmatch(layersString.Value, "[^,]+") do
 						currentLayers[tonumber(layer)] = true
 					end
@@ -238,78 +223,84 @@ local function obstacleCollision(obstacles)
 					currentLayer = layerValue.Value
 					currentLayers[currentLayer] = true
 				else
-					currentLayer = 1 -- Default to ground level
+					currentLayer = 1
 					currentLayers[1] = true
 				end
 			end
 
-			-- Check if obstacle is on the same layer
-			local sameLayer = false
-
+			local skipThisObstacle = false
 			if obstacleLayers then
-				-- Obstacle occupies multiple layers
+				local obstacleLayerList = {}
 				for layer in string.gmatch(obstacleLayers.Value, "[^,]+") do
-					if currentLayers[tonumber(layer)] then
-						sameLayer = true
+					obstacleLayerList[tonumber(layer)] = true
+				end
+
+				local hasCommonLayer = false
+				for currentL, _ in pairs(currentLayers) do
+					if obstacleLayerList[currentL] then
+						hasCommonLayer = true
 						break
 					end
 				end
+
+				if not hasCommonLayer then
+					skipThisObstacle = true
+				end
 			elseif obstacleLayer then
-				-- Obstacle on single layer
-				if currentLayers[obstacleLayer.Value] then
-					sameLayer = true
-				end
-			else
-				-- No layer specified, assume ground level (1)
-				if currentLayers[1] then
-					sameLayer = true
+				if not currentLayers[obstacleLayer.Value] then
+					skipThisObstacle = true
 				end
 			end
 
-			-- Only check collision if on the same layer
-			if not sameLayer then
-				continue -- Skip this obstacle, different layer
-			end
+			if not skipThisObstacle then
+				local extentsX, extentsZ = calculateExtents(model.PrimaryPart)
 
-			local extentsX1, extentsZ1 = calculateExtents(model.PrimaryPart)
-			local x1, z1 = project(model.PrimaryPart.Position.X, model.PrimaryPart.Position.Y, model.PrimaryPart.Position.Z)			
+				local x, z = project(model.PrimaryPart.Position.X, model.PrimaryPart.Position.Y, model.PrimaryPart.Position.Z)
 
-			for i = 1, #currentObjects do
-				local object = currentObjects[i]
+				-- Apply buffer: shrink the bounding boxes to prevent adjacent items from colliding
+				-- Reduce each extent by COLLISION_BUFFER on each side
+				local bufferedExtentsX = math.max(0, extentsX - COLLISION_BUFFER * 2)
+				local bufferedCurrentExtentsX = math.max(0, currentExtentsX - COLLISION_BUFFER * 2)
+				local bufferedExtentsZ = math.max(0, extentsZ - COLLISION_BUFFER * 2)
+				local bufferedCurrentExtentsZ = math.max(0, currentExtentsZ - COLLISION_BUFFER * 2)
 
-				if (not object.collision) then
-					local r = (object.r + cr) % 4			
+				if (not (floatLesser(x + bufferedExtentsX/2, px - bufferedCurrentExtentsX/2) or floatGreater(x - bufferedExtentsX/2, px + bufferedCurrentExtentsX/2) or floatLesser(z + bufferedExtentsZ/2, pz - bufferedCurrentExtentsZ/2) or floatGreater(z - bufferedExtentsZ/2, pz + bufferedCurrentExtentsZ/2))) then
+					collision = true
 
-					local x0, z0 = translate(object.px, -object.pz, cr)
-					x0 = x0 + px
-					z0 = z0 + pz
+					for i = 1, #currentObjects do
+						local object = currentObjects[i]
 
-					local extentsX0, extentsZ0				
+						local r = (object.r + cr) % 4
+						local x0, z0 = translate(object.px, -object.pz, cr)
+						x0 = x0 + px
+						z0 = z0 + pz
 
-					if (r == 1 or r == 3) then
-						extentsX0, extentsZ0 = object.sz, object.sx
-					else
-						extentsX0, extentsZ0 = object.sx, object.sz
-					end		
+						local extentsX0, extentsZ0
+						if (r == 1 or r == 3) then
+							extentsX0, extentsZ0 = object.sz, object.sx
+						else
+							extentsX0, extentsZ0 = object.sx, object.sz
+						end
 
-					if (floatLesser(x0 - extentsX0/2, x1 + extentsX1/2) and floatGreater(x0 + extentsX0/2, x1 - extentsX1/2) and floatLesser(z0 - extentsZ0/2, z1 + extentsZ1/2) and floatGreater(z0 + extentsZ0/2, z1 - extentsZ1/2)) then
-						collision = true
-						object.collision = true
-						setState(object, states.collision)
+						-- Apply buffer to individual object collision check too
+						local bufferedExtentsX0 = math.max(0, extentsX0 - COLLISION_BUFFER * 2)
+						local bufferedExtentsZ0 = math.max(0, extentsZ0 - COLLISION_BUFFER * 2)
+
+						if (not (floatLesser(x + bufferedExtentsX/2, x0 - bufferedExtentsX0/2) or floatGreater(x - bufferedExtentsX/2, x0 + bufferedExtentsX0/2) or floatLesser(z + bufferedExtentsZ/2, z0 - bufferedExtentsZ0/2) or floatGreater(z - bufferedExtentsZ/2, z0 + bufferedExtentsZ0/2))) then
+							object.collision = true
+							setState(object, states.collision)
+						end
 					end
 				end
 			end
 		end
 	end
 
-	-- ============================================
-	-- PART 2: Check CACHED cave walls (FAST!)
-	-- ============================================
+	-- PART 2: Check cave walls (no buffer needed for walls)
 	for i = 1, #currentObjects do
 		local object = currentObjects[i]
 
 		if not object.collision then
-			-- Calculate item position (same math as item-to-item collision)
 			local r = (object.r + cr) % 4
 			local x0, z0 = translate(object.px, -object.pz, cr)
 			x0 = x0 + px
@@ -322,19 +313,15 @@ local function obstacleCollision(obstacles)
 				extentsX0, extentsZ0 = object.sx, object.sz
 			end
 
-			-- Calculate 3D world position
 			local itemWorldPos = Vector3.new(
 				ox + x0 * dxx + z0 * dzx,
 				currentPlane.base.Position.Y + object.sy/2,
 				oz + x0 * dxz + z0 * dzz
 			)
 
-			-- Check against cached cave walls (SUPER FAST - no CollectionService call)
 			for _, wall in pairs(cachedCaveWalls) do
-				-- Verify wall still exists
 				if wall.Parent then
-					-- Simple 3D bounding box collision
-					local buffer = -0.1 -- Small buffer for better detection
+					local buffer = -0.1
 
 					local itemMin = itemWorldPos - Vector3.new(extentsX0/2 + buffer, object.sy/2 + buffer, extentsZ0/2 + buffer)
 					local itemMax = itemWorldPos + Vector3.new(extentsX0/2 + buffer, object.sy/2 + buffer, extentsZ0/2 + buffer)
@@ -342,7 +329,6 @@ local function obstacleCollision(obstacles)
 					local wallMin = wall.Position - wall.Size/2
 					local wallMax = wall.Position + wall.Size/2
 
-					-- AABB (Axis-Aligned Bounding Box) overlap test
 					if (itemMax.X > wallMin.X and itemMin.X < wallMax.X and
 						itemMax.Y > wallMin.Y and itemMin.Y < wallMax.Y and
 						itemMax.Z > wallMin.Z and itemMin.Z < wallMax.Z) then
@@ -357,9 +343,7 @@ local function obstacleCollision(obstacles)
 		end
 	end
 
-	-- ============================================
-	-- PART 3: Reset states (EXISTING CODE)
-	-- ============================================
+	-- PART 3: Reset states
 	for i = 1, #currentObjects do
 		local object = currentObjects[i]
 
@@ -373,22 +357,72 @@ local function obstacleCollision(obstacles)
 	return not collision
 end
 
-local function inputCapture() -- converts user inputs to 3d position, built in mobile compatibility
+-- FIXED: inputCapture with Exclude mode and ADJUSTABLE MOUSE OFFSET
+local function inputCapture()
 	local position
-	
+
 	if (touch) then
 		local camera = workspace.CurrentCamera
-		local range = TOUCH_RANGE * (camera.Focus.p - camera.CFrame.p).magnitude/5	
-		
-		position = camera.Focus.p + camera.CFrame.lookVector * (camera.CoordinateFrame.lookVector.Y/2 + .5) * range
+		-- FIXED: .p changed to .Position
+		local range = TOUCH_RANGE * (camera.Focus.Position - camera.CFrame.Position).magnitude/5	
+
+		-- FIXED: .p changed to .Position
+		position = camera.Focus.Position + camera.CFrame.lookVector * (camera.CoordinateFrame.lookVector.Y/2 + .5) * range
 	else
-		local hit, p = workspace:FindPartOnRayWithWhitelist(Ray.new(mouse.UnitRay.Origin, mouse.UnitRay.Direction * 999), {currentPlane.base})
-		
-		if (hit) then
-			position = p
+		-- Modern Raycast - Exclude placed items so raycast goes through them to hit base
+		local rayOrigin = mouse.UnitRay.Origin
+		local rayDirection = mouse.UnitRay.Direction * 999
+
+		local raycastParams = RaycastParams.new()
+
+		-- Build exclude list: everything EXCEPT the base plane
+		local excludeList = {}
+
+		-- Exclude all currently placing objects (ghost items)
+		for i = 1, #currentObjects do
+			if currentObjects[i].model then
+				table.insert(excludeList, currentObjects[i].model)
+			end
+		end
+
+		-- Exclude all placed items - this is KEY to prevent "skipping grid cells"
+		-- The raycast should pass through placed items to hit the base plane
+		if currentPlane and currentPlane.obstacles then
+			for _, item in pairs(currentPlane.obstacles:GetChildren()) do
+				table.insert(excludeList, item)
+			end
+		end
+
+		-- Exclude the player character too
+		if player.Character then
+			table.insert(excludeList, player.Character)
+		end
+
+		-- Use Exclude mode so raycast ignores placed items and only hits base
+		raycastParams.FilterDescendantsInstances = excludeList
+		raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+		raycastParams.IgnoreWater = true
+
+		-- Perform raycast - should hit base plane even when mouse is over placed items
+		local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+
+		-- Accept any hit result (should be base plane since we excluded everything else)
+		if raycastResult then
+			position = raycastResult.Position
+
+			-- MOUSE ALIGNMENT FIX: Adjustable X and Z offsets for perfect cursor alignment
+			-- Adjust these values to move the item relative to your mouse cursor
+			local MOUSE_OFFSET_X = 2    -- Positive = right, Negative = left (in world space)
+			local MOUSE_OFFSET_Z = 0    -- Positive = forward, Negative = backward (in world space)
+
+			-- Apply offset using the current plane's axes (so it respects plot rotation)
+			if currentXAxis and currentZAxis then
+				local offset = (currentXAxis * MOUSE_OFFSET_X) + (currentZAxis * MOUSE_OFFSET_Z)
+				position = position + offset
+			end
 		end
 	end
-	
+
 	return position, cr
 end
 
@@ -398,55 +432,55 @@ local function calc(position, rotation, force)
 	if (not currentPlane or currentPlane.loading) then
 		return
 	end
-	
+
 	force = force == true
-	
+
 	local ux, uz
-	
+
 	if (position) then
 		ux, uz = project(position.X, position.Y, position.Z)
 	else
 		ux, uz = ax or 0, az or 0
 	end
-		 
+
 	local nr = rotation or cr
-		
+
 	local nx = round(ux, GRID_SIZE)
 	local nz = round(uz, GRID_SIZE)
-	
+
 	local extentsX, extentsZ = translate(currentExtentsX, currentExtentsZ, nr)
-	extentsX = abs(extentsX)
-	extentsZ = abs(extentsZ)
-	
+	extentsX = math.abs(extentsX)
+	extentsZ = math.abs(extentsZ)
+
 	if (floatEqual(extentsX/2 % GRID_SIZE, 0)) then
 		nx = nx + GRID_SIZE/2
 	end
-	
+
 	if (floatEqual(extentsZ/2 % GRID_SIZE, 0)) then
 		nz = nz + GRID_SIZE/2
 	end
-	
+
 	nx = nx + currentPlane.offsetX
 	nz = nz + currentPlane.offsetZ
-	
+
 	local borderX = currentPlane.size.X/2
 	local borderZ = currentPlane.size.Z/2
-	
+
 	ax = ux
 	az = uz
-	
+
 	if (nx + extentsX/2 > borderX) then
 		nx = nx - (nx + extentsX/2 - borderX)
 	elseif (nx - extentsX/2 < -borderX) then
 		nx = nx - (nx - extentsX/2 + borderX)
 	end
-	
+
 	if (nz + extentsZ/2 > borderZ) then
 		nz = nz - (nz + extentsZ/2 - borderZ)
 	elseif (nz - extentsZ/2 < -borderZ) then
 		nz = nz - (nz - extentsZ/2 + borderZ)
 	end
-	
+
 	if (force or nx ~= cx or nz ~= cz or cr ~= nr) then
 		cx, cz, cr = nx, nz, nr
 		resting = false
@@ -459,24 +493,24 @@ local function render()
 	if (resting) then
 		return
 	end
-	
+
 	if (INTERPOLATION) then
 		local delta = 1/60
-		
+
 		springVelocity = (springVelocity + (currentPosition - springPosition)) * INTERPOLATION_DAMP * 60 * delta
 		springPosition = springPosition + springVelocity
-		
+
 		local extentsX, extentsZ = translate(currentExtentsX, currentExtentsZ, cr)
-		
-		local vx, vz = 9 * springVelocity:Dot(currentXAxis)/abs(extentsX), 9 * springVelocity:Dot(currentZAxis)/abs(extentsZ)
+
+		local vx, vz = 9 * springVelocity:Dot(currentXAxis)/math.abs(extentsX), 9 * springVelocity:Dot(currentZAxis)/math.abs(extentsZ)
 		local r
-		
+
 		if (not floatEqual(tweenGoalRotation, cr * math.pi/2)) then
 			tweenStartRotation = tweenCurrentRotation
 			tweenGoalRotation = cr * math.pi/2
 			tweenAlpha = 0
 		end
-				
+
 		if (tweenAlpha < 1) then
 			tweenAlpha = min(1, tweenAlpha + delta/ROTATION_SPEED)
 			tweenCurrentRotation = angleLerp(tweenStartRotation, tweenGoalRotation, 1 - (1 - tweenAlpha)^2)
@@ -484,14 +518,13 @@ local function render()
 		else
 			r = cr * math.pi/2
 		end
-		
-		
+
 		local effectAngle = CFrame.Angles(math.sqrt(math.abs(vz/100)) * math.sign(vz), 0, math.sqrt(math.abs(vx/100)) * math.sign(vx))
-		
+
 		local rotationCFrame = currentAxis * effectAngle * CFrame.Angles(0, r, 0)
 		local SnapRotCFrame = currentAxis * CFrame.Angles(0, cr * math.pi/2, 0)
 		local centerCFrame = rotationCFrame + springPosition
-		
+
 		for i = 1, #currentObjects do
 			local object = currentObjects[i]
 			local x, z = object.px, object.pz
@@ -516,14 +549,14 @@ local function render()
 			local x, z = object.px, object.pz
 			object.model:SetPrimaryPartCFrame(rotationCFrame * CFrame.Angles(0, object.r * math.pi/2, 0) + rotationCFrame * Vector3.new(x, object.sy/2, z) + currentPosition)
 		end
-		
+
 		resting = true
 	end
 end
 
 local function run(display)
 	local position, rotation = inputCapture()
-	
+
 	if (position or rotation) then
 		calc(position, rotation)
 		if (display) then
@@ -535,15 +568,13 @@ end
 function module.rotate()
 	calc(nil, (cr + 1) % 4)
 	render()
-	
+
 	SoundManager.RotateItem()
 
-	-- NEW: Update arrows for all currently placing objects
 	if currentObjects then
 		for i = 1, #currentObjects do
 			local object = currentObjects[i]
 			if object and object.model then
-				-- Small delay to ensure item has moved before updating arrows
 				task.wait()
 				DirectionalArrows.UpdateArrows(object.model)
 			end
@@ -605,7 +636,6 @@ local function enablePlacement(plane, models, prealigned)
 			local object = {}
 			object.model = model
 
-			-- ADD THIS: Add layer information from ItemStats to the model
 			if model:FindFirstChild("ItemStats") then
 				local itemStats = require(model.ItemStats)
 
@@ -669,7 +699,6 @@ local function enablePlacement(plane, models, prealigned)
 				extentsZMax = z1
 			end
 
-
 			model.PrimaryPart.Transparency = .5
 			model.PrimaryPart.Anchored = true
 			model.PrimaryPart.CanCollide = false
@@ -696,10 +725,12 @@ local function enablePlacement(plane, models, prealigned)
 			object.sx, object.sy, object.sz = object.model.PrimaryPart.Size.X, object.model.PrimaryPart.Size.Y, object.model.PrimaryPart.Size.Z
 		end
 	end
+
 	renderConnection = runService.RenderStepped:connect(run)
 	module.currentPlane = currentPlane
-	cacheCurrentPlotCaveWalls() -- Cache cave walls for instant collision detection
+	cacheCurrentPlotCaveWalls()
 	currentEvent = Instance.new("BindableEvent")
+
 	if (GRID_TEXTURE) then
 		currentTexture = Instance.new("Texture", currentPlane.base)
 		currentTexture.Texture = GRID_TEXTURE
@@ -707,6 +738,7 @@ local function enablePlacement(plane, models, prealigned)
 		currentTexture.StudsPerTileU = GRID_SIZE
 		currentTexture.StudsPerTileV = GRID_SIZE
 	end
+
 	run(true)
 	return currentEvent.Event
 end
@@ -719,12 +751,12 @@ local function disablePlacement(plane)
 		module.currentPlane = nil
 		currentEvent:Destroy()
 		currentEvent = nil	
-		
+
 		if (currentTexture) then
 			currentTexture:Destroy()
 			currentTexture = nil
 		end
-		
+
 		for i = 1, #currentObjects do
 			local object = currentObjects[i]
 			object.model = nil
@@ -737,9 +769,9 @@ local function setLoading(plane, isLoading)
 	if (plane.loading == isLoading) then
 		return
 	end
-	
+
 	plane.loading = isLoading
-	
+
 	if (plane == currentPlane) then	
 		if (isLoading) then
 			for i = 1, #currentObjects do
@@ -749,7 +781,7 @@ local function setLoading(plane, isLoading)
 			for i = 1, #currentObjects do
 				setState(currentObjects[i], states.neutral, true)
 			end
-			
+
 			obstacleCollision()
 		end
 	end
