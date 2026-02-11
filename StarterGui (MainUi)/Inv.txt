@@ -151,7 +151,7 @@ function module.LOAD(MODULE_INFO)
 	closeCorner.Parent = closeButton
 
 	closeButton.MouseButton1Click:Connect(function()
-		SoundManager.ButtonClick()
+		--SoundManager.ButtonClick()
 		Main.CLOSE_MENU(script.Parent)
 	end)
 
@@ -360,7 +360,7 @@ function module.LOAD(MODULE_INFO)
 		table.insert(categoryButtons, tabButton)
 
 		tabButton.MouseButton1Click:Connect(function()
-			SoundManager.ButtonClick()
+			--SoundManager.ButtonClick()
 			CURRENT_ITEM_FILTER = category.Name
 			allButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 			for _, btn in pairs(categoryButtons) do
@@ -373,7 +373,7 @@ function module.LOAD(MODULE_INFO)
 
 	-- All button click handler
 	allButton.MouseButton1Click:Connect(function()
-		SoundManager.ButtonClick()
+		--SoundManager.ButtonClick()
 		CURRENT_ITEM_FILTER = "All"
 		allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
 		for _, btn in pairs(categoryButtons) do
@@ -607,7 +607,7 @@ function module.LOAD(MODULE_INFO)
 			clickButton.MouseButton1Click:Connect(function()
 				if DB and itemAmount > 0 then
 					DB = false
-					SoundManager.ButtonClick()
+					--SoundManager.ButtonClick()
 					local ITEMS_PLACING = {ITEM:Clone()}
 					PLACEMENT.BEGIN_PLACING(ITEMS_PLACING)
 					wait(0.1)
