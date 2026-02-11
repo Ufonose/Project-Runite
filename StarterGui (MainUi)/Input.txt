@@ -41,7 +41,7 @@ function module.LOAD(MODULE_INFO)
 
 	-- ADD THESE LINES - ProximityPrompt cooldown system:
 	local lastProximityPromptTime = 0
-	local PROXIMITY_COOLDOWN = 2  -- 300ms cooldown after using proximity prompt
+	local PROXIMITY_COOLDOWN = 1.5  -- 300ms cooldown after using proximity prompt
 
 	-- Track when ANY proximity prompt is triggered
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
