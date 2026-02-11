@@ -144,6 +144,12 @@ function module.LOAD(MODULE_INFO)
 				SoundManager.RotateItem()
 			elseif not module.SELECTING_ITEMS and ItemSelection.SELECTED_COUNT > 0 then
 				ItemSelection.MOVE_ITEMS()
+			elseif not PLACEMENT.PLACING_ITEMS and not module.SELECTING_ITEMS then
+				-- Open Research GUI when not placing items or selecting
+				local ResearchGui = PlayerGui:FindFirstChild("ResearchGui")
+				if ResearchGui then
+					Main.OPEN_MENU(ResearchGui)
+				end
 			end
 		elseif KEY_INPUT.KeyCode == Enum.KeyCode.F then
 			if PLACEMENT.PLACING_ITEMS then
@@ -152,13 +158,6 @@ function module.LOAD(MODULE_INFO)
 				end
 			elseif not PLACEMENT.PLACING_ITEMS then
 				Main.OPEN_MENU(script.Parent.Parent.Shop)
-			end
-		elseif KEY_INPUT.KeyCode == Enum.KeyCode.T then
-			if not PLACEMENT.PLACING_ITEMS and not module.SELECTING_ITEMS then
-				local ResearchGui = PlayerGui:FindFirstChild("ResearchGui")  -- Get fresh reference
-				if ResearchGui then
-					Main.OPEN_MENU(ResearchGui)
-				end
 			end
 		elseif KEY_INPUT.KeyCode == Enum.KeyCode.Q then
 			if PLACEMENT.PLACING_ITEMS then
