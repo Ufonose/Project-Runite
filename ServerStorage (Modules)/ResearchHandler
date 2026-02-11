@@ -1,3 +1,5 @@
+-- ServerStorage (Modules)/ResearchHandler (WITH UNIVERSAL ITEM TRACKING)
+
 local ServerStorage = game:GetService("ServerStorage")
 local RepStorage = game:GetService("ReplicatedStorage")
 local ResearchData = require(ServerStorage.Modules.ResearchData)
@@ -12,8 +14,27 @@ function ResearchHandler.InitializePlayer(player)
 			CompletedObjectives = {},
 			ActiveObjectives = {},
 			ObjectiveProgress = {},
+			ItemsCollected = {},  -- Track all items collected
 		}
 	end
+
+	-- Add ItemsCollected if it doesn't exist (for existing saves)
+	if not _G["global_data"][player.Name]["Research"]["ItemsCollected"] then
+		_G["global_data"][player.Name]["Research"]["ItemsCollected"] = {}
+	end
+end
+
+-- NEW: Track item collection (called for ALL items processed, not just research)
+function ResearchHandler.TrackItemCollection(player, itemName, amount)
+	ResearchHandler.InitializePlayer(player)
+
+	local research = _G["global_data"][player.Name]["Research"]
+
+	-- Track the item
+	if not research.ItemsCollected[itemName] then
+		research.ItemsCollected[itemName] = 0
+	end
+	research.ItemsCollected[itemName] = research.ItemsCollected[itemName] + amount
 end
 
 -- Start tracking an objective
@@ -23,11 +44,6 @@ function ResearchHandler.StartObjective(player, objectiveId)
 	local research = _G["global_data"][player.Name]["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
-	--print("=== START OBJECTIVE ===")
-	--print("Player:", player.Name)
-	--print("Objective ID:", objectiveId)
-	--print("Objective found:", objective ~= nil)
-
 	if not objective then
 		warn("Objective", objectiveId, "not found!")
 		return false
@@ -35,19 +51,16 @@ function ResearchHandler.StartObjective(player, objectiveId)
 
 	-- Check if already completed
 	if table.find(research.CompletedObjectives, objectiveId) then
-		--print("Already completed")
 		return false, "Already completed"
 	end
 
 	-- Check if already active
 	if table.find(research.ActiveObjectives, objectiveId) then
-		--print("Already active")
 		return false, "Already active"
 	end
 
 	-- Check prerequisites
 	if not ResearchData.CanStartObjective(objectiveId, research.CompletedObjectives) then
-		--print("Prerequisites not met")
 		return false, "Prerequisites not met"
 	end
 
@@ -58,44 +71,30 @@ function ResearchHandler.StartObjective(player, objectiveId)
 	-- Initialize progress for each requirement
 	for _, requirement in pairs(objective.Requirements) do
 		research.ObjectiveProgress[tostring(objectiveId)][requirement.ItemName] = 0
-		--print("Initialized requirement:", requirement.ItemName, "= 0 /", requirement.Amount)
 	end
-
-	--print("Objective started successfully!")
-	--print("Active objectives:", table.concat(research.ActiveObjectives, ", "))
 
 	return true
 end
 
--- Deposit an item towards an objective
+-- Deposit an item towards an objective (NO LONGER TRACKS ItemsCollected - that's done separately now)
 function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
 	ResearchHandler.InitializePlayer(player)
 
 	local research = _G["global_data"][player.Name]["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
-	--print("=== DEPOSIT ITEM ===")
-	--print("Player:", player.Name)
-	--print("Objective ID:", objectiveId)
-	--print("Objective found:", objective ~= nil)print("Item Name:", itemName)
-	--print("Amount:", amount)
-
 	if not objective then 
-		--print("Objective not found!")
 		return false 
 	end
 
 	-- Check if objective is active
 	if not table.find(research.ActiveObjectives, objectiveId) then
-		--print("Objective not active!")
-		--print("Active objectives:", table.concat(research.ActiveObjectives, ", "))
-		return false, "Objective not active"
+		return false
 	end
 
 	-- Find the requirement
 	local requirement = nil
 	for _, req in pairs(objective.Requirements) do
-		--print("Checking requirement:", req.ItemName, "vs", itemName)
 		if req.ItemName == itemName then
 			requirement = req
 			break
@@ -103,27 +102,17 @@ function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
 	end
 
 	if not requirement then
-		--print("Item not required for this objective!")
-		--print("Required items:")
-		for _, req in pairs(objective.Requirements) do
-			--print(" -", req.ItemName)
-		end
-		return false, "Item not required for this objective"
+		return false
 	end
 
-	--print("Requirement found:", requirement.ItemName, requirement.Amount)
-
-	-- Add to progress
-	local currentProgress = research.ObjectiveProgress[tostring(objectiveId)][itemName] or 0
+	-- Update progress
+	local progressKey = tostring(objectiveId)
+	local currentProgress = research.ObjectiveProgress[progressKey][itemName] or 0
 	local newProgress = math.min(currentProgress + amount, requirement.Amount)
-	research.ObjectiveProgress[tostring(objectiveId)][itemName] = newProgress
-
-	--print("Progress updated:", currentProgress, "->", newProgress)
+	research.ObjectiveProgress[progressKey][itemName] = newProgress
 
 	-- Check if objective is complete
 	local isComplete = ResearchHandler.CheckObjectiveComplete(player, objectiveId)
-
-	--print("Objective complete?", isComplete)
 
 	if isComplete then
 		ResearchHandler.CompleteObjective(player, objectiveId)
@@ -157,9 +146,6 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 	local research = _G["global_data"][player.Name]["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
-	-- print("=== COMPLETING OBJECTIVE ===")
-	--print("Objective:", objective.Name)
-
 	if not objective then return false end
 
 	-- Mark as completed
@@ -174,7 +160,6 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 	-- Give rewards
 	if objective.Rewards.ResearchTokens then
 		player.ResearchTokens.Value = player.ResearchTokens.Value + objective.Rewards.ResearchTokens
-		--print("Gave", objective.Rewards.ResearchTokens, "research tokens")
 	end
 
 	-- Unlock machines
@@ -183,17 +168,14 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 			local itemKey = tostring(machineId)
 			if _G["global_data"][player.Name]["Items"][itemKey] then
 				_G["global_data"][player.Name]["Items"][itemKey]["Unlocked"] = true
-				--print("Unlocked machine ID:", machineId)
 			end
 		end
 	end
 
-	-- Notify player with research name (no emoji, space before + for proper splitting)
+	-- Notify player with research name
 	RepStorage.Events.MessageClient:FireClient(player, "screen", {
 		["message"] = objective.Name .. " completed! +" .. (objective.Rewards.ResearchTokens or 0) .. " Research Tokens"
 	})
-
-	--print("Objective completed successfully!")
 
 	return true
 end
