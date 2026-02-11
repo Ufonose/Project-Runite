@@ -1,10 +1,25 @@
--- ServerStorage (Modules)/ResearchHandler (WITH UNIVERSAL ITEM TRACKING)
+-- ServerStorage (Modules)/ResearchHandler (WITH ITEM UNLOCK NOTIFICATIONS)
 
 local ServerStorage = game:GetService("ServerStorage")
 local RepStorage = game:GetService("ReplicatedStorage")
 local ResearchData = require(ServerStorage.Modules.ResearchData)
 
 local ResearchHandler = {}
+
+-- Helper function to get item name from item ID
+local function getItemNameFromId(itemId)
+	-- Search through ReplicatedStorage.Items to find the item with matching ID
+	for _, item in pairs(RepStorage.Items:GetChildren()) do
+		local itemStats = item:FindFirstChild("ItemStats")
+		if itemStats then
+			local stats = require(itemStats)
+			if stats.ItemId == itemId then
+				return item.Name  -- Return the actual item name
+			end
+		end
+	end
+	return "Unknown Item"
+end
 
 -- Initialize player research data if it doesn't exist
 function ResearchHandler.InitializePlayer(player)
@@ -76,7 +91,7 @@ function ResearchHandler.StartObjective(player, objectiveId)
 	return true
 end
 
--- Deposit an item towards an objective (NO LONGER TRACKS ItemsCollected - that's done separately now)
+-- Deposit an item towards an objective
 function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
 	ResearchHandler.InitializePlayer(player)
 
@@ -158,23 +173,38 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 	end
 
 	-- Give rewards
-	if objective.Rewards.ResearchTokens then
-		player.ResearchTokens.Value = player.ResearchTokens.Value + objective.Rewards.ResearchTokens
+	local tokenReward = objective.Rewards.ResearchTokens or 0
+	if tokenReward > 0 then
+		player.ResearchTokens.Value = player.ResearchTokens.Value + tokenReward
 	end
 
 	-- Unlock machines
+	local unlockedMachines = {}
 	if objective.Rewards.UnlockMachines then
 		for _, machineId in pairs(objective.Rewards.UnlockMachines) do
 			local itemKey = tostring(machineId)
 			if _G["global_data"][player.Name]["Items"][itemKey] then
 				_G["global_data"][player.Name]["Items"][itemKey]["Unlocked"] = true
+
+				-- Get the machine name for the notification
+				local machineName = getItemNameFromId(machineId)
+				table.insert(unlockedMachines, machineName)
 			end
 		end
 	end
 
-	-- Notify player with research name
+	-- Build notification message (client will automatically split at "completed!" and style the reward text in blue)
+	local notificationMessage = objective.Name .. " completed!"
+
+	if tokenReward > 0 then
+		notificationMessage = notificationMessage .. " +" .. tokenReward .. " Research Tokens"
+	elseif #unlockedMachines > 0 then
+		notificationMessage = notificationMessage .. " 🔓 Unlocked: " .. table.concat(unlockedMachines, ", ")
+	end
+
+	-- Notify player
 	RepStorage.Events.MessageClient:FireClient(player, "screen", {
-		["message"] = objective.Name .. " completed! +" .. (objective.Rewards.ResearchTokens or 0) .. " Research Tokens"
+		["message"] = notificationMessage
 	})
 
 	return true
