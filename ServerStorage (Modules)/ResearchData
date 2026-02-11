@@ -882,16 +882,201 @@ ResearchData.Objectives = {
 		Name = "Iron Master 2",
 		Description = "Deposit iron",
 		Age = 4,
-		RequiredObjectives = {57}, 
+		RequiredObjectives = {56}, 
 		Requirements = {
-			{ItemName = "Iron Ingot", Amount = 1000},
-			{ItemName = "Iron Plate", Amount = 1000},
+			{ItemName = "Iron Ingot", Amount = 300},
+			{ItemName = "Iron Plate", Amount = 300},
 		},
 		Rewards = {
 			ResearchTokens = 100,
 			UnlockMachines = {},
 		},
-		TreePosition = {X = 1, Y = 1}, -- (column 1, row 1)
+		TreePosition = {X = 1, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 58, 
+		Name = "The Iron Master",
+		Description = "Deposit iron",
+		Age = 4,
+		RequiredObjectives = {57}, 
+		Requirements = {
+			{ItemName = "Iron Gear", Amount = 500},
+			{ItemName = "Iron Coil", Amount = 500},
+			{ItemName = "Iron Pipe", Amount = 500},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 1, Y = 3}, -- (column 1, row 1)
+	},
+	{
+		Id = 59, 
+		Name = "Copper Master 1",
+		Description = "Deposit copper",
+		Age = 4,
+		RequiredObjectives = {55}, 
+		Requirements = {
+			{ItemName = "Copper Ore", Amount = 1000},
+			{ItemName = "Copper Ore_Crushed", Amount = 1000},
+			{ItemName = "Copper Ore_Cleaned", Amount = 1000},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 2, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 60, 
+		Name = "Copper Master 2",
+		Description = "Deposit copper",
+		Age = 4,
+		RequiredObjectives = {59}, 
+		Requirements = {
+			{ItemName = "Copper Ingot", Amount = 300},
+			{ItemName = "Copper Plate", Amount = 300},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 2, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 61, 
+		Name = "The Copper Master",
+		Description = "Deposit copper",
+		Age = 4,
+		RequiredObjectives = {60}, 
+		Requirements = {
+			{ItemName = "Copper Gear", Amount = 500},
+			{ItemName = "Copper Coil", Amount = 500},
+			{ItemName = "Copper Pipe", Amount = 500},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 2, Y = 3}, -- (column 1, row 1)
+	},
+	{
+		Id = 62, 
+		Name = "Gold Master 1",
+		Description = "Deposit gold",
+		Age = 4,
+		RequiredObjectives = {55}, 
+		Requirements = {
+			{ItemName = "Gold Ore", Amount = 1000},
+			{ItemName = "Gold Ore_Crushed", Amount = 1000},
+			{ItemName = "Gold Ore_Cleaned", Amount = 1000},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 3, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 63, 
+		Name = "Copper Master 2",
+		Description = "Deposit gold",
+		Age = 4,
+		RequiredObjectives = {62}, 
+		Requirements = {
+			{ItemName = "Gold Ingot", Amount = 300},
+			{ItemName = "Gold Plate", Amount = 300},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 3, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 64, 
+		Name = "The Gold Master",
+		Description = "Deposit gold",
+		Age = 4,
+		RequiredObjectives = {63}, 
+		Requirements = {
+			{ItemName = "Gold Gear", Amount = 500},
+			{ItemName = "Gold Coil", Amount = 500},
+			{ItemName = "Gold Pipe", Amount = 500},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 3, Y = 3}, -- (column 1, row 1)
+	},
+	{
+		Id = 65, 
+		Name = "Gem Master 1",
+		Description = "Deposit gems",
+		Age = 4,
+		RequiredObjectives = {55}, 
+		Requirements = {
+			{ItemName = "Emerald Gem", Amount = 100},
+			{ItemName = "Ruby Gem", Amount = 80},
+			{ItemName = "Diamond Gem", Amount = 50},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 4, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 66, 
+		Name = "The Gem Master",
+		Description = "Deposit polished gems",
+		Age = 4,
+		RequiredObjectives = {65}, 
+		Requirements = {
+			{ItemName = "Polished Emerald Gem", Amount = 150},
+			{ItemName = "Polished Ruby Gem", Amount = 100},
+			{ItemName = "Polished Diamond Gem", Amount = 70},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 4, Y = 2}, -- (column 1, row 1)
+	},
+	{
+		Id = 67, 
+		Name = "Impure Master 1",
+		Description = "Deposit impure",
+		Age = 4,
+		RequiredObjectives = {55}, 
+		Requirements = {
+			{ItemName = "Impure Gear", Amount = 500},
+			{ItemName = "Impure Coil", Amount = 500},
+			{ItemName = "Impure Pipe", Amount = 500},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 5, Y = 1}, -- (column 1, row 1)
+	},
+	{
+		Id = 68, 
+		Name = "The Impure Master",
+		Description = "Deposit impure",
+		Age = 4,
+		RequiredObjectives = {67}, 
+		Requirements = {
+			{ItemName = "Impure Gear", Amount = 500},
+			{ItemName = "Impure Coil", Amount = 500},
+			{ItemName = "Impure Pipe", Amount = 500},
+		},
+		Rewards = {
+			ResearchTokens = 100,
+			UnlockMachines = {},
+		},
+		TreePosition = {X = 5, Y = 2}, -- (column 1, row 1)
 	},
 
 
