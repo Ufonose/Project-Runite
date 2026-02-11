@@ -25,6 +25,66 @@ local researchData = nil
 local cardReferences = {} -- Store references to cards for updating
 local statisticsReferences = {} -- Store references to statistics items for updating
 
+-- Color mapping for different item types (grouped by material)
+local ITEM_COLORS = {
+	-- COPPER ITEMS (Orange-brown copper tone)
+	["Copper Coil"] = Color3.fromRGB(184, 115, 51),
+	["Copper Gear"] = Color3.fromRGB(184, 115, 51),
+	["Copper Ingot"] = Color3.fromRGB(184, 115, 51),
+	["Copper Ore"] = Color3.fromRGB(184, 115, 51),
+	["Copper Ore_Cleaned"] = Color3.fromRGB(184, 115, 51),
+	["Copper Ore_Crushed"] = Color3.fromRGB(184, 115, 51),
+	["Copper Pipe"] = Color3.fromRGB(184, 115, 51),
+	["Copper Plate"] = Color3.fromRGB(184, 115, 51),
+
+	-- IRON ITEMS (Grey metallic tone)
+	["Iron Coil"] = Color3.fromRGB(160, 160, 170),
+	["Iron Gear"] = Color3.fromRGB(160, 160, 170),
+	["Iron Ingot"] = Color3.fromRGB(160, 160, 170),
+	["Iron Ore"] = Color3.fromRGB(160, 160, 170),
+	["Iron Ore_Cleaned"] = Color3.fromRGB(160, 160, 170),
+	["Iron Ore_Crushed"] = Color3.fromRGB(160, 160, 170),
+	["Iron Pipe"] = Color3.fromRGB(160, 160, 170),
+	["Iron Plate"] = Color3.fromRGB(160, 160, 170),
+
+	-- GOLD ITEMS (Bright gold tone)
+	["Gold Coil"] = Color3.fromRGB(255, 215, 0),
+	["Gold Gear"] = Color3.fromRGB(255, 215, 0),
+	["Gold Ingot"] = Color3.fromRGB(255, 215, 0),
+	["Gold Ore"] = Color3.fromRGB(255, 215, 0),
+	["Gold Ore_Cleaned"] = Color3.fromRGB(255, 215, 0),
+	["Gold Ore_Crushed"] = Color3.fromRGB(255, 215, 0),
+	["Gold Pipe"] = Color3.fromRGB(255, 215, 0),
+	["Gold Plate"] = Color3.fromRGB(255, 215, 0),
+
+	-- IMPURE ITEMS (Dark muddy brown)
+	["Impure Coil"] = Color3.fromRGB(168, 140, 112),
+	["Impure Gear"] = Color3.fromRGB(168, 140, 112),
+	["Impure Ingot"] = Color3.fromRGB(168, 140, 112),
+	["Impure Pipe"] = Color3.fromRGB(168, 140, 112),
+	["Impure Plate"] = Color3.fromRGB(168, 140, 112),
+
+	-- RUBY GEMS (Deep red)
+	["Ruby Gem"] = Color3.fromRGB(255, 97, 100),
+	["Polished Ruby Gem"] = Color3.fromRGB(255, 97, 100),
+
+	-- EMERALD GEMS (Vibrant green)
+	["Emerald Gem"] = Color3.fromRGB(80, 200, 120),
+	["Polished Emerald Gem"] = Color3.fromRGB(80, 200, 120),
+
+	-- DIAMOND GEMS (Bright cyan/blue)
+	["Diamond Gem"] = Color3.fromRGB(79, 223, 225),
+	["Polished Diamond Gem"] = Color3.fromRGB(79, 223, 225),
+
+	-- Default fallback
+	["Default"] = Color3.fromRGB(200, 200, 200)
+}
+
+-- Helper function to get item color
+local function getItemColor(itemName)
+	return ITEM_COLORS[itemName] or ITEM_COLORS["Default"]
+end
+
 -- Function to update scale factor based on screen size
 local function updateScaleFactor()
 	local viewport = workspace.CurrentCamera.ViewportSize
@@ -602,12 +662,29 @@ local function createObjectiveCard(objectiveData, researchData, position)
 			progress = researchData.ObjectiveProgress[objectiveData.Id][requirement.ItemName] or 0
 		end
 
+		-- Get base color for this item type
+		local baseColor = getItemColor(requirement.ItemName)
+
+		-- Determine text color based on completion
+		local textColor
+		if progress >= requirement.Amount then
+			-- Completed: Use green
+			textColor = Color3.fromRGB(100, 255, 100)
+		else
+			-- Not completed: Use item's base color
+			textColor = baseColor
+		end
+
 		local reqText = Instance.new("TextLabel")
 		reqText.Name = "Req_" .. i
-		reqText.Size = UDim2.new(1, 0, 0.2, 0)  -- Will be sized by ListLayout
+		reqText.Size = UDim2.new(1, 0, 0.2, 0)
 		reqText.BackgroundTransparency = 1
-		reqText.Text = string.format("• %s: %d/%d", requirement.ItemName:gsub("OreModel", ""):gsub("_", " "), progress, requirement.Amount)
-		reqText.TextColor3 = progress >= requirement.Amount and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(200, 200, 200)
+
+		-- Add checkmark for completed requirements
+		local completionMark = progress >= requirement.Amount and "✓ " or "• "
+		reqText.Text = string.format("%s%s: %d/%d", completionMark, requirement.ItemName:gsub("OreModel", ""):gsub("_", " "), progress, requirement.Amount)
+
+		reqText.TextColor3 = textColor
 		reqText.TextSize = 11
 		reqText.Font = Enum.Font.Gotham
 		reqText.TextXAlignment = Enum.TextXAlignment.Left
@@ -622,7 +699,7 @@ local function createObjectiveCard(objectiveData, researchData, position)
 		reqConstraint.Parent = reqText
 
 		-- Store reference for updating
-		requirementLabels[requirement.ItemName] = {label = reqText, amount = requirement.Amount}
+		requirementLabels[requirement.ItemName] = {label = reqText, amount = requirement.Amount, baseColor = baseColor}
 	end
 
 	-- Store card reference
@@ -928,9 +1005,20 @@ function updateProgress()
 					progress = freshData.ObjectiveProgress[tostring(objectiveId)][itemName] or 0
 				end
 
-				-- Update text and color
-				reqData.label.Text = string.format("• %s: %d/%d", itemName:gsub("OreModel", ""):gsub("_", " "), progress, reqData.amount)
-				reqData.label.TextColor3 = progress >= reqData.amount and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(200, 200, 200)
+				-- Determine text color based on completion
+				local textColor
+				if progress >= reqData.amount then
+					-- Completed: Use green
+					textColor = Color3.fromRGB(100, 255, 100)
+				else
+					-- Not completed: Use stored base color
+					textColor = reqData.baseColor
+				end
+
+				-- Add checkmark for completed requirements
+				local completionMark = progress >= reqData.amount and "✓ " or "• "
+				reqData.label.Text = string.format("%s%s: %d/%d", completionMark, itemName:gsub("OreModel", ""):gsub("_", " "), progress, reqData.amount)
+				reqData.label.TextColor3 = textColor
 			end
 		end
 
