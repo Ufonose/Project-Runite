@@ -1,3 +1,5 @@
+-- ReplicatedStorage (Items.Standard Furnace)/SmeltOre.txt (TRACKS ALL ITEMS)
+
 local RepStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
@@ -31,7 +33,6 @@ script.Parent.Smelt.Touched:Connect(function(HIT)
 				local PROCESSED = ITEM_HANDLER.PROCESS_ORE(PLOT, script.Parent.Parent, script.Parent.Smelt, ITEM_INFO.Addition, ITEM_INFO.Multiplier, ORE)
 
 				if PROCESSED then
-					-- ALSO try to deposit to research (if any active objectives need this item)
 					local ResearchHandler = require(ServerStorage.Modules.ResearchHandler)
 					local ResearchData = require(ServerStorage.Modules.ResearchData)
 
@@ -45,53 +46,62 @@ script.Parent.Smelt.Touched:Connect(function(HIT)
 						oreModelName = ORE.Name
 					end
 
-					-- Try to deposit to any active objective that needs this item
+					-- NEW: ALWAYS track item collection for statistics (before research deposit)
+					ResearchHandler.TrackItemCollection(plot_owner, oreModelName, 1)
+
+					-- THEN try to deposit to research (if any active objectives need this item)
 					local research = ResearchHandler.GetPlayerResearch(plot_owner)
 					local deposited = false
 
 					for _, objectiveId in pairs(research.ActiveObjectives) do
-						local success, currentProgress = ResearchHandler.DepositItem(plot_owner, objectiveId, oreModelName, 1)
+						-- Get the objective first to check requirement amount
+						local objective = ResearchData.GetObjective(objectiveId)
+						if objective then
+							for _, req in pairs(objective.Requirements) do
+								if req.ItemName == oreModelName then
+									-- Check current progress
+									local currentProgress = research.ObjectiveProgress[tostring(objectiveId)][oreModelName] or 0
 
-						if success then
-							deposited = true
+									-- Only deposit if not already complete
+									if currentProgress < req.Amount then
+										local success, newProgress = ResearchHandler.DepositItem(plot_owner, objectiveId, oreModelName, 1)
 
-							-- Get the objective to find the required amount
-							local objective = ResearchData.GetObjective(objectiveId)
-							local requiredAmount = 0
+										if success then
+											deposited = true
 
-							-- Find the requirement for this specific item
-							if objective then
-								for _, requirement in pairs(objective.Requirements) do
-									if requirement.ItemName == oreModelName then
-										requiredAmount = requirement.Amount
-										break
+											-- Show visual feedback for research deposit
+											local progressMsg = string.format("%s: %d/%d", 
+												req.ItemName:gsub("OreModel", ""):gsub("_", " "), 
+												newProgress, 
+												req.Amount
+											)
+
+											RepStorage.Events.MessageClient:FireClient(
+												plot_owner, 
+												"visual", 
+												{
+													["visual_part"] = script.Parent.Smelt, 
+													["message"] = progressMsg, 
+													["message_color"] = Color3.fromRGB(134, 207, 255)
+												}
+											)
+
+											break
+										end
 									end
+									break  -- Found the requirement, stop checking other requirements
 								end
 							end
 
-							-- Only show message if this specific requirement isn't already complete
-							if currentProgress < requiredAmount then
-								-- Show research progress message WITHOUT emoji, with current/required format
-								local displayName = oreModelName:gsub("OreModel", ""):gsub("_", " ")
-								RepStorage.Events.MessageClient:FireClient(plot_owner, "visual", {
-									["visual_part"] = script.Parent.Smelt, 
-									["message"] = displayName .. " (" .. currentProgress .. "/" .. requiredAmount .. ")", 
-									["message_color"] = Color3.fromRGB(138, 180, 255)
-								})
+							if deposited then
+								break  -- Already deposited to this objective, stop checking other objectives
 							end
-							-- No break - continues to check other objectives!
 						end
 					end
+				end
 
-					-- Destroy ore after processing
-					ORE:Destroy()
-				end
-			else
-				-- Default behavior if no plot owner
-				local PROCESSED = ITEM_HANDLER.PROCESS_ORE(PLOT, script.Parent.Parent, script.Parent.Smelt, ITEM_INFO.Addition, ITEM_INFO.Multiplier, ORE)
-				if PROCESSED then
-					ORE:Destroy()
-				end
+				-- Destroy ore
+				ORE:Destroy()
 			end
 		end
 	end
