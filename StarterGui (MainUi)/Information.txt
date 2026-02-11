@@ -166,7 +166,7 @@ function module.LOAD(MODULE_INFO)
 			local icon_label = icon_container.Icon
 
 			-- Check if this is a research completion message (contains "completed!" and tokens)
-			local isResearchComplete = string.find(message_text, "completed!") and string.find(message_text, "Research Tokens")
+			local isResearchComplete = string.find(message_text, "completed!") and (string.find(message_text, "Research Tokens") or string.find(message_text, "Unlocked:"))
 
 			if isResearchComplete then
 				-- Split the message into two parts
@@ -220,9 +220,8 @@ function module.LOAD(MODULE_INFO)
 			icon_label.Text = icon_text
 			icon_container.BackgroundColor3 = icon_bg_color
 
-			-- Play success sound for research completion
-			local lowerText = string.lower(message_text)
-			if string.find(lowerText, "research") and (string.find(lowerText, "complete") or string.find(lowerText, "completed")) then
+			-- Play success sound for research completion (including unlocks)
+			if isResearchComplete then
 				print("Playing success sound for research completion!")
 				if SoundManager and SoundManager.Success then
 					local success, err = pcall(function()
