@@ -49,9 +49,8 @@ script.Parent.Smelt.Touched:Connect(function(HIT)
 					-- NEW: ALWAYS track item collection for statistics (before research deposit)
 					ResearchHandler.TrackItemCollection(plot_owner, oreModelName, 1)
 
-					-- THEN try to deposit to research (if any active objectives need this item)
+					-- THEN try to deposit to ALL active objectives that need this item
 					local research = ResearchHandler.GetPlayerResearch(plot_owner)
-					local deposited = false
 
 					for _, objectiveId in pairs(research.ActiveObjectives) do
 						-- Get the objective first to check requirement amount
@@ -67,8 +66,6 @@ script.Parent.Smelt.Touched:Connect(function(HIT)
 										local success, newProgress = ResearchHandler.DepositItem(plot_owner, objectiveId, oreModelName, 1)
 
 										if success then
-											deposited = true
-
 											-- Show visual feedback for research deposit
 											local progressMsg = string.format("%s: %d/%d", 
 												req.ItemName:gsub("OreModel", ""):gsub("_", " "), 
@@ -85,16 +82,10 @@ script.Parent.Smelt.Touched:Connect(function(HIT)
 													["message_color"] = Color3.fromRGB(134, 207, 255)
 												}
 											)
-
-											break
 										end
 									end
-									break  -- Found the requirement, stop checking other requirements
+									break  -- Found the requirement for this objective, check next objective
 								end
-							end
-
-							if deposited then
-								break  -- Already deposited to this objective, stop checking other objectives
 							end
 						end
 					end
