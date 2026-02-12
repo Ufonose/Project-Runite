@@ -1,3 +1,6 @@
+-- ServerScriptService/UpgradesServerHandler.lua
+-- FIXED: Uses upgrade levels instead of multipliers for conveyor speed
+
 local RepStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
@@ -8,8 +11,9 @@ if not EventsFolder then
 	return
 end
 
--- Load UpgradesData module
+-- Load modules
 local UpgradesData = require(RepStorage:WaitForChild("Modules"):WaitForChild("UpgradesData"))
+local ConveyorUpgradeApplier = require(ServerStorage:WaitForChild("Modules"):WaitForChild("ConveyorUpgradeApplier"))
 
 -- Helper to get player upgrades from global data
 local function GetPlayerUpgrades(player)
@@ -114,9 +118,19 @@ if BuyUpgradeRemote then
 		cashValue.Value = cashValue.Value - cost
 
 		-- Increment upgrade level
-		upgrades[upgradeId] = currentLevel + 1
+		local newLevel = currentLevel + 1
+		upgrades[upgradeId] = newLevel
 
-		print(player.Name, "upgraded", upgradeData.Name, "to level", currentLevel + 1)
+		print(player.Name, "upgraded", upgradeData.Name, "to level", newLevel)
+
+		-- APPLY UPGRADE TO EXISTING ITEMS
+		if upgradeId == "ConveyorSpeed" then
+			-- Apply the upgrade level (+1 speed per level) to all conveyors
+			local conveyorsUpdated = ConveyorUpgradeApplier.ApplyToPlayerPlot(player, newLevel)
+
+			print("Updated", conveyorsUpdated, "conveyors for", player.Name, "- New speed: base + " .. newLevel)
+		end
+
 		return true
 	end
 else
