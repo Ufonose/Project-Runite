@@ -1,5 +1,5 @@
 -- ReplicatedStorage/Items/[Miner]/DropOre.lua
--- REPLACE the SelectRandomOre function with this updated version
+-- COMPLETE UPDATED VERSION with both Gem Discovery and Double Drop
 
 local Plrs = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
@@ -95,6 +95,46 @@ local function GetWaitTime()
 	return waitTime
 end
 
+-- Function to create and drop a single ore
+local function DropSingleOre(plot_owner, selectedOreName, selectedWorth)
+	local ORE, CASH_VALUE = ITEM_HANDLER.DROP_ORE(
+		PLOT, 
+		script.Parent.Parent, 
+		script.Parent.Drop, 
+		Vector3.new(ITEM_INFO.DropSize, ITEM_INFO.DropSize, ITEM_INFO.DropSize), 
+		ITEM_INFO.DropColor, 
+		ITEM_INFO.DropMaterial, 
+		selectedWorth,
+		selectedOreName
+	)
+
+	if ORE then
+		-- Add random left/right offset
+		local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
+
+		local currentCFrame
+		if ORE:IsA("Model") then
+			currentCFrame = ORE:GetPivot()
+			local newCFrame = currentCFrame * CFrame.new(randomX, 0, 0)
+			ORE:PivotTo(newCFrame)
+		elseif ORE:IsA("BasePart") then
+			currentCFrame = ORE.CFrame
+			ORE.CFrame = currentCFrame * CFrame.new(randomX, 0, 0)
+		end
+
+		ORE.Parent = PLOT.MiscInfo.OresDropped
+
+		-- Set network ownership
+		if ORE:IsA("Model") then
+			if ORE.PrimaryPart then
+				ORE.PrimaryPart:SetNetworkOwner(plot_owner)
+			end
+		elseif ORE:IsA("BasePart") then
+			ORE:SetNetworkOwner(plot_owner)
+		end
+	end
+end
+
 while true do
 	local waitTime = GetWaitTime()
 	wait(waitTime)
@@ -102,41 +142,26 @@ while true do
 	local plot_owner = Plrs:FindFirstChild(PLOT.Owner.Value)
 	if plot_owner ~= nil then
 		if plot_owner.Settings.MinesActive.Value then
+			-- Check for double drop chance
+			local doubleDropChance = 0
+			if _G.GetUpgradeMultiplier then
+				doubleDropChance = _G.GetUpgradeMultiplier(plot_owner, "DoubleDropChance")
+			end
+
+			-- Roll for double drop (1-10% chance)
+			local isDoubleDrop = (math.random() * 100) <= doubleDropChance
+
+			-- Select ore type
 			local selectedOreName, selectedWorth = SelectRandomOre()
 
-			local ORE, CASH_VALUE = ITEM_HANDLER.DROP_ORE(
-				PLOT, 
-				script.Parent.Parent, 
-				script.Parent.Drop, 
-				Vector3.new(ITEM_INFO.DropSize, ITEM_INFO.DropSize, ITEM_INFO.DropSize), 
-				ITEM_INFO.DropColor, 
-				ITEM_INFO.DropMaterial, 
-				selectedWorth,
-				selectedOreName
-			)
+			-- Drop first ore
+			DropSingleOre(plot_owner, selectedOreName, selectedWorth)
 
-			if ORE then
-				local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
-
-				local currentCFrame
-				if ORE:IsA("Model") then
-					currentCFrame = ORE:GetPivot()
-					local newCFrame = currentCFrame * CFrame.new(randomX, 0, 0)
-					ORE:PivotTo(newCFrame)
-				elseif ORE:IsA("BasePart") then
-					currentCFrame = ORE.CFrame
-					ORE.CFrame = currentCFrame * CFrame.new(randomX, 0, 0)
-				end
-
-				ORE.Parent = PLOT.MiscInfo.OresDropped
-
-				if ORE:IsA("Model") then
-					if ORE.PrimaryPart then
-						ORE.PrimaryPart:SetNetworkOwner(plot_owner)
-					end
-				elseif ORE:IsA("BasePart") then
-					ORE:SetNetworkOwner(plot_owner)
-				end
+			-- Drop second ore if double drop triggered
+			if isDoubleDrop then
+				-- Small delay and different position for second ore
+				wait(0.05)
+				DropSingleOre(plot_owner, selectedOreName, selectedWorth)
 			end
 		end
 	end
