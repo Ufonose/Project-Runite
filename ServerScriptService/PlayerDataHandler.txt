@@ -11,7 +11,7 @@ local PLAYER_DATA_INFO = require(ServerStorage.Modules.PlayerDataInfo)
 local CASH_LIB = require(RepStorage.Modules.CashLib)
 local MainLib = require(RepStorage.Modules.MainLib)
 -- Constants
-local data_code = "map_r14"		-- Change this string to reset data map_r14
+local data_code = "map_r14o3"		-- Change this string to reset data map_r14
 
 if workspace:FindFirstChild("Items") then
 	workspace.Items.Parent = RepStorage
@@ -56,7 +56,7 @@ local function SAVE_DATA(Plr)
 end
 
 -- ServerScriptService/PlayerDataHandler.lua
--- FIND THE LOAD_DATA FUNCTION - SIMPLIFIED VERSION
+-- FIXED: Restored proper Research data structure
 
 local function LOAD_DATA(Plr)
 	if Plr:FindFirstChild("Loading") then
@@ -141,8 +141,22 @@ local function LOAD_DATA(Plr)
 		end
 	end
 
-	-- Load Research Progress
-	_G["global_data"][Plr.Name]["Research"] = plr_data["ResearchData"] or {}
+	-- *** FIXED: Load Research Progress with proper structure ***
+	_G["global_data"][Plr.Name]["Research"] = plr_data["ResearchData"] or {
+		CompletedObjectives = {},
+		ActiveObjectives = {},
+		ObjectiveProgress = {},
+	}
+
+	-- Add ItemsCollected if it doesn't exist (for existing saves)
+	if not _G["global_data"][Plr.Name]["Research"]["ItemsCollected"] then
+		_G["global_data"][Plr.Name]["Research"]["ItemsCollected"] = {}
+	end
+
+	-- Load Furnace Hotspot (ALWAYS UNLOCKED)
+	_G["global_data"][Plr.Name]["FurnaceHotspot"] = plr_data["FurnaceHotspot"] or {
+		Unlocked = true,
+	}
 
 	-- *** CRITICAL: Load Upgrades Data BEFORE loading plot items ***
 	_G["global_data"][Plr.Name]["Upgrades"] = plr_data["UpgradesData"] or {}
