@@ -96,7 +96,6 @@ if BuyUpgradeRemote then
 		local cost = UpgradesData.GetUpgradeCost(upgradeId, currentLevel)
 
 		-- Get player's cash
-		local ServerStorage = game:GetService("ServerStorage")
 		local cashValue = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(player.Name)
 		if not cashValue then
 			warn("Player cash not found!")
@@ -118,61 +117,6 @@ if BuyUpgradeRemote then
 		upgrades[upgradeId] = currentLevel + 1
 
 		print(player.Name, "upgraded", upgradeData.Name, "to level", currentLevel + 1)
-
-		-- ⭐ If ConveyorSpeed was upgraded, refresh all existing conveyors IMMEDIATELY
-		if upgradeId == "ConveyorSpeed" then
-			print("=== REFRESHING CONVEYORS FOR", player.Name, "===")
-
-			-- Find the player's plot by Owner value
-			local plot = nil
-			for _, p in pairs(workspace.Plots:GetChildren()) do
-				if p:FindFirstChild("Owner") and p.Owner.Value == player.Name then
-					plot = p
-					break
-				end
-			end
-
-			if plot then
-				print("Found plot:", plot.Name)
-				local placedItems = plot:FindFirstChild("PlacedItems")
-				if placedItems then
-					local speedBonus = upgrades[upgradeId]
-					local updatedCount = 0
-
-					print("Speed bonus:", speedBonus)
-
-					for _, item in pairs(placedItems:GetChildren()) do
-						local itemStats = item:FindFirstChild("ItemStats")
-						if itemStats then
-							local success, itemInfo = pcall(require, itemStats)
-							if success and itemInfo.ConveyorSpeed and itemInfo.ConveyorSpeed > 0 then
-								local baseSpeed = itemInfo.ConveyorSpeed
-
-								for _, descendant in pairs(item:GetDescendants()) do
-									if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvMerge" or descendant.Name == "ConvSlope") then
-										local convVelo = descendant:FindFirstChild("ConvVelo")
-										if convVelo then
-											local isReversed = convVelo.Value < 0
-											local newSpeed = baseSpeed + speedBonus
-											convVelo.Value = isReversed and -newSpeed or newSpeed
-											updatedCount = updatedCount + 1
-											print("Updated:", item.Name, descendant.Name, "from", (isReversed and -baseSpeed or baseSpeed), "to", convVelo.Value)
-										end
-									end
-								end
-							end
-						end
-					end
-
-					print("=== UPDATED", updatedCount, "CONVEYOR PARTS ===")
-				else
-					warn("PlacedItems not found!")
-				end
-			else
-				warn("Plot not found for player:", player.Name)
-			end
-		end
-
 		return true
 	end
 else
@@ -183,12 +127,6 @@ end
 function GetUpgradeMultiplier(player, upgradeId)
 	local upgrades = GetPlayerUpgrades(player)
 	local level = upgrades[upgradeId] or 0
-
-	-- For ConveyorSpeed, return flat bonus instead of multiplier
-	if upgradeId == "ConveyorSpeed" then
-		return level  -- Returns 0, 1, 2, 3... (flat bonus)
-	end
-
 	return UpgradesData.GetUpgradeMultiplier(upgradeId, level)
 end
 
