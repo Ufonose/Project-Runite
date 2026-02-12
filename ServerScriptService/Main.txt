@@ -1,3 +1,5 @@
+-- ServerScriptService/Main.txt
+
 -- Services
 local RepStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -5,7 +7,7 @@ local Plrs = game:GetService("Players")
 -- Modules
 local MAIN_LIB = require(RepStorage.Modules.MainLib)
 -- Variables
-	-- Arrays
+-- Arrays
 local DEBOUNCE = {}
 
 -- Define minimum quantities that must remain for each item (by item name)
@@ -16,8 +18,6 @@ local MINIMUM_ITEM_QUANTITIES = {
 }
 
 warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] loading...")
-
--- ServerScriptService/Main.txt (UPDATE PLACE_ITEM)
 
 function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 	if Plr and PLACED_ITEMS and ITEMS then
@@ -77,6 +77,29 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 						end
 					end
 					print("=== REVERSAL COMPLETE ===")
+				end
+
+				-- ⭐ Apply Conveyor Speed Upgrade
+				if ITEM_INFO.ConveyorSpeed and ITEM_INFO.ConveyorSpeed > 0 then
+					-- Get the player's conveyor speed upgrade
+					local speedBonus = 0
+					if _G.GetUpgradeMultiplier then
+						speedBonus = _G.GetUpgradeMultiplier(Plr, "ConveyorSpeed")
+					end
+
+					-- Apply speed bonus to all Conv, ConvMerge, and ConvSlope parts
+					for _, descendant in pairs(REAL_ITEM:GetDescendants()) do
+						if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvMerge" or descendant.Name == "ConvSlope") then
+							local convVelo = descendant:FindFirstChild("ConvVelo")
+							if convVelo then
+								local baseSpeed = math.abs(convVelo.Value)  -- Get absolute value (in case reversed)
+								local isNegative = convVelo.Value < 0
+								local newSpeed = baseSpeed + speedBonus
+								convVelo.Value = isNegative and -newSpeed or newSpeed
+								print("Applied conveyor speed upgrade:", descendant.Name, "Base:", baseSpeed, "Bonus:", speedBonus, "Final:", convVelo.Value)
+							end
+						end
+					end
 				end
 
 				REAL_ITEM.Parent = PLACED_ITEMS
@@ -162,89 +185,94 @@ function SELL_ITEM(Plr, ITEMS)
 
 		-- Count TOTAL items (placed on plot + in inventory)
 		local PLR_PLOT = Plr.SetPlot.Value
-		local PLACED_ITEMS = PLR_PLOT:FindFirstChild("PlacedItems")
+		local PLACED_ITEMS = PLR_PLOT.PlacedItems
 		local totalItemCounts = {}
 
-		-- Count items placed on the plot
-		if PLACED_ITEMS then
-			for _, item in pairs(PLACED_ITEMS:GetChildren()) do
-				if item:FindFirstChild("ItemStats") then
-					local itemStats = require(item.ItemStats)
-					local itemName = MAIN_LIB.ITEM_FROM_ID(itemStats.ItemId).Name
-					totalItemCounts[itemName] = (totalItemCounts[itemName] or 0) + 1
+		-- Count placed items
+		for _, placedItem in pairs(PLACED_ITEMS:GetChildren()) do
+			local itemName = placedItem.Name
+			totalItemCounts[itemName] = (totalItemCounts[itemName] or 0) + 1
+		end
+
+		-- Count inventory items
+		for itemIdStr, itemData in pairs(_G["global_data"][Plr.Name]["Items"]) do
+			local itemId = tonumber(itemIdStr)
+			if itemId then
+				local itemModel = MAIN_LIB.ITEM_FROM_ID(itemId)
+				if itemModel then
+					local itemName = itemModel.Name
+					totalItemCounts[itemName] = (totalItemCounts[itemName] or 0) + itemData.Amount
 				end
 			end
 		end
 
-		-- ADD items in inventory
-		if _G["global_data"] and _G["global_data"][Plr.Name] and _G["global_data"][Plr.Name]["Items"] then
-			for itemId, itemData in pairs(_G["global_data"][Plr.Name]["Items"]) do
-				if itemData.Amount and itemData.Amount > 0 then
-					-- FIXED: itemId is now a string, convert to number for ITEM_FROM_ID
-					local item = MAIN_LIB.ITEM_FROM_ID(tonumber(itemId))
-					if item then
-						local itemName = item.Name
-						totalItemCounts[itemName] = (totalItemCounts[itemName] or 0) + itemData.Amount
-					end
-				end
-			end
-		end
-
-		-- Check if selling would drop below minimum for any item
+		-- Check if selling would go below minimum
 		for itemName, sellCount in pairs(itemsBeingSold) do
 			local minimumRequired = MINIMUM_ITEM_QUANTITIES[itemName]
 			if minimumRequired then
-				local totalOwned = totalItemCounts[itemName] or 0
-				local remainingAfterSale = totalOwned - sellCount
+				local totalCount = totalItemCounts[itemName] or 0
+				local remainingAfterSale = totalCount - sellCount
 
 				if remainingAfterSale < minimumRequired then
-					RepStorage.Events.MessageClient:FireClient(Plr, "screen", {
-						["message"] = "Cannot sell! You must keep at least " .. minimumRequired .. " " .. itemName .. "s."
-					})
+					warn(string.format(
+						"Cannot sell %s: would leave %d but need %d minimum",
+						itemName,
+						remainingAfterSale,
+						minimumRequired
+						))
+					RepStorage.Events.MessageClient:FireClient(
+						Plr,
+						"screen",
+						{["message"] = string.format("You need at least %d %s", minimumRequired, itemName)}
+					)
 					return false
 				end
 			end
 		end
 
-		-- Proceed with selling
+		local SOLD_ITEMS = {}
 		for I, REAL_ID in pairs(ITEM_ID) do
-			-- Check hotspot items
-			if REAL_ID:GetAttribute("HotspotMiner") == true then
-				warn("Cannot sell hotspot miner!")
-				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "Hotspot miners cannot be sold!"})
-				return false
-			end
-
-			if REAL_ID:GetAttribute("HotspotFurnace") == true then
-				warn("Cannot sell hotspot furnace!")
-				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "The central furnace cannot be sold!"})
-				return false
-			end
-
 			local ITEM_INFO = require(REAL_ID.ItemStats)
 			if table.find(CANT_SELL_TYPES, ITEM_INFO.ItemType) == nil then
-				local sellValue = math.floor(ITEM_INFO.Cost * 0.3)  -- 30% of buy price
-				CASH.Value += sellValue
-				REAL_ID:Destroy()
+				SOLD_ITEMS[#SOLD_ITEMS+1] = REAL_ID
 			end
 		end
-		return true
+
+		if #SOLD_ITEMS == #ITEM_ID then
+			local TOTAL_VAL = 0
+			for I, REAL_ID in pairs(SOLD_ITEMS) do
+				local ITEM_INFO = require(REAL_ID.ItemStats)
+				local ITEM_VAL = math.floor(ITEM_INFO.Cost*0.3)
+				TOTAL_VAL += ITEM_VAL
+				-- FIXED: Added tostring() for item ID
+				_G["global_data"][Plr.Name]["Items"][tostring(ITEM_INFO.ItemId)]["Amount"] -= 1
+			end
+			CASH.Value += TOTAL_VAL
+			RepStorage.Events.InventoryUpdate:FireClient(Plr)
+			return true
+		end
 	end
 	return false
 end
 
-function WITHDRAW_ITEMS(Plr, ITEMS)
-	if DEBOUNCE[Plr.Name] then
-		return false
-	else
-		DEBOUNCE[Plr.Name] = true
-		spawn(function()
-			wait(.3)
-			DEBOUNCE[Plr.Name] = nil
-		end)
+function UPDATE_STORT(Plr)
+	local PLR_PLOT = Plr.SetPlot.Value
+	local INV_TYPE = Plr.InvSort.Value
+	if PLR_PLOT and INV_TYPE then
+		-- Refresh inventory!
+		RepStorage.Events.InventoryUpdate:FireClient(Plr)
 	end
-	if Plr then
+end
+
+function WITHDRAW_ITEMS(Plr, ITEMS)
+	if DEBOUNCE[Plr] == true then
+		RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "Wait before withdrawing again!"})
+		return false
+	end
+	DEBOUNCE[Plr] = true
+	if ITEMS then
 		for I, ITEM in pairs(ITEMS) do
+			-- Check if this is a hotspot-only miner (don't allow withdrawal)
 			if ITEM:GetAttribute("HotspotMiner") == true then
 				warn("Cannot withdraw hotspot miner!")
 				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "Hotspot miners cannot be moved!"})
@@ -263,8 +291,10 @@ function WITHDRAW_ITEMS(Plr, ITEMS)
 			ITEM:Destroy()
 		end
 		RepStorage.Events.InventoryUpdate:FireClient(Plr)
+		DEBOUNCE[Plr] = false
 		return true
 	end
+	DEBOUNCE[Plr] = false
 	return false
 end
 
