@@ -6,7 +6,7 @@ UpgradesData.Upgrades = {
 		Name = "Iron Mine Speed",
 		Description = "Increase the speed of all Iron Miners by 10% per level",
 		Icon = "⛏️",
-		BaseCost = 1,
+		BaseCost = 100,
 		CostMultiplier = 1.5,  -- Cost increases by 50% each level
 		MaxLevel = 20,
 		SortOrder = 1,
@@ -28,7 +28,7 @@ UpgradesData.Upgrades = {
 		Name = "Copper Mine Speed",
 		Description = "Increase the speed of all Copper Miners by 10% per level",
 		Icon = "🔨",
-		BaseCost = 1,
+		BaseCost = 100,
 		CostMultiplier = 1.5,
 		MaxLevel = 20,
 		SortOrder = 2,
@@ -49,7 +49,7 @@ UpgradesData.Upgrades = {
 		Name = "Gold Mine Speed",
 		Description = "Increase the speed of all Gold Miners by 10% per level",
 		Icon = "💎",
-		BaseCost = 1,
+		BaseCost = 250,
 		CostMultiplier = 1.5,
 		MaxLevel = 20,
 		SortOrder = 3,
@@ -68,9 +68,9 @@ UpgradesData.Upgrades = {
 
 	["ConveyorSpeed"] = {
 		Name = "Conveyor Speed",
-		Description = "Increase the speed of all Conveyors by 1 per level",
+		Description = "Increase the speed of all Conveyors by 8% per level",
 		Icon = "🔄",
-		BaseCost = 1,
+		BaseCost = 150,
 		CostMultiplier = 1.5,
 		MaxLevel = 20,
 		SortOrder = 4,
@@ -79,11 +79,11 @@ UpgradesData.Upgrades = {
 			if level == 0 then
 				return "Not Upgraded"
 			else
-				return "+" .. level .. " Speed"
+				return "+" .. (level * 8) .. "% Speed"
 			end
 		end,
 		ApplyEffect = function(level)
-			return level  -- Returns flat bonus (e.g., 1, 2, 3...)
+			return 1 + (level * 0.08)  -- 1.08x, 1.16x, 1.24x, etc.
 		end
 	},
 
@@ -91,7 +91,7 @@ UpgradesData.Upgrades = {
 		Name = "Cash Bonus",
 		Description = "Increase cash earned from all sources by 5% per level",
 		Icon = "💰",
-		BaseCost = 1,
+		BaseCost = 200,
 		CostMultiplier = 1.6,
 		MaxLevel = 20,
 		SortOrder = 5,
