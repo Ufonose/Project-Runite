@@ -1042,10 +1042,7 @@ function module.LOAD(MODULE_INFO)
 		if shopFrame:FindFirstChild("UpgradesContainer") then
 			shopFrame.UpgradesContainer.Visible = false
 		end
-
-		if script.Parent:FindFirstChild("UpgradeShopHandler") then
-			script.Parent.UpgradeShopHandler.Enabled = false
-		end
+		-- Removed .Enabled = false line (ModuleScripts don't have this)
 	end)
 
 	upgradesTabButton.MouseButton1Click:Connect(function()
@@ -1057,10 +1054,7 @@ function module.LOAD(MODULE_INFO)
 		if shopFrame:FindFirstChild("UpgradesContainer") then
 			shopFrame.UpgradesContainer.Visible = true
 		end
-
-		if script.Parent:FindFirstChild("UpgradeShopHandler") then
-			script.Parent.UpgradeShopHandler.Enabled = true
-		end
+		-- Removed .Enabled = true line (ModuleScripts don't have this)
 	end)
 
 	-- Menu toggle handler
