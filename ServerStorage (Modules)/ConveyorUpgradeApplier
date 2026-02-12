@@ -1,0 +1,133 @@
+-- ServerStorage/Modules/ConveyorUpgradeApplier.lua
+-- FIXED: Only look at items that ACTUALLY have conveyor parts
+
+local RepStorage = game:GetService("ReplicatedStorage")
+
+local ConveyorUpgradeApplier = {}
+
+-- Cache the base conveyor speed (only lookup once)
+local BASE_CONVEYOR_SPEED = nil
+
+-- Check if a part is a conveyor by its name
+local function isConveyorPart(part)
+	return part.Name == "Conv" or 
+		part.Name == "ConvMerge" or 
+		part.Name == "ConvSlope" or 
+		part.Name == "ConvSlopeMerge"
+end
+
+-- Get the base conveyor speed by finding an ACTUAL conveyor part
+local function getBaseConveyorSpeed()
+	-- Return cached value if we already found it
+	if BASE_CONVEYOR_SPEED then
+		return BASE_CONVEYOR_SPEED
+	end
+
+	print("Looking for base conveyor speed by checking actual conveyor parts...")
+
+	-- Look through ALL items to find one that CONTAINS a conveyor part
+	for _, item in pairs(RepStorage.Items:GetChildren()) do
+		-- Check if this item has any conveyor parts
+		for _, descendant in pairs(item:GetDescendants()) do
+			if descendant:IsA("BasePart") and isConveyorPart(descendant) then
+				-- Found a conveyor part! Check its ConvVelo
+				local convVelo = descendant:FindFirstChild("ConvVelo")
+				if convVelo and math.abs(convVelo.Value) > 0 then
+					BASE_CONVEYOR_SPEED = math.abs(convVelo.Value)
+					print("✓ Found base conveyor speed:", BASE_CONVEYOR_SPEED, "from", descendant.Name, "in item:", item.Name)
+					return BASE_CONVEYOR_SPEED
+				end
+			end
+		end
+	end
+
+	-- Fallback default
+	BASE_CONVEYOR_SPEED = 7
+	warn("⚠ Could not find base conveyor speed, using default:", BASE_CONVEYOR_SPEED)
+	return BASE_CONVEYOR_SPEED
+end
+
+-- Apply conveyor speed upgrade to a single conveyor part
+function ConveyorUpgradeApplier.ApplyToConveyorPart(conveyorPart, upgradeLevel)
+	if not conveyorPart or not conveyorPart:IsA("BasePart") then
+		return false
+	end
+
+	-- Check if this is a conveyor part by name
+	if not isConveyorPart(conveyorPart) then
+		return false
+	end
+
+	local convVelo = conveyorPart:FindFirstChild("ConvVelo")
+	if convVelo then
+		local baseSpeed = getBaseConveyorSpeed()
+		local newSpeed = baseSpeed + upgradeLevel
+
+		-- Preserve direction (positive or negative)
+		local isReversed = convVelo.Value < 0
+
+		if isReversed then
+			convVelo.Value = -newSpeed
+		else
+			convVelo.Value = newSpeed
+		end
+
+		return true
+	end
+
+	return false
+end
+
+-- Apply upgrade to all conveyors on a player's plot
+function ConveyorUpgradeApplier.ApplyToPlayerPlot(player, upgradeLevel)
+	local plot = player:FindFirstChild("SetPlot")
+	if not plot or not plot.Value then
+		warn("Player plot not found for", player.Name)
+		return 0
+	end
+
+	local placedItems = plot.Value:FindFirstChild("PlacedItems")
+	if not placedItems then
+		warn("PlacedItems folder not found")
+		return 0
+	end
+
+	local conveyorsUpdated = 0
+	local baseSpeed = getBaseConveyorSpeed()
+
+	print("=== APPLYING CONVEYOR UPGRADES TO EXISTING ITEMS ===")
+	print("Base Speed:", baseSpeed)
+	print("Upgrade Level:", upgradeLevel)
+	print("Final Speed:", baseSpeed + upgradeLevel)
+
+	-- Loop through all placed items
+	for _, item in pairs(placedItems:GetChildren()) do
+		-- Check all descendants for conveyor parts
+		for _, descendant in pairs(item:GetDescendants()) do
+			if descendant:IsA("BasePart") and isConveyorPart(descendant) then
+				if ConveyorUpgradeApplier.ApplyToConveyorPart(descendant, upgradeLevel) then
+					conveyorsUpdated = conveyorsUpdated + 1
+				end
+			end
+		end
+	end
+
+	print("Updated", conveyorsUpdated, "conveyors")
+	print("=== UPGRADE APPLICATION COMPLETE ===")
+
+	return conveyorsUpdated
+end
+
+-- Get the current conveyor upgrade level for a player
+function ConveyorUpgradeApplier.GetPlayerUpgradeLevel(player)
+	if _G["global_data"] and _G["global_data"][player.Name] then
+		local upgrades = _G["global_data"][player.Name]["Upgrades"]
+		if upgrades and upgrades["ConveyorSpeed"] then
+			return upgrades["ConveyorSpeed"]
+		end
+	end
+
+	return 0
+end
+
+return ConveyorUpgradeApplier
