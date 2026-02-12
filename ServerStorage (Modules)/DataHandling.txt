@@ -97,8 +97,12 @@ local function ApplyConveyorUpgradeToItem(item, upgradeLevel)
 				local currentValue = convVelo.Value
 				local isReversed = currentValue < 0
 
+				-- Check if this is a sloped conveyor (gets 0.5x upgrade instead of 1x)
+				local isSloped = (descendant.Name == "ConvSlope" or descendant.Name == "ConvSlopeMerge")
+				local speedBoost = isSloped and (upgradeLevel * 0.5) or upgradeLevel
+
 				-- Calculate new speed
-				local newSpeed = baseSpeed + upgradeLevel
+				local newSpeed = baseSpeed + speedBoost
 
 				-- Apply with correct direction
 				if isReversed then
