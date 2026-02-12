@@ -114,6 +114,29 @@ UpgradesData.Upgrades = {
 		ApplyEffect = function(level)
 			return 1 + (level * 0.05)
 		end
+	},
+	
+	GemDiscovery = {
+		Name = "Gem Discovery",
+		Description = "Increases the chance to find rare gems by 10% per level",
+		Icon = "💎",
+		BaseCost = 1,
+		CostMultiplier = 1.2,
+		MaxLevel = 20,
+		SortOrder = 6,
+		Category = "Miners",
+		GetEffectText = function(level)
+			if level == 0 then
+				return "Not Upgraded"
+			else
+				return "+" .. (level * 10) .. "% Gem Chance"
+			end
+		end,
+		ApplyEffect = function(level)
+			-- Returns multiplier for gem chances
+			-- Level 1 = 1.1x (10% more), Level 10 = 2.0x (100% more)
+			return 1 + (level * 0.1)
+		end
 	}
 }
 
