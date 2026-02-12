@@ -1,82 +1,88 @@
 -- ReplicatedStorage/Modules/UpgradesData.lua
--- FIXED: ConveyorSpeed now uses +1 speed per level instead of percentage
+-- UPDATED: Added IronMineSpeed, CopperMineSpeed, GoldMineSpeed upgrades
 
 local UpgradesData = {}
 
--- Define all available upgrades
 UpgradesData.Upgrades = {
-	["IronMineSpeed"] = {
+	-- === MINER SPEED UPGRADES ===
+	IronMineSpeed = {
 		Name = "Iron Mine Speed",
-		Description = "Increase the speed of all Iron Miners by 10% per level",
+		Description = "Increases ore drop speed for all Iron Mines by 5% per level",
 		Icon = "⛏️",
 		BaseCost = 1,
-		CostMultiplier = 1.5,
+		CostMultiplier = 1.15,
 		MaxLevel = 20,
 		SortOrder = 1,
-		Category = "Mining",
+		Category = "Miners",
 		GetEffectText = function(level)
 			if level == 0 then
 				return "Not Upgraded"
 			else
-				return "+" .. (level * 10) .. "% Speed"
+				local speedIncrease = level * 5
+				return "+" .. speedIncrease .. "% Speed"
 			end
 		end,
 		ApplyEffect = function(level)
-			return 1 + (level * 0.1)
+			-- Returns speed multiplier: 1 + (level * 0.05)
+			-- Level 1 = 1.05x speed, Level 10 = 1.5x speed, Level 20 = 2.0x speed
+			return 1 + (level * 0.05)
 		end
 	},
 
-	["CopperMineSpeed"] = {
+	CopperMineSpeed = {
 		Name = "Copper Mine Speed",
-		Description = "Increase the speed of all Copper Miners by 10% per level",
-		Icon = "🔨",
+		Description = "Increases ore drop speed for all Copper Mines by 5% per level",
+		Icon = "⛏️",
 		BaseCost = 1,
-		CostMultiplier = 1.5,
+		CostMultiplier = 1.15,
 		MaxLevel = 20,
 		SortOrder = 2,
-		Category = "Mining",
+		Category = "Miners",
 		GetEffectText = function(level)
 			if level == 0 then
 				return "Not Upgraded"
 			else
-				return "+" .. (level * 10) .. "% Speed"
+				local speedIncrease = level * 5
+				return "+" .. speedIncrease .. "% Speed"
 			end
 		end,
 		ApplyEffect = function(level)
-			return 1 + (level * 0.1)
+			return 1 + (level * 0.05)
 		end
 	},
 
-	["GoldMineSpeed"] = {
+	GoldMineSpeed = {
 		Name = "Gold Mine Speed",
-		Description = "Increase the speed of all Gold Miners by 10% per level",
-		Icon = "💎",
+		Description = "Increases ore drop speed for all Gold Mines by 5% per level",
+		Icon = "⛏️",
 		BaseCost = 1,
-		CostMultiplier = 1.5,
+		CostMultiplier = 1.15,
 		MaxLevel = 20,
 		SortOrder = 3,
-		Category = "Mining",
+		Category = "Miners",
 		GetEffectText = function(level)
 			if level == 0 then
 				return "Not Upgraded"
 			else
-				return "+" .. (level * 10) .. "% Speed"
+				local speedIncrease = level * 5
+				return "+" .. speedIncrease .. "% Speed"
 			end
 		end,
 		ApplyEffect = function(level)
-			return 1 + (level * 0.1)
+			return 1 + (level * 0.05)
 		end
 	},
 
-	["ConveyorSpeed"] = {
+	-- === EXISTING UPGRADES ===
+	ConveyorSpeed = {
 		Name = "Conveyor Speed",
-		Description = "Increase the speed of all Conveyors by +1 per level",
-		Icon = "🔄",
+		Description = "Increases the speed of all conveyors by 1 unit per level",
+		Icon = "➡️",
 		BaseCost = 1,
-		CostMultiplier = 1.5,
+		CostMultiplier = 1.12,
 		MaxLevel = 20,
 		SortOrder = 4,
-		Category = "Production",
+		Category = "Automation",
 		GetEffectText = function(level)
 			if level == 0 then
 				return "Not Upgraded"
@@ -85,17 +91,16 @@ UpgradesData.Upgrades = {
 			end
 		end,
 		ApplyEffect = function(level)
-			-- For conveyor speed, just return the level (used as flat bonus)
 			return level
 		end
 	},
 
-	["CashBonus"] = {
+	CashBonus = {
 		Name = "Cash Bonus",
-		Description = "Increase cash earned from all sources by 5% per level",
+		Description = "Increases cash earned from processed ores by 5% per level",
 		Icon = "💰",
 		BaseCost = 1,
-		CostMultiplier = 1.6,
+		CostMultiplier = 1.18,
 		MaxLevel = 20,
 		SortOrder = 5,
 		Category = "Economy",
