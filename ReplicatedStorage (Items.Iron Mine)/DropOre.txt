@@ -1,3 +1,7 @@
+-- ReplicatedStorage/Items/[Miner Name]/DropOre.lua
+-- UPDATED: Applies speed upgrades dynamically
+-- Place this script in each miner (Iron Mine, Copper Mine, Gold Mine)
+
 local Plrs = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
 local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
@@ -31,15 +35,40 @@ local function SelectRandomOre()
 	return dropTable[1].Name, dropTable[1].Worth
 end
 
+-- Function to calculate wait time with speed upgrade applied
+local function GetWaitTime()
+	local baseMin = ITEM_INFO.DropSpeedMin
+	local baseMax = ITEM_INFO.DropSpeedMax
+
+	-- Get speed upgrade level from miner attribute
+	local upgradeLevel = script.Parent.Parent:GetAttribute("SpeedUpgradeLevel") or 0
+
+	-- Calculate speed multiplier: 1 + (level * 0.05)
+	-- Level 0 = 1x speed (no change)
+	-- Level 1 = 1.05x speed (5% faster)
+	-- Level 10 = 1.5x speed (50% faster)
+	-- Level 20 = 2.0x speed (100% faster)
+	local speedMultiplier = 1 + (upgradeLevel * 0.05)
+
+	-- Apply speed multiplier to reduce wait time
+	local adjustedMin = baseMin / speedMultiplier
+	local adjustedMax = baseMax / speedMultiplier
+
+	-- Generate random wait time in adjusted range
+	local waitTime = adjustedMin + math.random() * (adjustedMax - adjustedMin)
+
+	return waitTime
+end
+
 while true do
-	-- NEW: Random wait time between min and max
-	local waitTime = ITEM_INFO.DropSpeedMin + math.random() * (ITEM_INFO.DropSpeedMax - ITEM_INFO.DropSpeedMin)
+	-- Calculate wait time with upgrades applied
+	local waitTime = GetWaitTime()
 	wait(waitTime)
 
 	local plot_owner = Plrs:FindFirstChild(PLOT.Owner.Value)
 	if plot_owner ~= nil then
 		if plot_owner.Settings.MinesActive.Value then
-			-- NEW: Select random ore based on rarity
+			-- Select random ore based on rarity
 			local selectedOreName, selectedWorth = SelectRandomOre()
 
 			-- Create the ore using the selected ore name and worth
@@ -51,7 +80,7 @@ while true do
 				ITEM_INFO.DropColor, 
 				ITEM_INFO.DropMaterial, 
 				selectedWorth,
-				selectedOreName  -- Pass the selected ore name
+				selectedOreName
 			)
 
 			if ORE then
