@@ -1,5 +1,5 @@
 -- ServerScriptService/ItemHandler.lua
--- FIXED: Uses upgrade levels instead of multipliers
+-- COMPLETE VERSION with Conveyor and Miner Upgrade Support
 
 -- Services
 local RepStorage = game:GetService("ReplicatedStorage")
@@ -10,8 +10,9 @@ if workspace:FindFirstChild("Items") then
 	workspace.Items.Parent = RepStorage
 end
 
--- Load ConveyorUpgradeApplier
+-- Load upgrade appliers
 local ConveyorUpgradeApplier = require(ServerStorage:WaitForChild("Modules"):WaitForChild("ConveyorUpgradeApplier"))
+local MinerUpgradeApplier = require(ServerStorage:WaitForChild("Modules"):WaitForChild("MinerUpgradeApplier"))
 
 -- Process all items in ReplicatedStorage
 for I, ITEM in pairs(RepStorage.Items:GetChildren()) do
@@ -42,6 +43,10 @@ for I, ITEM in pairs(RepStorage.Items:GetChildren()) do
 	end
 end
 
+-- =====================================================
+-- CONVEYOR UPGRADE FUNCTIONS
+-- =====================================================
+
 -- Function to apply conveyor upgrades to a newly placed item
 function ApplyConveyorUpgradesToItem(player, item)
 	-- Get the player's conveyor upgrade level
@@ -70,4 +75,41 @@ end
 -- Expose function globally so PLACE_ITEM can use it
 _G.ApplyConveyorUpgradesToItem = ApplyConveyorUpgradesToItem
 
+-- =====================================================
+-- MINER UPGRADE FUNCTIONS
+-- =====================================================
+
+-- Function to apply miner speed upgrades to a newly placed item
+function ApplyMinerUpgradesToItem(player, item)
+	-- Check if this is a miner that should receive upgrades
+	local itemName = item.Name
+
+	-- Determine mine type (remove trailing numbers)
+	local baseName = itemName:gsub("%s*%d+$", "")
+	local isMiner = baseName:find("Iron Mine") or baseName:find("Copper Mine") or baseName:find("Gold Mine")
+
+	if not isMiner then
+		return -- Not a miner, skip
+	end
+
+	-- Apply the appropriate speed upgrade
+	local success = MinerUpgradeApplier.ApplyToMiner(item, player)
+
+	if success then
+		local upgradeLevel = item:GetAttribute("SpeedUpgradeLevel") or 0
+		if upgradeLevel > 0 then
+			print("Applied speed upgrade level", upgradeLevel, "to", itemName, "for", player.Name)
+		end
+	end
+end
+
+-- Expose function globally so PLACE_ITEM can use it
+_G.ApplyMinerUpgradesToItem = ApplyMinerUpgradesToItem
+
+-- =====================================================
+-- SCRIPT COMPLETE
+-- =====================================================
+
 print("Item Handler loaded successfully!")
+print("- Conveyor upgrades ready")
+print("- Miner speed upgrades ready")
