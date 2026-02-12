@@ -1,5 +1,5 @@
 -- ServerScriptService/UpgradesServerHandler.lua
--- FIXED: Uses upgrade levels instead of multipliers for conveyor speed
+-- UPDATED: Added miner speed upgrade handling
 
 local RepStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -14,6 +14,7 @@ end
 -- Load modules
 local UpgradesData = require(RepStorage:WaitForChild("Modules"):WaitForChild("UpgradesData"))
 local ConveyorUpgradeApplier = require(ServerStorage:WaitForChild("Modules"):WaitForChild("ConveyorUpgradeApplier"))
+local MinerUpgradeApplier = require(ServerStorage:WaitForChild("Modules"):WaitForChild("MinerUpgradeApplier"))
 
 -- Helper to get player upgrades from global data
 local function GetPlayerUpgrades(player)
@@ -125,10 +126,20 @@ if BuyUpgradeRemote then
 
 		-- APPLY UPGRADE TO EXISTING ITEMS
 		if upgradeId == "ConveyorSpeed" then
-			-- Apply the upgrade level (+1 speed per level) to all conveyors
 			local conveyorsUpdated = ConveyorUpgradeApplier.ApplyToPlayerPlot(player, newLevel)
-
 			print("Updated", conveyorsUpdated, "conveyors for", player.Name, "- New speed: base + " .. newLevel)
+
+		elseif upgradeId == "IronMineSpeed" then
+			local minersUpdated = MinerUpgradeApplier.ApplyToPlayerPlot(player, "Iron Mine")
+			print("Updated", minersUpdated, "Iron Mines for", player.Name, "- Speed level:", newLevel)
+
+		elseif upgradeId == "CopperMineSpeed" then
+			local minersUpdated = MinerUpgradeApplier.ApplyToPlayerPlot(player, "Copper Mine")
+			print("Updated", minersUpdated, "Copper Mines for", player.Name, "- Speed level:", newLevel)
+
+		elseif upgradeId == "GoldMineSpeed" then
+			local minersUpdated = MinerUpgradeApplier.ApplyToPlayerPlot(player, "Gold Mine")
+			print("Updated", minersUpdated, "Gold Mines for", player.Name, "- Speed level:", newLevel)
 		end
 
 		return true
