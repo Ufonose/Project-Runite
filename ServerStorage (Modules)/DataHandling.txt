@@ -1,14 +1,15 @@
--- ServerStorage (Modules)/DataHandling.txt (UPDATED WITH ASSEMBLY CONFIG)
+-- ServerStorage (Modules)/DataHandling.txt (COMPLETE WITH CONVEYOR SPEED UPGRADE)
 
 -- Services
 local RepStorage = game:GetService("ReplicatedStorage")
+local Plrs = game:GetService("Players")
 -- Modules
 local MainLib = require(RepStorage.Modules.MainLib)
 -- DataHandling
 local DataHandling = {}
 
 local function LOAD_ITEM_BASICS(ITEM)
-	-- ADD THIS: Add layer information when loading items
+	-- Add layer information when loading items
 	if ITEM:FindFirstChild("ItemStats") then
 		local itemStats = require(ITEM.ItemStats)
 
@@ -52,13 +53,13 @@ function DataHandling.LOAD_PLOT(Plr, PLOT_DATA)
 			local item_pos = PLR_PLOT.BasePlot.CFrame * CFrame.new(unpack(item_data["item_pos"]))
 			ITEM_MODEL:SetPrimaryPartCFrame(item_pos)
 
-			-- NEW: Apply conveyor reversal if saved (UPDATED TO INCLUDE ConvSlope)
+			-- Apply conveyor reversal if saved (UPDATED TO INCLUDE ConvSlope)
 			if item_data["CONVEYOR_REVERSED"] then
 				ITEM_MODEL:SetAttribute("ConveyorReversed", true)
 
 				-- Reverse ConvVelo values BEFORE parenting/enabling scripts
 				for _, descendant in pairs(ITEM_MODEL:GetDescendants()) do
-					-- UPDATE: Handle Conv AND ConvSlope (NOT ConvMerge)
+					-- Handle Conv AND ConvSlope (NOT ConvMerge)
 					if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope") then
 						-- Skip ConvMerge (it has NoFlip attribute)
 						if descendant:GetAttribute("NoFlip") then
@@ -81,7 +82,32 @@ function DataHandling.LOAD_PLOT(Plr, PLOT_DATA)
 				end
 			end
 
-			-- NEW: Restore sorter configuration if saved
+			-- ⭐ Apply Conveyor Speed Upgrade to loaded conveyors
+			local item_rep_name = ITEM_MODEL.Name
+			local ITEM_INFO = require(RepStorage.Items:FindFirstChild(item_rep_name).ItemStats)
+			if ITEM_INFO.ConveyorSpeed and ITEM_INFO.ConveyorSpeed > 0 then
+				-- Get the player's conveyor speed upgrade
+				local speedBonus = 0
+				if _G.GetUpgradeMultiplier then
+					speedBonus = _G.GetUpgradeMultiplier(Plr, "ConveyorSpeed")
+				end
+
+				-- Apply speed bonus to all Conv, ConvMerge, and ConvSlope parts
+				for _, descendant in pairs(ITEM_MODEL:GetDescendants()) do
+					if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvMerge" or descendant.Name == "ConvSlope") then
+						local convVelo = descendant:FindFirstChild("ConvVelo")
+						if convVelo then
+							local baseSpeed = math.abs(convVelo.Value)
+							local isNegative = convVelo.Value < 0
+							local newSpeed = baseSpeed + speedBonus
+							convVelo.Value = isNegative and -newSpeed or newSpeed
+							print("Applied conveyor speed upgrade on load:", descendant.Name, "Final:", convVelo.Value)
+						end
+					end
+				end
+			end
+
+			-- Restore sorter configuration if saved
 			if item_data["SORT_CONFIG"] then
 				print("Loading sorter config for", ITEM_MODEL.Name)
 
@@ -103,7 +129,7 @@ function DataHandling.LOAD_PLOT(Plr, PLOT_DATA)
 				end
 			end
 
-			-- ✨ NEW: Restore assembly machine configuration if saved
+			-- Restore assembly machine configuration if saved
 			if item_data["ASSEMBLY_CONFIG"] then
 				print("Loading assembly config for", ITEM_MODEL.Name)
 
@@ -133,7 +159,7 @@ function DataHandling.UNLOAD_PLOT(Plr)
 		for I, ITEM in pairs(PLR_PLOT.PlacedItems:GetChildren()) do
 			if ITEM:FindFirstChild("Hitbox") and ITEM:FindFirstChild("ItemStats") then
 
-				-- ✨ SKIP HOTSPOT ITEMS - DON'T SAVE THEM!
+				-- SKIP HOTSPOT ITEMS - DON'T SAVE THEM!
 				if ITEM:GetAttribute("HotspotMiner") == true then
 					print("Skipping hotspot miner:", ITEM.Name)
 					continue  -- Don't save hotspot miners
