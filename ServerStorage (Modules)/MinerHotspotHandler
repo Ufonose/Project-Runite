@@ -21,37 +21,37 @@ MinerHotspotHandler.HotspotConfigs = {
 	[3] = {
 		Id = 3,
 		MinerName = "Copper Mine 1",
-		Cost = 0,
+		Cost = 1,
 		Description = "",
 	},
 	[4] = {
 		Id = 4,
 		MinerName = "Copper Mine 2",
-		Cost = 0,
+		Cost = 15,
 		Description = "",
 	},
 	[5] = {
 		Id = 5,
 		MinerName = "Iron Mine 3",
-		Cost = 0,
+		Cost = 110,
 		Description = "",
 	},
 	[6] = {
 		Id = 6,
 		MinerName = "Copper Mine 3",
-		Cost = 0,
+		Cost = 200,
 		Description = "",
 	},
 	[7] = {
 		Id = 7,
-		MinerName = "Gold Mine 1",
-		Cost = 0,
+		MinerName = "Gold Mine 2",
+		Cost = 90,
 		Description = "",
 	},
 	[8] = {
 		Id = 8,
-		MinerName = "Gold Mine 2",
-		Cost = 0,
+		MinerName = "Gold Mine 3",
+		Cost = 220,
 		Description = "",
 	},
 	[9] = {
@@ -66,6 +66,18 @@ MinerHotspotHandler.HotspotConfigs = {
 		Cost = 0,
 		Description = "",
 	},
+	[11] = {
+		Id = 11,
+		MinerName = "Copper Mine 4",
+		Cost = 27,
+		Description = "",
+	},
+	[12] = {
+		Id = 12,
+		MinerName = "Gold Mine 1",
+		Cost = 1,
+		Description = "",
+	}
 }
 
 -- Initialize player's hotspot data
@@ -223,7 +235,12 @@ function MinerHotspotHandler.ActivateHotspot(player, hotspotId)
 		activeMiner.PrimaryPart.CanCollide = false
 		activeMiner.PrimaryPart.Anchored = true
 	end
-
+	
+	-- Apply miner speed upgrades
+	if _G.ApplyMinerUpgradesToItem then
+		_G.ApplyMinerUpgradesToItem(player, activeMiner)
+		print("Applied speed upgrades to hotspot miner:", config.MinerName)
+	end
 	-- Enable scripts
 	for _, descendant in pairs(activeMiner:GetDescendants()) do
 		if descendant:IsA("Script") then
