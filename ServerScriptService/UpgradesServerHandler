@@ -1,0 +1,198 @@
+local RepStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+
+-- Wait for required folders
+local EventsFolder = RepStorage:WaitForChild("Events", 10)
+if not EventsFolder then
+	warn("Events folder not found in ReplicatedStorage!")
+	return
+end
+
+-- Load UpgradesData module
+local UpgradesData = require(RepStorage:WaitForChild("Modules"):WaitForChild("UpgradesData"))
+
+-- Helper to get player upgrades from global data
+local function GetPlayerUpgrades(player)
+	if not _G["global_data"] or not _G["global_data"][player.Name] then
+		warn("Player data not loaded for", player.Name)
+		return {}
+	end
+
+	if not _G["global_data"][player.Name]["Upgrades"] then
+		_G["global_data"][player.Name]["Upgrades"] = {}
+	end
+
+	return _G["global_data"][player.Name]["Upgrades"]
+end
+
+-- Get all player upgrades
+local GetPlayerUpgradesRemote = EventsFolder:FindFirstChild("GetPlayerUpgrades")
+if GetPlayerUpgradesRemote then
+	GetPlayerUpgradesRemote.OnServerInvoke = function(player)
+		local upgrades = GetPlayerUpgrades(player)
+
+		-- Ensure all upgrade types exist with default level 0
+		for upgradeId, _ in pairs(UpgradesData.Upgrades) do
+			if not upgrades[upgradeId] then
+				upgrades[upgradeId] = 0
+			end
+		end
+
+		return upgrades
+	end
+else
+	warn("GetPlayerUpgrades RemoteFunction not found!")
+end
+
+-- Get upgrades data
+local GetUpgradesDataRemote = EventsFolder:FindFirstChild("GetUpgradesData")
+if GetUpgradesDataRemote then
+	GetUpgradesDataRemote.OnServerInvoke = function(player)
+		-- Convert upgrades data to be client-safe (no functions)
+		local clientSafeData = {}
+
+		for upgradeId, upgradeData in pairs(UpgradesData.Upgrades) do
+			clientSafeData[upgradeId] = {
+				Name = upgradeData.Name,
+				Description = upgradeData.Description,
+				Icon = upgradeData.Icon,
+				BaseCost = upgradeData.BaseCost,
+				CostMultiplier = upgradeData.CostMultiplier,
+				MaxLevel = upgradeData.MaxLevel,
+				SortOrder = upgradeData.SortOrder,
+			}
+		end
+
+		return clientSafeData
+	end
+else
+	warn("GetUpgradesData RemoteFunction not found!")
+end
+
+-- Buy upgrade
+local BuyUpgradeRemote = EventsFolder:FindFirstChild("BuyUpgrade")
+if BuyUpgradeRemote then
+	BuyUpgradeRemote.OnServerInvoke = function(player, upgradeId)
+		-- Validate upgrade exists
+		local upgradeData = UpgradesData.Upgrades[upgradeId]
+		if not upgradeData then
+			warn("Invalid upgrade ID:", upgradeId)
+			return false
+		end
+
+		-- Get current upgrades
+		local upgrades = GetPlayerUpgrades(player)
+
+		-- Get current level
+		local currentLevel = upgrades[upgradeId] or 0
+
+		-- Check if already at max level
+		if UpgradesData.IsMaxLevel(upgradeId, currentLevel) then
+			warn("Upgrade already at max level")
+			return false
+		end
+
+		-- Calculate cost
+		local cost = UpgradesData.GetUpgradeCost(upgradeId, currentLevel)
+
+		-- Get player's cash
+		local ServerStorage = game:GetService("ServerStorage")
+		local cashValue = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(player.Name)
+		if not cashValue then
+			warn("Player cash not found!")
+			return false
+		end
+
+		local currentCash = cashValue.Value
+
+		-- Check if player can afford it
+		if currentCash < cost then
+			warn("Not enough cash. Need:", cost, "Have:", currentCash)
+			return false
+		end
+
+		-- Deduct cash
+		cashValue.Value = cashValue.Value - cost
+
+		-- Increment upgrade level
+		upgrades[upgradeId] = currentLevel + 1
+
+		print(player.Name, "upgraded", upgradeData.Name, "to level", currentLevel + 1)
+
+		-- ⭐ If ConveyorSpeed was upgraded, refresh all existing conveyors IMMEDIATELY
+		if upgradeId == "ConveyorSpeed" then
+			print("=== REFRESHING CONVEYORS FOR", player.Name, "===")
+
+			-- Find the player's plot by Owner value
+			local plot = nil
+			for _, p in pairs(workspace.Plots:GetChildren()) do
+				if p:FindFirstChild("Owner") and p.Owner.Value == player.Name then
+					plot = p
+					break
+				end
+			end
+
+			if plot then
+				print("Found plot:", plot.Name)
+				local placedItems = plot:FindFirstChild("PlacedItems")
+				if placedItems then
+					local speedBonus = upgrades[upgradeId]
+					local updatedCount = 0
+
+					print("Speed bonus:", speedBonus)
+
+					for _, item in pairs(placedItems:GetChildren()) do
+						local itemStats = item:FindFirstChild("ItemStats")
+						if itemStats then
+							local success, itemInfo = pcall(require, itemStats)
+							if success and itemInfo.ConveyorSpeed and itemInfo.ConveyorSpeed > 0 then
+								local baseSpeed = itemInfo.ConveyorSpeed
+
+								for _, descendant in pairs(item:GetDescendants()) do
+									if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvMerge" or descendant.Name == "ConvSlope") then
+										local convVelo = descendant:FindFirstChild("ConvVelo")
+										if convVelo then
+											local isReversed = convVelo.Value < 0
+											local newSpeed = baseSpeed + speedBonus
+											convVelo.Value = isReversed and -newSpeed or newSpeed
+											updatedCount = updatedCount + 1
+											print("Updated:", item.Name, descendant.Name, "from", (isReversed and -baseSpeed or baseSpeed), "to", convVelo.Value)
+										end
+									end
+								end
+							end
+						end
+					end
+
+					print("=== UPDATED", updatedCount, "CONVEYOR PARTS ===")
+				else
+					warn("PlacedItems not found!")
+				end
+			else
+				warn("Plot not found for player:", player.Name)
+			end
+		end
+
+		return true
+	end
+else
+	warn("BuyUpgrade RemoteFunction not found!")
+end
+
+-- Helper function to get upgrade multiplier (used by other systems)
+function GetUpgradeMultiplier(player, upgradeId)
+	local upgrades = GetPlayerUpgrades(player)
+	local level = upgrades[upgradeId] or 0
+
+	-- For ConveyorSpeed, return flat bonus instead of multiplier
+	if upgradeId == "ConveyorSpeed" then
+		return level  -- Returns 0, 1, 2, 3... (flat bonus)
+	end
+
+	return UpgradesData.GetUpgradeMultiplier(upgradeId, level)
+end
+
+-- Expose function globally for other scripts to use
+_G.GetUpgradeMultiplier = GetUpgradeMultiplier
+
+print("Upgrades server handler loaded successfully!")
