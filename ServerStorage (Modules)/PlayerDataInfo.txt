@@ -45,6 +45,7 @@ PLAYER_DATA.SIMPLE_VALS = {
 PLAYER_DATA.INVENTORY_TYPES = {
 	"Items",
 	"CraftedItems",
+	"Upgrades",
 }
 
 return PLAYER_DATA
