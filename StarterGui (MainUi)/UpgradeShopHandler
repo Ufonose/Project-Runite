@@ -1,0 +1,771 @@
+local module = {}
+
+function module.LOAD(MODULE_INFO)
+	-- Basic Needs
+	local MODULES = MODULE_INFO["MODULES"]
+	local SERVICES = MODULE_INFO["SERVICES"]
+	-- Services
+	local RepStorage = SERVICES["ReplicatedStorage"]
+	local Plrs = SERVICES["Players"]
+	-- Modules
+	local CASH_LIB = MODULES["CashLib"]
+	local SoundManager = require(RepStorage.Modules.SoundManager)
+	-- Plr Info
+	local Plr = Plrs.LocalPlayer
+
+	-- Don't create anything during LOAD - wait until ShopFrame exists
+	-- This avoids race conditions with Shop module loading
+
+	print("UpgradeShopHandler: Waiting for ShopFrame to be created by Shop module...")
+
+	task.spawn(function()
+		-- Wait for ShopFrame (created by Shop.lua in script.Parent)
+		local shopFolder = script.Parent
+		local shopFrame = shopFolder:WaitForChild("ShopFrame", 60)
+
+		if not shopFrame then
+			warn("UpgradeShopHandler: ShopFrame never appeared!")
+			return
+		end
+
+		print("UpgradeShopHandler: ShopFrame found! Creating upgrades UI...")
+
+		-- Variables
+		local DB = true
+		local SELECTED_UPGRADE = nil
+		local UPGRADES_DATA = nil
+		local PLAYER_UPGRADES = nil
+		local CURRENT_CATEGORY = "AllCategory"
+		local searchBox = nil
+
+		-- ==================== UPGRADES CONTAINER ====================
+		local upgradesContainer = Instance.new("Frame")
+		upgradesContainer.Name = "UpgradesContainer"
+		upgradesContainer.Size = UDim2.new(1, 0, 1, 0)
+		upgradesContainer.Position = UDim2.new(0, 0, 0, 0)
+		upgradesContainer.BackgroundTransparency = 1
+		upgradesContainer.Visible = false
+		upgradesContainer.ZIndex = 7
+		upgradesContainer.Parent = shopFrame
+
+		-- ==================== LEFT SIDEBAR - CATEGORIES WITH SEARCH ====================
+		local categoryFrame = Instance.new("Frame")
+		categoryFrame.Name = "CategorySidebar"
+		categoryFrame.Size = UDim2.new(0.15, 0, 0.915, 0)
+		categoryFrame.Position = UDim2.new(0.0357, 0, 0.065, 0)
+		categoryFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+		categoryFrame.BackgroundTransparency = 0.3
+		categoryFrame.BorderSizePixel = 0
+		categoryFrame.ZIndex = 7
+		categoryFrame.Parent = upgradesContainer
+
+		local categoryCorner = Instance.new("UICorner")
+		categoryCorner.CornerRadius = UDim.new(0, 12)
+		categoryCorner.Parent = categoryFrame
+
+		local categoryStroke = Instance.new("UIStroke")
+		categoryStroke.Color = Color3.fromRGB(60, 60, 80)
+		categoryStroke.Thickness = 1
+		categoryStroke.Transparency = 0.6
+		categoryStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		categoryStroke.Parent = categoryFrame
+
+		local categoryPadding = Instance.new("UIPadding")
+		categoryPadding.PaddingTop = UDim.new(0.012, 0)
+		categoryPadding.PaddingBottom = UDim.new(0.02, 0)
+		categoryPadding.PaddingLeft = UDim.new(0.05, 0)
+		categoryPadding.PaddingRight = UDim.new(0.05, 0)
+		categoryPadding.Parent = categoryFrame
+
+		local categoryLayout = Instance.new("UIListLayout")
+		categoryLayout.FillDirection = Enum.FillDirection.Vertical
+		categoryLayout.Padding = UDim.new(0.01, 0)
+		categoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		categoryLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		categoryLayout.Parent = categoryFrame
+
+		-- Search bar
+		local searchFrame = Instance.new("Frame")
+		searchFrame.Name = "SearchFrame"
+		searchFrame.Size = UDim2.new(0.9, 0, 0.045, 0)
+		searchFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+		searchFrame.BorderSizePixel = 0
+		searchFrame.ZIndex = 8
+		searchFrame.LayoutOrder = -2
+		searchFrame.Parent = categoryFrame
+
+		local searchCorner = Instance.new("UICorner")
+		searchCorner.CornerRadius = UDim.new(0, 10)
+		searchCorner.Parent = searchFrame
+
+		local searchStroke = Instance.new("UIStroke")
+		searchStroke.Color = Color3.fromRGB(60, 60, 80)
+		searchStroke.Thickness = 1
+		searchStroke.Transparency = 0.6
+		searchStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		searchStroke.Parent = searchFrame
+
+		local searchIcon = Instance.new("TextLabel")
+		searchIcon.Size = UDim2.new(0.2, 0, 1, 0)
+		searchIcon.Position = UDim2.new(0.05, 0, 0, 0)
+		searchIcon.BackgroundTransparency = 1
+		searchIcon.Text = "🔍"
+		searchIcon.TextSize = 14
+		searchIcon.TextScaled = true
+		searchIcon.ZIndex = 9
+		searchIcon.Parent = searchFrame
+
+		local searchIconConstraint = Instance.new("UITextSizeConstraint")
+		searchIconConstraint.MaxTextSize = 14
+		searchIconConstraint.Parent = searchIcon
+
+		searchBox = Instance.new("TextBox")
+		searchBox.Size = UDim2.new(0.65, 0, 1, 0)
+		searchBox.Position = UDim2.new(0.25, 0, 0, 0)
+		searchBox.BackgroundTransparency = 1
+		searchBox.Text = ""
+		searchBox.PlaceholderText = "Search..."
+		searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+		searchBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
+		searchBox.TextSize = 11
+		searchBox.Font = Enum.Font.Gotham
+		searchBox.TextXAlignment = Enum.TextXAlignment.Left
+		searchBox.TextScaled = true
+		searchBox.ClearTextOnFocus = false
+		searchBox.ZIndex = 9
+		searchBox.Parent = searchFrame
+
+		local searchBoxConstraint = Instance.new("UITextSizeConstraint")
+		searchBoxConstraint.MaxTextSize = 11
+		searchBoxConstraint.Parent = searchBox
+
+		local clearButton = Instance.new("TextButton")
+		clearButton.Size = UDim2.new(0.15, 0, 0.7, 0)
+		clearButton.Position = UDim2.new(0.8, 0, 0.15, 0)
+		clearButton.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+		clearButton.Text = "X"
+		clearButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+		clearButton.TextSize = 12
+		clearButton.Font = Enum.Font.GothamBold
+		clearButton.TextScaled = true
+		clearButton.Visible = false
+		clearButton.ZIndex = 9
+		clearButton.Parent = searchFrame
+
+		local clearTextConstraint = Instance.new("UITextSizeConstraint")
+		clearTextConstraint.MaxTextSize = 12
+		clearTextConstraint.Parent = clearButton
+
+		local clearCorner = Instance.new("UICorner")
+		clearCorner.CornerRadius = UDim.new(1, 0)
+		clearCorner.Parent = clearButton
+
+		clearButton.MouseButton1Click:Connect(function()
+			searchBox.Text = ""
+		end)
+
+		-- "All" button
+		local allButton = Instance.new("TextButton")
+		allButton.Name = "AllCategory"
+		allButton.Size = UDim2.new(0.9, 0, 0.045, 0)
+		allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
+		allButton.Text = "All"
+		allButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		allButton.TextSize = 13
+		allButton.Font = Enum.Font.GothamBold
+		allButton.TextScaled = true
+		allButton.LayoutOrder = -1
+		allButton.ZIndex = 8
+		allButton.Parent = categoryFrame
+
+		local allTextConstraint = Instance.new("UITextSizeConstraint")
+		allTextConstraint.MaxTextSize = 13
+		allTextConstraint.Parent = allButton
+
+		local allCorner = Instance.new("UICorner")
+		allCorner.CornerRadius = UDim.new(0, 10)
+		allCorner.Parent = allButton
+
+		local allStroke = Instance.new("UIStroke")
+		allStroke.Color = Color3.fromRGB(0, 0, 0)
+		allStroke.Thickness = 1
+		allStroke.Transparency = 0.7
+		allStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		allStroke.Parent = allButton
+
+		-- Category buttons data
+		local categories = {
+			{Name = "MiningCategory", Display = "⛏️ Mining", Color = Color3.fromRGB(70, 100, 140), Upgrades = {"IronMineSpeed", "CopperMineSpeed", "GoldMineSpeed"}},
+			{Name = "ProductionCategory", Display = "🔄 Production", Color = Color3.fromRGB(100, 70, 140), Upgrades = {"ConveyorSpeed"}},
+			{Name = "EconomyCategory", Display = "💰 Economy", Color = Color3.fromRGB(140, 100, 70), Upgrades = {"CashBonus"}},
+		}
+
+		local categoryButtons = {}
+
+		-- Create category buttons
+		for i, category in pairs(categories) do
+			local tabButton = Instance.new("TextButton")
+			tabButton.Name = category.Name
+			tabButton.Size = UDim2.new(0.9, 0, 0.045, 0)
+			tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+			tabButton.Text = category.Display
+			tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+			tabButton.TextSize = 13
+			tabButton.Font = Enum.Font.GothamBold
+			tabButton.TextScaled = true
+			tabButton.LayoutOrder = i
+			tabButton.ZIndex = 8
+			tabButton.Parent = categoryFrame
+
+			local tabTextConstraint = Instance.new("UITextSizeConstraint")
+			tabTextConstraint.MaxTextSize = 13
+			tabTextConstraint.Parent = tabButton
+
+			local tabCorner = Instance.new("UICorner")
+			tabCorner.CornerRadius = UDim.new(0, 10)
+			tabCorner.Parent = tabButton
+
+			local tabStroke = Instance.new("UIStroke")
+			tabStroke.Color = Color3.fromRGB(0, 0, 0)
+			tabStroke.Thickness = 1
+			tabStroke.Transparency = 0.7
+			tabStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			tabStroke.Parent = tabButton
+
+			table.insert(categoryButtons, {Button = tabButton, Category = category})
+
+			tabButton.MouseButton1Click:Connect(function()
+				CURRENT_CATEGORY = category.Name
+				allButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+				for j, btnData in pairs(categoryButtons) do
+					btnData.Button.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+				end
+				tabButton.BackgroundColor3 = category.Color
+				LOAD_UPGRADES()
+			end)
+		end
+
+		allButton.MouseButton1Click:Connect(function()
+			CURRENT_CATEGORY = "AllCategory"
+			allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
+			for _, btnData in pairs(categoryButtons) do
+				btnData.Button.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+			end
+			LOAD_UPGRADES()
+		end)
+
+		-- ==================== UPGRADES SCROLL (RIGHT SIDE) ====================
+		local upgradesScroll = Instance.new("ScrollingFrame")
+		upgradesScroll.Name = "UpgradesScroll"
+		upgradesScroll.Size = UDim2.new(0.76, 0, 0.67, 0)
+		upgradesScroll.Position = UDim2.new(0.2, 0, 0.128, 0)
+		upgradesScroll.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+		upgradesScroll.BackgroundTransparency = 0.3
+		upgradesScroll.BorderSizePixel = 0
+		upgradesScroll.ScrollBarThickness = 10
+		upgradesScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 105)
+		upgradesScroll.ZIndex = 7
+		upgradesScroll.Parent = upgradesContainer
+
+		local upgradesCorner = Instance.new("UICorner")
+		upgradesCorner.CornerRadius = UDim.new(0, 12)
+		upgradesCorner.Parent = upgradesScroll
+
+		local upgradesStroke = Instance.new("UIStroke")
+		upgradesStroke.Color = Color3.fromRGB(60, 60, 80)
+		upgradesStroke.Thickness = 1
+		upgradesStroke.Transparency = 0.6
+		upgradesStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		upgradesStroke.Parent = upgradesScroll
+
+		local upgradesGrid = Instance.new("UIGridLayout")
+		upgradesGrid.SortOrder = Enum.SortOrder.LayoutOrder
+		upgradesGrid.Parent = upgradesScroll
+
+		local function updateUpgradesGridSize()
+			local viewport = workspace.CurrentCamera.ViewportSize
+			local screenWidth = viewport.X
+			local scrollWidth = upgradesScroll.AbsoluteSize.X
+
+			local numColumns = (screenWidth < 900) and 2 or 3
+			local cellWidth = (scrollWidth - 30) / numColumns - 10
+			local cellHeight = cellWidth / 0.7381
+
+			upgradesGrid.CellSize = UDim2.new(0, cellWidth, 0, cellHeight)
+			upgradesGrid.CellPadding = UDim2.new(0, 10, 0, 10)
+		end
+
+		updateUpgradesGridSize()
+		upgradesScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateUpgradesGridSize)
+
+		local upgradesPadding = Instance.new("UIPadding")
+		upgradesPadding.PaddingTop = UDim.new(0.027, 0)
+		upgradesPadding.PaddingBottom = UDim.new(0.027, 0)
+		upgradesPadding.PaddingLeft = UDim.new(0.0288, 0)
+		upgradesPadding.PaddingRight = UDim.new(0.0288, 0)
+		upgradesPadding.Parent = upgradesScroll
+
+		-- ==================== SELECTED UPGRADE PANEL ====================
+		local selectedPanel = Instance.new("Frame")
+		selectedPanel.Name = "SelectedUpgradePanel"
+		selectedPanel.Size = UDim2.new(0.76, 0, 0.17, 0)
+		selectedPanel.Position = UDim2.new(0.2, 0, 0.810, 0)
+		selectedPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+		selectedPanel.BackgroundTransparency = 0.2
+		selectedPanel.BorderSizePixel = 0
+		selectedPanel.Visible = false
+		selectedPanel.ZIndex = 7
+		selectedPanel.Parent = upgradesContainer
+
+		local selectedCorner = Instance.new("UICorner")
+		selectedCorner.CornerRadius = UDim.new(0, 12)
+		selectedCorner.Parent = selectedPanel
+
+		local selectedStroke = Instance.new("UIStroke")
+		selectedStroke.Color = Color3.fromRGB(60, 60, 80)
+		selectedStroke.Thickness = 1
+		selectedStroke.Transparency = 0.6
+		selectedStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		selectedStroke.Parent = selectedPanel
+
+		local selectedIcon = Instance.new("TextLabel")
+		selectedIcon.Size = UDim2.new(0.2885, 0, 0.8824, 0)
+		selectedIcon.Position = UDim2.new(0.0192, 0, 0.0588, 0)
+		selectedIcon.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		selectedIcon.BorderSizePixel = 0
+		selectedIcon.Text = "⚡"
+		selectedIcon.TextSize = 60
+		selectedIcon.TextScaled = true
+		selectedIcon.ZIndex = 8
+		selectedIcon.Parent = selectedPanel
+
+		local selectedIconConstraint = Instance.new("UITextSizeConstraint")
+		selectedIconConstraint.MaxTextSize = 60
+		selectedIconConstraint.Parent = selectedIcon
+
+		local selectedIconCorner = Instance.new("UICorner")
+		selectedIconCorner.CornerRadius = UDim.new(0, 12)
+		selectedIconCorner.Parent = selectedIcon
+
+		local infoContainer = Instance.new("Frame")
+		infoContainer.Size = UDim2.new(0.6538, 0, 0.8824, 0)
+		infoContainer.Position = UDim2.new(0.3269, 0, 0.0588, 0)
+		infoContainer.BackgroundTransparency = 1
+		infoContainer.ZIndex = 8
+		infoContainer.Parent = selectedPanel
+
+		local selectedName = Instance.new("TextLabel")
+		selectedName.Size = UDim2.new(1, 0, 0.1467, 0)
+		selectedName.Position = UDim2.new(0, 0, 0, 0)
+		selectedName.BackgroundTransparency = 1
+		selectedName.Text = "Upgrade Name"
+		selectedName.TextColor3 = Color3.fromRGB(255, 255, 255)
+		selectedName.TextSize = 16
+		selectedName.Font = Enum.Font.GothamBold
+		selectedName.TextXAlignment = Enum.TextXAlignment.Left
+		selectedName.TextTruncate = Enum.TextTruncate.AtEnd
+		selectedName.TextScaled = true
+		selectedName.ZIndex = 9
+		selectedName.Parent = infoContainer
+
+		local selectedNameConstraint = Instance.new("UITextSizeConstraint")
+		selectedNameConstraint.MaxTextSize = 16
+		selectedNameConstraint.Parent = selectedName
+
+		local selectedLevel = Instance.new("TextLabel")
+		selectedLevel.Size = UDim2.new(1, 0, 0.1067, 0)
+		selectedLevel.Position = UDim2.new(0, 0, 0.16, 0)
+		selectedLevel.BackgroundTransparency = 1
+		selectedLevel.Text = "Level 1 → Level 2"
+		selectedLevel.TextColor3 = Color3.fromRGB(150, 200, 150)
+		selectedLevel.TextSize = 12
+		selectedLevel.Font = Enum.Font.Gotham
+		selectedLevel.TextXAlignment = Enum.TextXAlignment.Left
+		selectedLevel.TextScaled = true
+		selectedLevel.ZIndex = 9
+		selectedLevel.Parent = infoContainer
+
+		local selectedLevelConstraint = Instance.new("UITextSizeConstraint")
+		selectedLevelConstraint.MaxTextSize = 12
+		selectedLevelConstraint.Parent = selectedLevel
+
+		local selectedDesc = Instance.new("TextLabel")
+		selectedDesc.Size = UDim2.new(1, 0, 0.2333, 0)
+		selectedDesc.Position = UDim2.new(0, 0, 0.2867, 0)
+		selectedDesc.BackgroundTransparency = 1
+		selectedDesc.Text = "Description here"
+		selectedDesc.TextColor3 = Color3.fromRGB(180, 180, 190)
+		selectedDesc.TextSize = 11
+		selectedDesc.Font = Enum.Font.Gotham
+		selectedDesc.TextWrapped = true
+		selectedDesc.TextXAlignment = Enum.TextXAlignment.Left
+		selectedDesc.TextYAlignment = Enum.TextYAlignment.Top
+		selectedDesc.TextScaled = true
+		selectedDesc.ZIndex = 9
+		selectedDesc.Parent = infoContainer
+
+		local selectedDescConstraint = Instance.new("UITextSizeConstraint")
+		selectedDescConstraint.MaxTextSize = 11
+		selectedDescConstraint.Parent = selectedDesc
+
+		local controlsRow = Instance.new("Frame")
+		controlsRow.Size = UDim2.new(1, 0, 0.4667, 0)
+		controlsRow.Position = UDim2.new(0, 0, 0.5333, 0)
+		controlsRow.BackgroundTransparency = 1
+		controlsRow.ZIndex = 9
+		controlsRow.Parent = infoContainer
+
+		local upgradeButton = Instance.new("TextButton")
+		upgradeButton.Size = UDim2.new(0.48, 0, 1, 0)
+		upgradeButton.Position = UDim2.new(0, 0, 0, 0)
+		upgradeButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+		upgradeButton.Text = "⚡ Upgrade - $1,000"
+		upgradeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		upgradeButton.TextSize = 14
+		upgradeButton.Font = Enum.Font.GothamBold
+		upgradeButton.TextScaled = true
+		upgradeButton.ZIndex = 11
+		upgradeButton.Parent = controlsRow
+
+		local upgradeTextConstraint = Instance.new("UITextSizeConstraint")
+		upgradeTextConstraint.MaxTextSize = 14
+		upgradeTextConstraint.Parent = upgradeButton
+
+		local upgradeCorner = Instance.new("UICorner")
+		upgradeCorner.CornerRadius = UDim.new(0, 10)
+		upgradeCorner.Parent = upgradeButton
+
+		local upgradeStroke = Instance.new("UIStroke")
+		upgradeStroke.Color = Color3.fromRGB(0, 0, 0)
+		upgradeStroke.Thickness = 1
+		upgradeStroke.Transparency = 0.7
+		upgradeStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		upgradeStroke.Parent = upgradeButton
+
+		local cancelButton = Instance.new("TextButton")
+		cancelButton.Size = UDim2.new(0.48, 0, 1, 0)
+		cancelButton.Position = UDim2.new(0.52, 0, 0, 0)
+		cancelButton.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
+		cancelButton.Text = "Cancel"
+		cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		cancelButton.TextSize = 14
+		cancelButton.Font = Enum.Font.GothamBold
+		cancelButton.TextScaled = true
+		cancelButton.ZIndex = 11
+		cancelButton.Parent = controlsRow
+
+		local cancelTextConstraint = Instance.new("UITextSizeConstraint")
+		cancelTextConstraint.MaxTextSize = 14
+		cancelTextConstraint.Parent = cancelButton
+
+		local cancelCorner = Instance.new("UICorner")
+		cancelCorner.CornerRadius = UDim.new(0, 10)
+		cancelCorner.Parent = cancelButton
+
+		local cancelStroke = Instance.new("UIStroke")
+		cancelStroke.Color = Color3.fromRGB(0, 0, 0)
+		cancelStroke.Thickness = 1
+		cancelStroke.Transparency = 0.7
+		cancelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		cancelStroke.Parent = cancelButton
+
+		-- ==================== UPGRADE LOADING ====================
+		local function FILTER_UPGRADE(upgradeId, upgradeName)
+			local CAN_SHOW = true
+
+			-- Search filter
+			if string.len(searchBox.Text) > 0 then
+				if not string.find(string.lower(upgradeName), string.lower(searchBox.Text)) then
+					CAN_SHOW = false
+				end
+			end
+
+			-- Category filter
+			if CAN_SHOW and CURRENT_CATEGORY ~= "AllCategory" then
+				local foundCategory = false
+				for _, btnData in pairs(categoryButtons) do
+					if btnData.Category.Name == CURRENT_CATEGORY then
+						if table.find(btnData.Category.Upgrades, upgradeId) then
+							foundCategory = true
+							break
+						end
+					end
+				end
+				if not foundCategory then
+					CAN_SHOW = false
+				end
+			end
+
+			return CAN_SHOW
+		end
+
+		local function LOAD_UPGRADES()
+			-- Get upgrades data from server
+			local success, result = pcall(function()
+				UPGRADES_DATA = RepStorage.Events.GetUpgradesData:InvokeServer()
+				PLAYER_UPGRADES = RepStorage.Events.GetPlayerUpgrades:InvokeServer()
+			end)
+
+			if not success then
+				warn("Failed to load upgrades:", result)
+				return
+			end
+
+			if not UPGRADES_DATA or not PLAYER_UPGRADES then
+				warn("Upgrades data is nil")
+				return
+			end
+
+			-- Clear existing upgrade cards
+			for _, child in pairs(upgradesScroll:GetChildren()) do
+				if child:IsA("Frame") then
+					child:Destroy()
+				end
+			end
+
+			-- Create upgrade cards
+			for upgradeId, upgradeData in pairs(UPGRADES_DATA) do
+				local currentLevel = PLAYER_UPGRADES[upgradeId] or 0
+				local nextLevel = currentLevel + 1
+				local maxLevel = upgradeData.MaxLevel or 10
+				local isMaxLevel = currentLevel >= maxLevel
+
+				-- Calculate cost for next level
+				local cost = upgradeData.BaseCost * (upgradeData.CostMultiplier ^ currentLevel)
+
+				local upgradeCard = Instance.new("Frame")
+				upgradeCard.Name = "Upgrade" .. upgradeId
+				upgradeCard.Size = UDim2.new(1, 0, 1, 0)
+				upgradeCard.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+				upgradeCard.BackgroundTransparency = 0.2
+				upgradeCard.BorderSizePixel = 0
+				upgradeCard.LayoutOrder = upgradeData.SortOrder or 0
+				upgradeCard.ZIndex = 8
+				upgradeCard:SetAttribute("UPGRADE_ID", upgradeId)
+				upgradeCard:SetAttribute("CURRENT_LEVEL", currentLevel)
+
+				-- Apply filter
+				upgradeCard.Visible = FILTER_UPGRADE(upgradeId, upgradeData.Name)
+
+				local cardCorner = Instance.new("UICorner")
+				cardCorner.CornerRadius = UDim.new(0, 12)
+				cardCorner.Parent = upgradeCard
+
+				local cardStroke = Instance.new("UIStroke")
+				cardStroke.Color = Color3.fromRGB(60, 60, 80)
+				cardStroke.Thickness = 1
+				cardStroke.Transparency = 0.6
+				cardStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+				cardStroke.Parent = upgradeCard
+
+				-- Icon area
+				local upgradeIcon = Instance.new("Frame")
+				upgradeIcon.Size = UDim2.new(0.9355, 0, 0.5, 0)
+				upgradeIcon.Position = UDim2.new(0.0323, 0, 0.0238, 0)
+				upgradeIcon.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+				upgradeIcon.BorderSizePixel = 0
+				upgradeIcon.ZIndex = 9
+				upgradeIcon.Parent = upgradeCard
+
+				local iconCorner = Instance.new("UICorner")
+				iconCorner.CornerRadius = UDim.new(0, 10)
+				iconCorner.Parent = upgradeIcon
+
+				local iconLabel = Instance.new("TextLabel")
+				iconLabel.Size = UDim2.new(1, 0, 1, 0)
+				iconLabel.BackgroundTransparency = 1
+				iconLabel.Text = upgradeData.Icon or "⚡"
+				iconLabel.TextSize = 45
+				iconLabel.TextScaled = true
+				iconLabel.ZIndex = 10
+				iconLabel.Parent = upgradeIcon
+
+				local iconConstraint = Instance.new("UITextSizeConstraint")
+				iconConstraint.MaxTextSize = 45
+				iconConstraint.Parent = iconLabel
+
+				-- Level badge
+				local levelBadge = Instance.new("TextLabel")
+				levelBadge.Size = UDim2.new(0.35, 0, 0.25, 0)
+				levelBadge.Position = UDim2.new(0.6, 0, 0.05, 0)
+				levelBadge.BackgroundColor3 = isMaxLevel and Color3.fromRGB(200, 150, 50) or Color3.fromRGB(70, 130, 180)
+				levelBadge.Text = isMaxLevel and "MAX" or ("Lv " .. currentLevel)
+				levelBadge.TextColor3 = Color3.fromRGB(255, 255, 255)
+				levelBadge.TextSize = 12
+				levelBadge.Font = Enum.Font.GothamBold
+				levelBadge.TextScaled = true
+				levelBadge.ZIndex = 11
+				levelBadge.Parent = upgradeIcon
+
+				local badgeConstraint = Instance.new("UITextSizeConstraint")
+				badgeConstraint.MaxTextSize = 12
+				badgeConstraint.Parent = levelBadge
+
+				local badgeCorner = Instance.new("UICorner")
+				badgeCorner.CornerRadius = UDim.new(0, 6)
+				badgeCorner.Parent = levelBadge
+
+				-- Upgrade name
+				local upgradeName = Instance.new("TextLabel")
+				upgradeName.Size = UDim2.new(0.9355, 0, 0.119, 0)
+				upgradeName.Position = UDim2.new(0.0323, 0, 0.55, 0)
+				upgradeName.BackgroundTransparency = 1
+				upgradeName.Text = upgradeData.Name
+				upgradeName.TextColor3 = Color3.fromRGB(255, 255, 255)
+				upgradeName.TextSize = 13
+				upgradeName.Font = Enum.Font.GothamBold
+				upgradeName.TextXAlignment = Enum.TextXAlignment.Center
+				upgradeName.TextTruncate = Enum.TextTruncate.AtEnd
+				upgradeName.TextScaled = true
+				upgradeName.ZIndex = 9
+				upgradeName.Parent = upgradeCard
+
+				local nameConstraint = Instance.new("UITextSizeConstraint")
+				nameConstraint.MaxTextSize = 13
+				nameConstraint.Parent = upgradeName
+
+				-- Current effect display
+				local effectText = "Not Upgraded"
+				if currentLevel > 0 then
+					-- Calculate effect text based on upgrade type
+					if upgradeId == "IronMineSpeed" or upgradeId == "CopperMineSpeed" or upgradeId == "GoldMineSpeed" then
+						effectText = "+" .. (currentLevel * 10) .. "% Speed"
+					elseif upgradeId == "ConveyorSpeed" then
+						effectText = "+" .. currentLevel .. " Speed"
+					elseif upgradeId == "CashBonus" then
+						effectText = "+" .. (currentLevel * 5) .. "% Cash"
+					end
+				end
+
+				local effectLabel = Instance.new("TextLabel")
+				effectLabel.Size = UDim2.new(0.9355, 0, 0.095, 0)
+				effectLabel.Position = UDim2.new(0.0323, 0, 0.69, 0)
+				effectLabel.BackgroundTransparency = 1
+				effectLabel.Text = effectText
+				effectLabel.TextColor3 = Color3.fromRGB(150, 200, 150)
+				effectLabel.TextSize = 11
+				effectLabel.Font = Enum.Font.Gotham
+				effectLabel.TextScaled = true
+				effectLabel.ZIndex = 9
+				effectLabel.Parent = upgradeCard
+
+				local effectConstraint = Instance.new("UITextSizeConstraint")
+				effectConstraint.MaxTextSize = 11
+				effectConstraint.Parent = effectLabel
+
+				-- Cost/Status label
+				local costLabel = Instance.new("TextLabel")
+				costLabel.Size = UDim2.new(0.9355, 0, 0.1429, 0)
+				costLabel.Position = UDim2.new(0.0323, 0, 0.8333, 0)
+				costLabel.BackgroundColor3 = isMaxLevel and Color3.fromRGB(200, 150, 50) or Color3.fromRGB(70, 130, 180)
+				costLabel.BorderSizePixel = 0
+				costLabel.Text = isMaxLevel and "⭐ MAX LEVEL" or ("$" .. CASH_LIB.SUFFIX_NUM(cost))
+				costLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+				costLabel.TextSize = 14
+				costLabel.Font = Enum.Font.GothamBold
+				costLabel.TextScaled = true
+				costLabel.ZIndex = 9
+				costLabel.Parent = upgradeCard
+
+				local costConstraint = Instance.new("UITextSizeConstraint")
+				costConstraint.MaxTextSize = 14
+				costConstraint.Parent = costLabel
+
+				local costCorner = Instance.new("UICorner")
+				costCorner.CornerRadius = UDim.new(0, 8)
+				costCorner.Parent = costLabel
+
+				local costStroke = Instance.new("UIStroke")
+				costStroke.Color = Color3.fromRGB(0, 0, 0)
+				costStroke.Thickness = 1
+				costStroke.Transparency = 0.7
+				costStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+				costStroke.Parent = costLabel
+
+				-- Click button
+				local clickButton = Instance.new("TextButton")
+				clickButton.Size = UDim2.new(1, 0, 1, 0)
+				clickButton.BackgroundTransparency = 1
+				clickButton.Text = ""
+				clickButton.ZIndex = 10
+				clickButton.Parent = upgradeCard
+
+				clickButton.MouseButton1Click:Connect(function()
+					if DB then
+						DB = false
+						SELECTED_UPGRADE = {
+							Id = upgradeId,
+							Data = upgradeData,
+							CurrentLevel = currentLevel,
+							Cost = cost,
+							IsMaxLevel = isMaxLevel
+						}
+
+						selectedIcon.Text = upgradeData.Icon or "⚡"
+						selectedName.Text = upgradeData.Name
+						selectedLevel.Text = isMaxLevel and "MAX LEVEL" or ("Level " .. currentLevel .. " → Level " .. nextLevel)
+						selectedDesc.Text = upgradeData.Description
+
+						if isMaxLevel then
+							upgradeButton.Text = "⭐ MAX LEVEL"
+							upgradeButton.BackgroundColor3 = Color3.fromRGB(130, 100, 50)
+						else
+							upgradeButton.Text = "⚡ Upgrade - $" .. CASH_LIB.SUFFIX_NUM(cost)
+							upgradeButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+						end
+
+						selectedPanel.Visible = true
+						wait(0.1)
+						DB = true
+					end
+				end)
+
+				upgradeCard.Parent = upgradesScroll
+			end
+
+			upgradesScroll.CanvasSize = UDim2.new(0, 0, 0, upgradesGrid.AbsoluteContentSize.Y + 60)
+		end
+
+		-- ==================== BUTTON HANDLERS ====================
+		upgradeButton.MouseButton1Click:Connect(function()
+			if DB and SELECTED_UPGRADE and not SELECTED_UPGRADE.IsMaxLevel then
+				DB = false
+
+				local success = RepStorage.Events.BuyUpgrade:InvokeServer(SELECTED_UPGRADE.Id)
+				if success then
+					SoundManager.Purchase()
+					LOAD_UPGRADES()
+					selectedPanel.Visible = false
+					SELECTED_UPGRADE = nil
+				else
+					SoundManager.Error()
+				end
+
+				wait(0.1)
+				DB = true
+			end
+		end)
+
+		cancelButton.MouseButton1Click:Connect(function()
+			SELECTED_UPGRADE = nil
+			selectedPanel.Visible = false
+		end)
+
+		-- Search functionality
+		searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+			clearButton.Visible = string.len(searchBox.Text) > 0
+			LOAD_UPGRADES()
+		end)
+
+		-- Load upgrades when container becomes visible
+		upgradesContainer:GetPropertyChangedSignal("Visible"):Connect(function()
+			if upgradesContainer.Visible then
+				LOAD_UPGRADES()
+			end
+		end)
+
+		print("UpgradeShopHandler fully loaded!")
+	end)
+end
+
+return module
