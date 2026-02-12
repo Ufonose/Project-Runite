@@ -140,6 +140,14 @@ if BuyUpgradeRemote then
 		elseif upgradeId == "GoldMineSpeed" then
 			local minersUpdated = MinerUpgradeApplier.ApplyToPlayerPlot(player, "Gold Mine")
 			print("Updated", minersUpdated, "Gold Mines for", player.Name, "- Speed level:", newLevel)
+
+			-- ADD THIS NEW SECTION:
+		elseif upgradeId == "MovementSpeed" then
+			-- Apply walkspeed upgrade immediately
+			if _G.ApplyWalkspeedUpgrade then
+				_G.ApplyWalkspeedUpgrade(player)
+				print("Applied movement speed upgrade to", player.Name, "- New speed:", 16 + newLevel)
+			end
 		end
 
 		return true
