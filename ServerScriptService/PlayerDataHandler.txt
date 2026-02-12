@@ -55,11 +55,15 @@ local function SAVE_DATA(Plr)
 	return true
 end
 
+-- ServerScriptService/PlayerDataHandler.lua
+-- FIND THE LOAD_DATA FUNCTION - SIMPLIFIED VERSION
+
 local function LOAD_DATA(Plr)
 	if Plr:FindFirstChild("Loading") then
 		return "Already Loading!"
 	end
 	Instance.new("BoolValue", Plr).Name = "Loading"
+
 	if _G["global_data"][Plr.Name] == nil then
 		_G["global_data"][Plr.Name] = {}
 		for I, INVENTORY_TYPE in pairs(PLAYER_DATA_INFO.INVENTORY_TYPES) do
@@ -67,9 +71,11 @@ local function LOAD_DATA(Plr)
 			print("INVENTORY_TYPE CREATED FOR "..Plr.Name.."! ("..INVENTORY_TYPE..")")
 		end
 	end
+
 	-- Get the player's data
 	local plr_data = DATA_HANDLING(data_code, Plr):Get({})
-	-- Load Basic Values.
+
+	-- Load Basic Values
 	for val_name, val_data in pairs(PLAYER_DATA_INFO.SIMPLE_VALS) do
 		local val_obj = Plr:FindFirstChild(val_name)
 		if val_obj == nil then
@@ -78,13 +84,13 @@ local function LOAD_DATA(Plr)
 		end
 		val_obj.Value = plr_data[val_name] or val_data["DEFAULT"]
 	end
-	-- Load Player Settings.
+
+	-- Load Player Settings
 	Instance.new("Folder", Plr).Name = "Settings"
 	for val_name, val_data in pairs(PLAYER_DATA_INFO.SETTINGS_VALUES) do
 		local val_obj = Instance.new(val_data["VALUE_TYPE"] or "BoolValue", Plr.Settings)
 		val_obj.Name = val_name
 
-		-- FIX: Check for nil instead of using "or"
 		local savedValue = plr_data["setting"..val_name]
 		if savedValue ~= nil then
 			val_obj.Value = savedValue
@@ -92,15 +98,15 @@ local function LOAD_DATA(Plr)
 			val_obj.Value = val_data["DEFAULT"]
 		end
 	end
-	
+
 	-- Cash Loading
 	local plr_cash = Instance.new("NumberValue", ServerStorage.ServerLockedPlayerInfo.PlayerCash)
 	plr_cash.Name = Plr.Name
 	plr_cash.Value = plr_data["Cash"] or 400
 
-	-- Load the Player's Inventory!
+	-- Load the Player's Inventory
 	local default_inv = {
-		["2"] = { -- String keys instead of numeric
+		["2"] = {
 			["Amount"] = 18,
 			["Unlocked"] = true,  
 		},
@@ -108,74 +114,55 @@ local function LOAD_DATA(Plr)
 			["Amount"] = 4,
 			["Unlocked"] = true,
 		},
-
 	}
 	_G["global_data"][Plr.Name]["Items"] = plr_data["InvItemSaveData"] or default_inv
 
-	-- DEBUG: Check what we loaded
-	--print("=== ITEMS DEBUG ===")
-	--print("plr_data['InvItemSaveData']:", plr_data["InvItemSaveData"])
-	--print("Using default_inv?", plr_data["InvItemSaveData"] == nil)
-
-	local itemCount = 0
-	for itemId, itemData in pairs(_G["global_data"][Plr.Name]["Items"]) do
-		itemCount = itemCount + 1
-		--print("  Item", itemId, "- Amount:", itemData.Amount, "Unlocked:", itemData.Unlocked)
-	end
-	--print("Total items loaded:", itemCount)
-
-	-- THIS IS THE CHANGED PART - now checks default_inv for missing items
+	-- Load all items into inventory
 	for _, item in pairs(RepStorage.Items:GetChildren()) do
 		local item_info = require(item.ItemStats)
-		local itemKey = tostring(item_info.ItemId) -- CHANGED: Convert to string
+		local itemKey = tostring(item_info.ItemId)
 
 		if _G["global_data"][Plr.Name]["Items"][itemKey] == nil then
-			-- Check if this item is in default_inv (starting items)
-			if default_inv[itemKey] then -- CHANGED: Use string key
-				-- It's a starting item, add it with the default values
-				_G["global_data"][Plr.Name]["Items"][itemKey] = { -- CHANGED: Use string key
+			if default_inv[itemKey] then
+				_G["global_data"][Plr.Name]["Items"][itemKey] = {
 					["Unlocked"] = default_inv[itemKey]["Unlocked"],
 					["Amount"] = default_inv[itemKey]["Amount"],
 				}
-				print("Added new starting item to existing player:", item_info.ItemId)
 			else
-				-- It's not a starting item, add as locked with 0 amount
-				_G["global_data"][Plr.Name]["Items"][itemKey] = { -- CHANGED: Use string key
+				_G["global_data"][Plr.Name]["Items"][itemKey] = {
 					["Unlocked"] = false,
 					["Amount"] = 0,
 				}
 			end
 		else
-			-- Item already exists in player data, just ensure unlocked status
-			if _G["global_data"][Plr.Name]["Items"][itemKey]["Amount"] > 0 then -- CHANGED: Use string key
-				_G["global_data"][Plr.Name]["Items"][itemKey]["Unlocked"] = true -- CHANGED: Use string key
+			if _G["global_data"][Plr.Name]["Items"][itemKey]["Amount"] > 0 then
+				_G["global_data"][Plr.Name]["Items"][itemKey]["Unlocked"] = true
 			end
 		end
 	end
+
 	-- Load Research Progress
-	_G["global_data"][Plr.Name]["Research"] = plr_data["ResearchData"] or {
-		CompletedObjectives = {},
-		ActiveObjectives = {},
-		ObjectiveProgress = {},
-	}
-	-- Load Furnace Hotspot (ALWAYS UNLOCKED)
-	_G["global_data"][Plr.Name]["FurnaceHotspot"] = plr_data["FurnaceHotspot"] or {
-		Unlocked = true,  -- Always unlocked by default!
-	}
+	_G["global_data"][Plr.Name]["Research"] = plr_data["ResearchData"] or {}
+
+	-- *** CRITICAL: Load Upgrades Data BEFORE loading plot items ***
+	_G["global_data"][Plr.Name]["Upgrades"] = plr_data["UpgradesData"] or {}
+
 	-- Load Cave Barriers
 	_G["global_data"][Plr.Name]["UnlockedBarriers"] = plr_data["UnlockedBarriers"] or {}
-	-- Load the Player's Plot Items!
+
+	-- Load Miner Hotspots
+	_G["global_data"][Plr.Name]["MinerHotspots"] = plr_data["MinerHotspots"] or {
+		UnlockedHotspots = {},
+	}
+
+	-- Load the Player's Plot Items
+	-- (Upgrades are automatically applied in LOAD_PLOT now)
 	local plot_data = plr_data["PlotItemPlaced"] or {}
 	if plot_data ~= {} then
 		plot_data = game.HttpService:JSONDecode(plot_data)
 	end
 	DATA_FUNCTION_HANDLING.LOAD_PLOT(Plr, plot_data)
-	-- Load Upgrades Data
-	_G["global_data"][Plr.Name]["Upgrades"] = plr_data["UpgradesData"] or {}
-	-- Load Miner Hotspots
-	_G["global_data"][Plr.Name]["MinerHotspots"] = plr_data["MinerHotspots"] or {
-		UnlockedHotspots = {},
-	}
+
 	-- Leaderstats
 	Instance.new("Folder",Plr).Name = "leaderstats"
 	local CashLeaderStat = Instance.new("StringValue",Plr.leaderstats)
@@ -184,13 +171,15 @@ local function LOAD_DATA(Plr)
 		CashLeaderStat.Value = "$"..CASH_LIB.SUFFIX_NUM(plr_cash.Value)
 	end)
 	CashLeaderStat.Value = "$"..CASH_LIB.SUFFIX_NUM(plr_cash.Value)
+
 	local RebirthLeaderStat = Instance.new("StringValue",Plr.leaderstats)
 	RebirthLeaderStat.Name = "Rebirths"
 	Plr.Rebirth.Changed:Connect(function()
 		RebirthLeaderStat.Value = Plr.Rebirth.Value + 1
 	end)
 	RebirthLeaderStat.Value = Plr.Rebirth.Value + 1
-	-- Loading Completed, create a tag in the player!
+
+	-- Loading Completed
 	Instance.new("BoolValue", Plr).Name = "DataLoaded"
 end
 
