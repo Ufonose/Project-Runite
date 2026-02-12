@@ -41,6 +41,8 @@ local function SAVE_DATA(Plr)
 	plr_data["InvItemSaveData"] = _G["global_data"][Plr.Name]["Items"]
 	-- Save Research Progress
 	plr_data["ResearchData"] = _G["global_data"][Plr.Name]["Research"]
+	--Save Upgrade Data
+	plr_data["UpgradesData"] = _G["global_data"][Plr.Name]["Upgrades"]
 	-- Save the Player's Plot Items!
 	local base_data = game.HttpService:JSONEncode(DATA_FUNCTION_HANDLING.UNLOAD_PLOT(Plr))
 	plr_data["PlotItemPlaced"] = base_data
@@ -111,16 +113,16 @@ local function LOAD_DATA(Plr)
 	_G["global_data"][Plr.Name]["Items"] = plr_data["InvItemSaveData"] or default_inv
 
 	-- DEBUG: Check what we loaded
-	print("=== ITEMS DEBUG ===")
-	print("plr_data['InvItemSaveData']:", plr_data["InvItemSaveData"])
-	print("Using default_inv?", plr_data["InvItemSaveData"] == nil)
+	--print("=== ITEMS DEBUG ===")
+	--print("plr_data['InvItemSaveData']:", plr_data["InvItemSaveData"])
+	--print("Using default_inv?", plr_data["InvItemSaveData"] == nil)
 
 	local itemCount = 0
 	for itemId, itemData in pairs(_G["global_data"][Plr.Name]["Items"]) do
 		itemCount = itemCount + 1
-		print("  Item", itemId, "- Amount:", itemData.Amount, "Unlocked:", itemData.Unlocked)
+		--print("  Item", itemId, "- Amount:", itemData.Amount, "Unlocked:", itemData.Unlocked)
 	end
-	print("Total items loaded:", itemCount)
+	--print("Total items loaded:", itemCount)
 
 	-- THIS IS THE CHANGED PART - now checks default_inv for missing items
 	for _, item in pairs(RepStorage.Items:GetChildren()) do
@@ -168,6 +170,8 @@ local function LOAD_DATA(Plr)
 		plot_data = game.HttpService:JSONDecode(plot_data)
 	end
 	DATA_FUNCTION_HANDLING.LOAD_PLOT(Plr, plot_data)
+	-- Load Upgrades Data
+	_G["global_data"][Plr.Name]["Upgrades"] = plr_data["UpgradesData"] or {}
 	-- Load Miner Hotspots
 	_G["global_data"][Plr.Name]["MinerHotspots"] = plr_data["MinerHotspots"] or {
 		UnlockedHotspots = {},
