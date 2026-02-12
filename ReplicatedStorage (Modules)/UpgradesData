@@ -1,3 +1,6 @@
+-- ReplicatedStorage/Modules/UpgradesData.lua
+-- FIXED: ConveyorSpeed now uses +1 speed per level instead of percentage
+
 local UpgradesData = {}
 
 -- Define all available upgrades
@@ -6,8 +9,8 @@ UpgradesData.Upgrades = {
 		Name = "Iron Mine Speed",
 		Description = "Increase the speed of all Iron Miners by 10% per level",
 		Icon = "⛏️",
-		BaseCost = 100,
-		CostMultiplier = 1.5,  -- Cost increases by 50% each level
+		BaseCost = 1,
+		CostMultiplier = 1.5,
 		MaxLevel = 20,
 		SortOrder = 1,
 		Category = "Mining",
@@ -19,8 +22,7 @@ UpgradesData.Upgrades = {
 			end
 		end,
 		ApplyEffect = function(level)
-			-- Returns the multiplier for this upgrade
-			return 1 + (level * 0.1)  -- 1.1x, 1.2x, 1.3x, etc.
+			return 1 + (level * 0.1)
 		end
 	},
 
@@ -28,7 +30,7 @@ UpgradesData.Upgrades = {
 		Name = "Copper Mine Speed",
 		Description = "Increase the speed of all Copper Miners by 10% per level",
 		Icon = "🔨",
-		BaseCost = 100,
+		BaseCost = 1,
 		CostMultiplier = 1.5,
 		MaxLevel = 20,
 		SortOrder = 2,
@@ -49,7 +51,7 @@ UpgradesData.Upgrades = {
 		Name = "Gold Mine Speed",
 		Description = "Increase the speed of all Gold Miners by 10% per level",
 		Icon = "💎",
-		BaseCost = 250,
+		BaseCost = 1,
 		CostMultiplier = 1.5,
 		MaxLevel = 20,
 		SortOrder = 3,
@@ -68,9 +70,9 @@ UpgradesData.Upgrades = {
 
 	["ConveyorSpeed"] = {
 		Name = "Conveyor Speed",
-		Description = "Increase the speed of all Conveyors by 8% per level",
+		Description = "Increase the speed of all Conveyors by +1 per level",
 		Icon = "🔄",
-		BaseCost = 150,
+		BaseCost = 1,
 		CostMultiplier = 1.5,
 		MaxLevel = 20,
 		SortOrder = 4,
@@ -79,11 +81,12 @@ UpgradesData.Upgrades = {
 			if level == 0 then
 				return "Not Upgraded"
 			else
-				return "+" .. (level * 8) .. "% Speed"
+				return "+" .. level .. " Speed"
 			end
 		end,
 		ApplyEffect = function(level)
-			return 1 + (level * 0.08)  -- 1.08x, 1.16x, 1.24x, etc.
+			-- For conveyor speed, just return the level (used as flat bonus)
+			return level
 		end
 	},
 
@@ -91,7 +94,7 @@ UpgradesData.Upgrades = {
 		Name = "Cash Bonus",
 		Description = "Increase cash earned from all sources by 5% per level",
 		Icon = "💰",
-		BaseCost = 200,
+		BaseCost = 1,
 		CostMultiplier = 1.6,
 		MaxLevel = 20,
 		SortOrder = 5,
@@ -104,7 +107,7 @@ UpgradesData.Upgrades = {
 			end
 		end,
 		ApplyEffect = function(level)
-			return 1 + (level * 0.05)  -- 1.05x, 1.10x, 1.15x, etc.
+			return 1 + (level * 0.05)
 		end
 	}
 }
