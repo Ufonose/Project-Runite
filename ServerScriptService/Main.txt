@@ -17,7 +17,8 @@ local MINIMUM_ITEM_QUANTITIES = {
 
 warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] loading...")
 
--- ServerScriptService/Main.txt (UPDATE PLACE_ITEM)
+-- ServerScriptService/Main.lua - PLACE_ITEM function
+-- This shows EXACTLY where to add the upgrade code
 
 function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 	if Plr and PLACED_ITEMS and ITEMS then
@@ -25,12 +26,13 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 		for I, ITEM in pairs(ITEMS) do
 			local ITEM_REP = RepStorage.Items:FindFirstChild(ITEM["ITEM_NAME"])
 			local ITEM_INFO = require(ITEM_REP.ItemStats)
-			-- FIXED: Changed item_info to ITEM_INFO and added tostring()
+
+			-- Check if player has the item
 			if _G["global_data"][Plr.Name]["Items"][tostring(ITEM_INFO.ItemId)]["Amount"] > 0 then
 				local REAL_ITEM = ITEM_REP:Clone()
 				REAL_ITEM:SetPrimaryPartCFrame(ITEM["ITEM_LOCATION"])
 
-				-- Store the placement layer on the item
+				-- Store the placement layer
 				local layerValue = Instance.new("IntValue", REAL_ITEM)
 				layerValue.Name = "PlacementLayer"
 				if type(ITEM_INFO.PlacementLayer) == "table" then
@@ -42,48 +44,55 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 					layerValue.Value = ITEM_INFO.PlacementLayer or 1
 				end
 
-				-- IMPORTANT: Reverse ConvVelo and Beam BEFORE enabling scripts!
+				-- Handle conveyor reversal
 				if ITEM["CONVEYOR_REVERSED"] then
 					REAL_ITEM:SetAttribute("ConveyorReversed", true)
-					print("=== REVERSING CONVEYOR ===")
-					print("Item:", REAL_ITEM.Name)
 
 					for _, descendant in pairs(REAL_ITEM:GetDescendants()) do
 						if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope") then
-							if descendant:GetAttribute("NoFlip") then
-								print("Skipping", descendant:GetFullName(), "- NoFlip attribute set")
-								continue
-							end
-							if descendant.Name == "ConvMerge" then
-								print("Skipping ConvMerge - cannot flip direction")
+							if descendant:GetAttribute("NoFlip") or descendant.Name == "ConvMerge" then
 								continue
 							end
 
 							local convVelo = descendant:FindFirstChild("ConvVelo")
 							if convVelo then
-								print("Found ConvVelo:", convVelo.Value)
 								convVelo.Value = -convVelo.Value
-								print("Reversed to:", convVelo.Value)
-							else
-								warn("ConvVelo not found on Conv part!")
 							end
 
 							local beam = descendant:FindFirstChildOfClass("Beam")
 							if beam then
-								print("Found Beam, TextureSpeed:", beam.TextureSpeed)
 								beam.TextureSpeed = -beam.TextureSpeed
-								print("Reversed Beam TextureSpeed to:", beam.TextureSpeed)
 							end
 						end
 					end
-					print("=== REVERSAL COMPLETE ===")
 				end
 
+				-- Handle sorter configuration
+				if ITEM["SORT_CONFIG"] then
+					local sortConfig = REAL_ITEM:FindFirstChild("SortConfig") or Instance.new("Folder", REAL_ITEM)
+					sortConfig.Name = "SortConfig"
+
+					for portId, oreType in pairs(ITEM["SORT_CONFIG"]) do
+						local portValue = sortConfig:FindFirstChild(portId) or Instance.new("StringValue", sortConfig)
+						portValue.Name = portId
+						portValue.Value = oreType
+					end
+				end
+
+				-- Parent the item to the plot
 				REAL_ITEM.Parent = PLACED_ITEMS
 
-				-- FIXED: Changed item_info to ITEM_INFO and added tostring()
+				-- *** ADD THIS HERE - Apply conveyor upgrades AFTER parenting but BEFORE deducting inventory ***
+				pcall(function()
+					if _G.ApplyConveyorUpgradesToItem then
+						_G.ApplyConveyorUpgradesToItem(Plr, REAL_ITEM)
+					end
+				end)
+
+				-- Deduct from inventory
 				_G["global_data"][Plr.Name]["Items"][tostring(ITEM_INFO.ItemId)]["Amount"] -= 1
 
+				-- Enable scripts and update inventory (asynchronous)
 				spawn(function()
 					for E, DESCENDANT in pairs(REAL_ITEM:GetDescendants()) do
 						if DESCENDANT:IsA("Script") then
@@ -92,7 +101,7 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 						if E%50 == 0 then
 							wait()
 						end
-					end					
+					end
 
 					RepStorage.Events.InventoryUpdate:FireClient(Plr)
 				end)
