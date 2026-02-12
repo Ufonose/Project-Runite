@@ -137,6 +137,50 @@ UpgradesData.Upgrades = {
 			-- Level 1 = 1.1x (10% more), Level 10 = 2.0x (100% more)
 			return 1 + (level * 0.1)
 		end
+	},
+	
+	DoubleDropChance = {
+		Name = "Double Drop Chance",
+		Description = "Gives a chance for miners to drop 2 ores at once instead of 1",
+		Icon = "✨",
+		BaseCost = 1,
+		CostMultiplier = 1.25,
+		MaxLevel = 10,
+		SortOrder = 7,
+		Category = "Miners",
+		GetEffectText = function(level)
+			if level == 0 then
+				return "Not Upgraded"
+			else
+				return level .. "% Double Drop"
+			end
+		end,
+		ApplyEffect = function(level)
+			-- Returns the percentage chance (1-10%)
+			return level
+		end
+	},
+	
+	MovementSpeed = {
+		Name = "Movement Speed",
+		Description = "Increases your walking speed by 1 per level",
+		Icon = "🏃",
+		BaseCost = 1,
+		CostMultiplier = 1.15,
+		MaxLevel = 16,  -- 16 base + 16 levels = 32 max walkspeed
+		SortOrder = 8,
+		Category = "Quality of Life",
+		GetEffectText = function(level)
+			if level == 0 then
+				return "Speed: 16"
+			else
+				return "Speed: " .. (16 + level)
+			end
+		end,
+		ApplyEffect = function(level)
+			-- Returns total walkspeed
+			return 16 + level
+		end
 	}
 }
 
