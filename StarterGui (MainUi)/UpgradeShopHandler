@@ -631,7 +631,8 @@ function module.LOAD(MODULE_INFO)
 					if upgradeId == "IronMineSpeed" or upgradeId == "CopperMineSpeed" or upgradeId == "GoldMineSpeed" then
 						effectText = "+" .. (currentLevel * 10) .. "% Speed"
 					elseif upgradeId == "ConveyorSpeed" then
-						effectText = "+" .. (currentLevel * 8) .. "% Speed"
+						-- FIXED: Shows +X Speed instead of +X% Speed
+						effectText = "+" .. currentLevel .. " Speed"
 					elseif upgradeId == "CashBonus" then
 						effectText = "+" .. (currentLevel * 5) .. "% Cash"
 					end
