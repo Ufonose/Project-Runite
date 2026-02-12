@@ -88,6 +88,11 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 						_G.ApplyConveyorUpgradesToItem(Plr, REAL_ITEM)
 					end
 				end)
+				
+				-- Apply miner speed upgrades if available
+				if _G.ApplyMinerUpgradesToItem then
+					_G.ApplyMinerUpgradesToItem(Plr, REAL_ITEM)
+				end
 
 				-- Deduct from inventory
 				_G["global_data"][Plr.Name]["Items"][tostring(ITEM_INFO.ItemId)]["Amount"] -= 1
