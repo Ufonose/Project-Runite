@@ -11,7 +11,7 @@ local PLAYER_DATA_INFO = require(ServerStorage.Modules.PlayerDataInfo)
 local CASH_LIB = require(RepStorage.Modules.CashLib)
 local MainLib = require(RepStorage.Modules.MainLib)
 -- Constants
-local data_code = "map_r14o3"		-- Change this string to reset data map_r14
+local data_code = "map_r14o6"		-- Change this string to reset data map_r14
 
 if workspace:FindFirstChild("Items") then
 	workspace.Items.Parent = RepStorage
