@@ -203,10 +203,27 @@ function module.LOAD(MODULE_INFO)
 				Name = "MiningCategory", 
 				Display = "Mining", 
 				Color = Color3.fromRGB(70, 100, 140), 
-				Upgrades = {"IronMineSpeed", "CopperMineSpeed", "GoldMineSpeed", "GemDiscovery"}  -- Added GemDiscovery
+				Upgrades = {"IronMineSpeed", "CopperMineSpeed", "GoldMineSpeed", "GemDiscovery", "DoubleDropChance"}
 			},
-			{Name = "ProductionCategory", Display = "Production", Color = Color3.fromRGB(100, 70, 140), Upgrades = {"ConveyorSpeed"}},
-			{Name = "EconomyCategory", Display = "Economy", Color = Color3.fromRGB(140, 100, 70), Upgrades = {"CashBonus"}},
+			{
+				Name = "ProductionCategory", 
+				Display = "Production", 
+				Color = Color3.fromRGB(100, 70, 140), 
+				Upgrades = {"ConveyorSpeed"}
+			},
+			{
+				Name = "EconomyCategory", 
+				Display = "Economy", 
+				Color = Color3.fromRGB(140, 100, 70), 
+				Upgrades = {"CashBonus"}
+			},
+			-- ADD THIS NEW CATEGORY:
+			{
+				Name = "QualityOfLifeCategory", 
+				Display = "Quality of Life", 
+				Color = Color3.fromRGB(100, 140, 70), 
+				Upgrades = {"MovementSpeed"}
+			},
 		}
 
 		local categoryButtons = {}
@@ -645,6 +662,10 @@ function module.LOAD(MODULE_INFO)
 						effectText = "+" .. (currentLevel * 5) .. "% Cash"
 					elseif upgradeId == "GemDiscovery" then
 						effectText = "+" .. (currentLevel * 10) .. "% Gem Chance"
+					elseif upgradeId == "DoubleDropChance" then
+						effectText = currentLevel .. "% Double Drop"
+					elseif upgradeId == "MovementSpeed" then
+						effectText = "Speed: " .. (16 + currentLevel)
 					end
 				end
 
@@ -747,8 +768,26 @@ function module.LOAD(MODULE_INFO)
 				if success then
 					SoundManager.Purchase()
 					LOAD_UPGRADES()
-					selectedPanel.Visible = false
-					SELECTED_UPGRADE = nil
+
+					-- Update the selected upgrade info with new level
+					local newLevel = SELECTED_UPGRADE.CurrentLevel + 1
+					local newCost = SELECTED_UPGRADE.Data.BaseCost * (SELECTED_UPGRADE.Data.CostMultiplier ^ newLevel)
+					local isMaxLevel = newLevel >= SELECTED_UPGRADE.Data.MaxLevel
+
+					SELECTED_UPGRADE.CurrentLevel = newLevel
+					SELECTED_UPGRADE.Cost = newCost
+					SELECTED_UPGRADE.IsMaxLevel = isMaxLevel
+
+					-- Update panel display
+					selectedLevel.Text = isMaxLevel and "MAX LEVEL" or ("Level " .. newLevel .. " → Level " .. (newLevel + 1))
+
+					if isMaxLevel then
+						upgradeButton.Text = "⭐ MAX LEVEL"
+						upgradeButton.BackgroundColor3 = Color3.fromRGB(130, 100, 50)
+					else
+						upgradeButton.Text = "⚡ Upgrade - $" .. CASH_LIB.SUFFIX_NUM(newCost)
+						upgradeButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+					end
 				else
 					SoundManager.Error()
 				end
