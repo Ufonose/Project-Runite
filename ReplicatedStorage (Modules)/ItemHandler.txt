@@ -110,9 +110,6 @@ function module.DROP_ORE(PLOT, MINE, DROP_PART, ORE_SIZE, ORE_COLOR, ORE_MATERIA
 	return nil, nil
 end
 
--- In ReplicatedStorage > Modules > ItemHandler
--- Find the PROCESS_ORE function and update it:
-
 function module.PROCESS_ORE(PLOT, FURNACE, SMELT_PART, ORE_ADD, ORE_MULTI, ORE)
 	local PLOT_OWNER = Plrs:FindFirstChild(PLOT.Owner.Value)
 	local OWNER_CASH = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(PLOT.Owner.Value)
@@ -124,16 +121,6 @@ function module.PROCESS_ORE(PLOT, FURNACE, SMELT_PART, ORE_ADD, ORE_MULTI, ORE)
 		if ORE_MULTI > 0 then
 			CASH_VAL *= ORE_MULTI
 		end
-
-		-- ⭐ Apply Cash Bonus Upgrade
-		if _G.GetUpgradeMultiplier then
-			local cashBonusMultiplier = _G.GetUpgradeMultiplier(PLOT_OWNER, "CashBonus")
-			CASH_VAL = CASH_VAL * cashBonusMultiplier
-		end
-
-		-- Round to avoid floating point issues
-		CASH_VAL = math.floor(CASH_VAL)
-
 		OWNER_CASH.Value += CASH_VAL
 		RepStorage.Events.MessageClient:FireClient(PLOT_OWNER, "visual", {["visual_part"] = SMELT_PART, ["message"] = "+$"..CASH_VAL, ["message_color"] = Color3.fromRGB(85, 255, 127)})
 		return true
