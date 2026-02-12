@@ -1,0 +1,72 @@
+-- ServerScriptService/WalkspeedApplier.lua
+-- NEW SCRIPT - Applies walkspeed upgrade to players
+
+local Players = game:GetService("Players")
+
+local BASE_WALKSPEED = 16
+
+-- Function to apply walkspeed to a character
+local function ApplyWalkspeed(player, character)
+	-- Wait for DataLoaded tag
+	local dataLoaded = player:WaitForChild("DataLoaded", 30)
+	if not dataLoaded then
+		warn("DataLoaded not found for", player.Name)
+		return
+	end
+
+	-- Wait for humanoid
+	local humanoid = character:WaitForChild("Humanoid", 5)
+	if not humanoid then
+		warn("No Humanoid found for", player.Name)
+		return
+	end
+
+	-- Get player's movement speed upgrade level
+	local upgradeLevel = 0
+	if _G.GetUpgradeMultiplier then
+		-- GetUpgradeMultiplier returns the effect, which is 16 + level
+		local totalSpeed = _G.GetUpgradeMultiplier(player, "MovementSpeed")
+		upgradeLevel = totalSpeed - BASE_WALKSPEED
+	end
+
+	-- Calculate walkspeed
+	local walkspeed = BASE_WALKSPEED + upgradeLevel
+
+	-- Apply walkspeed
+	humanoid.WalkSpeed = walkspeed
+
+	print("Applied walkspeed to", player.Name, "- Speed:", walkspeed, "(Base: 16, Upgrade:", upgradeLevel .. ")")
+end
+
+-- Apply to player when they spawn
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function(character)
+		task.spawn(function()
+			ApplyWalkspeed(player, character)
+		end)
+	end)
+end)
+
+-- Apply to existing players
+for _, player in pairs(Players:GetPlayers()) do
+	if player.Character then
+		task.spawn(function()
+			ApplyWalkspeed(player, player.Character)
+		end)
+	end
+
+	player.CharacterAdded:Connect(function(character)
+		task.spawn(function()
+			ApplyWalkspeed(player, character)
+		end)
+	end)
+end
+
+-- Expose function globally so upgrade system can call it
+_G.ApplyWalkspeedUpgrade = function(player)
+	if player.Character then
+		ApplyWalkspeed(player, player.Character)
+	end
+end
+
+print("WalkspeedApplier loaded!")
