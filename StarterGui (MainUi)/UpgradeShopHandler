@@ -655,7 +655,7 @@ function module.LOAD(MODULE_INFO)
 				if currentLevel > 0 then
 					-- Calculate effect text based on upgrade type
 					if upgradeId == "IronMineSpeed" or upgradeId == "CopperMineSpeed" or upgradeId == "GoldMineSpeed" then
-						effectText = "+" .. (currentLevel * 5) .. "% Speed"
+						effectText = "+" .. (currentLevel * 3) .. "% Speed"
 					elseif upgradeId == "ConveyorSpeed" then
 						effectText = "+" .. currentLevel .. " Speed"
 					elseif upgradeId == "CashBonus" then
