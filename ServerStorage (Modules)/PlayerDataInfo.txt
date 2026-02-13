@@ -21,7 +21,7 @@ PLAYER_DATA.SETTINGS_VALUES = {
 	},
 	["OreLimit"] = {
 		["VALUE_TYPE"] = "NumberValue",
-		["DEFAULT"] = 200,  -- Default ore limit
+		["DEFAULT"] = 250,  -- Default ore limit
 	},
 }
 
