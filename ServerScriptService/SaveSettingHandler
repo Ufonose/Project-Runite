@@ -1,0 +1,46 @@
+-- ServerScriptService/SaveSettingHandler.lua
+-- Handles saving player settings when changed in GUI
+
+local Players = game:GetService("Players")
+local RepStorage = game:GetService("ReplicatedStorage")
+
+print("SaveSettingHandler: Waiting for Events folder...")
+
+local eventsFolder = RepStorage:WaitForChild("Events", 10)
+if not eventsFolder then
+	warn("Events folder not found!")
+	return
+end
+
+local saveSettingEvent = eventsFolder:WaitForChild("SaveSetting", 10)
+if not saveSettingEvent then
+	warn("SaveSetting RemoteEvent not found!")
+	return
+end
+
+print("✓ SaveSetting RemoteEvent found!")
+
+-- Handle setting changes from client
+saveSettingEvent.OnServerEvent:Connect(function(player, settingName, newValue)
+	print(string.format("SaveSetting: %s changed '%s' to %s", player.Name, settingName, tostring(newValue)))
+
+	-- Validate player has Settings folder
+	local settings = player:FindFirstChild("Settings")
+	if not settings then
+		warn("Settings folder not found for", player.Name)
+		return
+	end
+
+	-- Find the setting
+	local setting = settings:FindFirstChild(settingName)
+	if not setting then
+		warn("Setting", settingName, "not found for", player.Name)
+		return
+	end
+
+	-- Update the value
+	setting.Value = newValue
+	print(string.format("✓ Updated %s.%s = %s", player.Name, settingName, tostring(newValue)))
+end)
+
+print("✓ SaveSettingHandler loaded!")
