@@ -296,6 +296,168 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 		return toggleFrame
 	end
 
+	-- Function to create a slider
+	local function createSlider(parent, labelText, settingName, minValue, maxValue, defaultValue, layoutOrder)
+		local sliderFrame = Instance.new("Frame")
+		sliderFrame.Name = settingName
+		sliderFrame.Size = UDim2.new(1, 0, 0, 70)  -- Fixed height for slider
+		sliderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		sliderFrame.BorderSizePixel = 0
+		sliderFrame.LayoutOrder = layoutOrder
+		sliderFrame.ZIndex = 13
+		sliderFrame.Parent = parent
+
+		local sliderCorner = Instance.new("UICorner")
+		sliderCorner.CornerRadius = UDim.new(0, 8)
+		sliderCorner.Parent = sliderFrame
+
+		-- Label
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(0.7, 0, 0, 25)  -- 70% width for label
+		label.Position = UDim2.new(0.029, 0, 0, 5)  -- 15/520 = 0.029
+		label.BackgroundTransparency = 1
+		label.Text = labelText
+		label.TextColor3 = Color3.fromRGB(220, 220, 220)
+		label.TextSize = 16
+		label.Font = Enum.Font.Gotham
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.ZIndex = 14
+		label.Parent = sliderFrame
+
+		-- Value display
+		local valueLabel = Instance.new("TextLabel")
+		valueLabel.Name = "ValueLabel"
+		valueLabel.Size = UDim2.new(0.25, 0, 0, 25)
+		valueLabel.Position = UDim2.new(0.73, 0, 0, 5)
+		valueLabel.BackgroundTransparency = 1
+		valueLabel.Text = defaultValue
+		valueLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+		valueLabel.TextSize = 16
+		valueLabel.Font = Enum.Font.GothamBold
+		valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+		valueLabel.ZIndex = 14
+		valueLabel.Parent = sliderFrame
+
+		-- Slider track
+		local sliderTrack = Instance.new("Frame")
+		sliderTrack.Name = "Track"
+		sliderTrack.Size = UDim2.new(0.942, 0, 0, 8)  -- (520-30)/520 = 0.942
+		sliderTrack.Position = UDim2.new(0.029, 0, 0, 45)
+		sliderTrack.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+		sliderTrack.BorderSizePixel = 0
+		sliderTrack.ZIndex = 14
+		sliderTrack.Parent = sliderFrame
+
+		local trackCorner = Instance.new("UICorner")
+		trackCorner.CornerRadius = UDim.new(1, 0)
+		trackCorner.Parent = sliderTrack
+
+		-- Slider fill
+		local sliderFill = Instance.new("Frame")
+		sliderFill.Name = "Fill"
+		sliderFill.Size = UDim2.new(0.5, 0, 1, 0)
+		sliderFill.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
+		sliderFill.BorderSizePixel = 0
+		sliderFill.ZIndex = 15
+		sliderFill.Parent = sliderTrack
+
+		local fillCorner = Instance.new("UICorner")
+		fillCorner.CornerRadius = UDim.new(1, 0)
+		fillCorner.Parent = sliderFill
+
+		-- Slider button
+		local sliderButton = Instance.new("TextButton")
+		sliderButton.Name = "SliderButton"
+		sliderButton.Size = UDim2.new(0, 20, 0, 20)
+		sliderButton.Position = UDim2.new(0.5, -10, 0.5, -10)
+		sliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		sliderButton.Text = ""
+		sliderButton.ZIndex = 16
+		sliderButton.Parent = sliderTrack
+
+		local buttonCorner = Instance.new("UICorner")
+		buttonCorner.CornerRadius = UDim.new(1, 0)
+		buttonCorner.Parent = sliderButton
+
+		-- Get initial value from player settings
+		local setting = Plr.Settings:FindFirstChild(settingName)
+		local currentValue = defaultValue
+		if setting then
+			currentValue = setting.Value
+		end
+
+		-- Update slider function
+		local function updateSlider(value)
+			value = math.clamp(value, minValue, maxValue)
+			local percentage = (value - minValue) / (maxValue - minValue)
+			sliderFill.Size = UDim2.new(percentage, 0, 1, 0)
+			sliderButton.Position = UDim2.new(percentage, -10, 0.5, -10)
+			valueLabel.Text = tostring(value)
+			return value
+		end
+
+		-- Initialize slider position
+		currentValue = updateSlider(currentValue)
+
+		-- Dragging logic
+		local dragging = false
+		local UserInputService = game:GetService("UserInputService")
+
+		sliderButton.MouseButton1Down:Connect(function()
+			dragging = true
+		end)
+
+		UserInputService.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = false
+			end
+		end)
+
+		UserInputService.InputChanged:Connect(function(input)
+			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				local trackSize = sliderTrack.AbsoluteSize.X
+				local trackPos = sliderTrack.AbsolutePosition.X
+				local mousePos = input.Position.X
+				local relativePos = math.clamp((mousePos - trackPos) / trackSize, 0, 1)
+				local newValue = math.floor(minValue + (relativePos * (maxValue - minValue)) + 0.5)
+				currentValue = updateSlider(newValue)
+
+				-- Update setting and save
+				if setting then
+					setting.Value = currentValue
+					RepStorage.Events.SaveSetting:FireServer(settingName, currentValue)
+				end
+			end
+		end)
+
+		-- Click anywhere on track to jump
+		sliderTrack.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				local trackSize = sliderTrack.AbsoluteSize.X
+				local trackPos = sliderTrack.AbsolutePosition.X
+				local mousePos = input.Position.X
+				local relativePos = math.clamp((mousePos - trackPos) / trackSize, 0, 1)
+				local newValue = math.floor(minValue + (relativePos * (maxValue - minValue)) + 0.5)
+				currentValue = updateSlider(newValue)
+
+				-- Update setting and save
+				if setting then
+					setting.Value = currentValue
+					RepStorage.Events.SaveSetting:FireServer(settingName, currentValue)
+				end
+			end
+		end)
+
+		-- Listen for external changes
+		if setting then
+			setting.Changed:Connect(function()
+				currentValue = updateSlider(setting.Value)
+			end)
+		end
+
+		return sliderFrame
+	end
+
 	-- Function to create a button-style toggle (same style as toggle but with clickable button instead)
 	local function createButtonToggle(parent, labelText, buttonText, buttonColor, layoutOrder)
 		local toggleFrame = Instance.new("Frame")
@@ -368,9 +530,10 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 
 	-- 2. Plot Settings Section
 	local plotSection, plotContent = createSection("Plot Settings", "🏗️", 2)
-	local minesToggle = createToggle(plotContent, "Enable All Miners", "MinesActive", 1)
-	local clearOresFrame, clearOresButton = createButtonToggle(plotContent, "Cleanup All Ores", "Clean", Color3.fromRGB(180, 80, 60), 2)
-	local withdrawFrame, withdrawButton = createButtonToggle(plotContent, "Withdraw All Items", "Withdraw", Color3.fromRGB(200, 60, 60), 3)
+	local oreLimitSlider = createSlider(plotContent, "Ore Limit (Performance)", "OreLimit", 10, 250, 250, 1)
+	local minesToggle = createToggle(plotContent, "Enable All Miners", "MinesActive", 2)
+	local clearOresFrame, clearOresButton = createButtonToggle(plotContent, "Cleanup All Ores", "Clean", Color3.fromRGB(180, 80, 60), 3)
+	local withdrawFrame, withdrawButton = createButtonToggle(plotContent, "Withdraw All Items", "Withdraw", Color3.fromRGB(200, 60, 60), 4)
 
 	-- 3. Sound Settings Section
 	local soundSection, soundContent = createSection("Sound Settings", "🔊", 3)
