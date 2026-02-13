@@ -1512,10 +1512,10 @@ function refreshAgeTabsAndTree()
 
 	-- Create age tabs
 	local ages = {
-		{Id = 1, Name = "First Age", Description = "Master the basics", Icon = "🏔️", Color = Color3.fromRGB(56, 63, 68)},
-		{Id = 2, Name = "Second Age", Description = "Powerful automation", Icon = "⚙️", Color = Color3.fromRGB(76, 72, 21)},
-		{Id = 3, Name = "Third Age", Description = "Advanced production", Icon = "⚡", Color = Color3.fromRGB(42, 1, 76)},
-		{Id = 4, Name = "Fourth Age", Description = "Bulk processing", Icon = "🔮", Color = Color3.fromRGB(12, 12, 12)},
+		{Id = 1, Name = "First Age", Description = "Master the basics", Icon = "⛏", Color = Color3.fromRGB(56, 63, 68)},
+		{Id = 2, Name = "Second Age", Description = "Powerful automation", Icon = "🔧", Color = Color3.fromRGB(76, 72, 21)},
+		{Id = 3, Name = "Third Age", Description = "Advanced production", Icon = "⚙️", Color = Color3.fromRGB(42, 1, 76)},
+		{Id = 4, Name = "Fourth Age", Description = "Bulk processing", Icon = "🏗", Color = Color3.fromRGB(12, 12, 12)},
 	}
 
 	for _, age in pairs(ages) do
