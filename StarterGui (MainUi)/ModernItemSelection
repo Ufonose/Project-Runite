@@ -256,7 +256,7 @@ function module.CREATE_MODERN_SELECTION_UI(parent)
 	-- Create buttons with uniform color - sleek dark gray-blue (NO ICONS)
 	local buttonColor = Color3.fromRGB(50, 55, 65)
 	local moveBtn = createButton("Move", buttonColor, "R", 1, nil)
-	local withdrawBtn = createButton("Withdraw", buttonColor, "Z", 2, nil)
+	local withdrawBtn = createButton("Withdraw", buttonColor, "E", 2, nil)
 	local buyBtn = createButton("Buy", buttonColor, "C", 3, "Buy -")
 	local sellBtn = createButton("Sell", buttonColor, "X", 4, "Sell -")
 
