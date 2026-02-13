@@ -1,3 +1,5 @@
+-- ServerStorage/Modules/PlayerDataInfo.lua (UPDATED WITH ORE LIMIT)
+
 local PLAYER_DATA = {}
 
 PLAYER_DATA.SETTINGS_VALUES = {
@@ -7,15 +9,19 @@ PLAYER_DATA.SETTINGS_VALUES = {
 	},
 	["HideResearch"] = {
 		["VALUE_TYPE"] = "BoolValue",
-		["DEFAULT"] = false,  -- Default to showing the research display
+		["DEFAULT"] = false,
 	},
 	["UISounds"] = {
 		["VALUE_TYPE"] = "BoolValue",
-		["DEFAULT"] = true,  -- Default to sounds enabled
+		["DEFAULT"] = true,
 	},
 	["NotificationSounds"] = {
 		["VALUE_TYPE"] = "BoolValue",
-		["DEFAULT"] = true,  -- Default to sounds enabled
+		["DEFAULT"] = true,
+	},
+	["OreLimit"] = {
+		["VALUE_TYPE"] = "NumberValue",
+		["DEFAULT"] = 200,  -- Default ore limit
 	},
 }
 
