@@ -141,12 +141,12 @@ local function updateDisplay(currentCount, maxCount)
 		stroke.Color = Color3.fromRGB(60, 60, 80)
 	end
 
-	print(string.format("Ore count updated: %d/%d", currentCount, maxCount))
+	--print(string.format("Ore count updated: %d/%d", currentCount, maxCount))
 end
 
 -- Listen for updates from server
 oreCountUpdateEvent.OnClientEvent:Connect(function(currentCount, maxCount)
-	print("Received ore count update:", currentCount, maxCount)
+	--print("Received ore count update:", currentCount, maxCount)
 	updateDisplay(currentCount, maxCount)
 end)
 
@@ -155,7 +155,7 @@ local settings = player:WaitForChild("Settings", 10)
 if settings then
 	local oreLimit = settings:WaitForChild("OreLimit", 10)
 	if oreLimit then
-		print("✓ OreLimit setting found:", oreLimit.Value)
+		--print("✓ OreLimit setting found:", oreLimit.Value)
 
 		-- Listen for limit changes (server will send updated count)
 		oreLimit.Changed:Connect(function()
