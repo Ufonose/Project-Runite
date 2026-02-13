@@ -1,3 +1,5 @@
+-- StarterGui/MainUi/Options/Options.lua (FIXED - PROPER MENU CLOSING)
+
 local module = {}
 
 function module.LOAD(MODULE_INFO)
@@ -10,6 +12,7 @@ function module.LOAD(MODULE_INFO)
 	-- Modules
 	local Main = MODULES["Main"]
 	local ModernOptions = MODULES["ModernOptions"]
+	local SoundManager = require(RepStorage.Modules.SoundManager)
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
 	local PlayerGui = Plr:WaitForChild("PlayerGui")
@@ -52,6 +55,7 @@ function module.LOAD(MODULE_INFO)
 
 	-- Clear ores button functionality
 	modernUI.ClearOresButton.MouseButton1Click:Connect(function()
+		SoundManager.ButtonClick()
 		local success = RepStorage.Events.ClearPlotOres:InvokeServer()
 		if success then
 			print("Plot ores cleared successfully!")
@@ -62,11 +66,13 @@ function module.LOAD(MODULE_INFO)
 
 	-- Withdraw button functionality (show confirmation popup)
 	modernUI.WithdrawButton.MouseButton1Click:Connect(function()
+		SoundManager.ButtonClick()
 		modernUI.ConfirmationPopup.Visible = true
 	end)
 
 	-- Confirmation popup - Yes button
 	modernUI.YesButton.MouseButton1Click:Connect(function()
+		SoundManager.ButtonClick()
 		modernUI.ConfirmationPopup.Visible = false
 		local success = RepStorage.Events.WithdrawAllItems:InvokeServer()
 		if success then
@@ -78,22 +84,30 @@ function module.LOAD(MODULE_INFO)
 
 	-- Confirmation popup - No button
 	modernUI.NoButton.MouseButton1Click:Connect(function()
+		SoundManager.ButtonClick()
 		modernUI.ConfirmationPopup.Visible = false
 	end)
 
-	-- Close button functionality
+	-- Menu toggle handler (this handles the visual state)
+	script.Parent.MenuObject.Changed:Connect(function()
+		if script.Parent.MenuObject.Value then
+			-- Opening settings
+			modernUI.Container.Visible = true
+			print("Settings opened")
+		else
+			-- Closing settings
+			modernUI.Container.Visible = false
+			modernUI.ConfirmationPopup.Visible = false  -- Also hide popup
+			print("Settings closed")
+		end
+	end)
+
+	-- Close button handler (FIXED - uses Main.CLOSE_MENU like all other GUIs)
 	modernUI.CloseButton.MouseButton1Click:Connect(function()
 		Main.CLOSE_MENU(script.Parent)
 	end)
 
-	-- Show/hide modern UI when MenuObject changes
-	script.Parent.MenuObject.Changed:Connect(function()
-		if script.Parent.MenuObject.Value then
-			modernUI.Container.Visible = true
-		else
-			modernUI.Container.Visible = false
-		end
-	end)
+	print("Modern Options GUI loaded successfully!")
 end
 
 return module
