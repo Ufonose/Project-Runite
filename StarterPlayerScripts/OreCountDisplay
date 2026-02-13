@@ -1,0 +1,171 @@
+-- StarterPlayerScripts/OreCountDisplay.lua
+-- Displays current ore count in corner of screen (Scale-based version)
+
+local Players = game:GetService("Players")
+local RepStorage = game:GetService("ReplicatedStorage")
+local Camera = workspace.CurrentCamera
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+print("OreCountDisplay: Starting...")
+
+-- Wait for player data to load (loading screen to finish)
+local dataLoaded = player:WaitForChild("DataLoaded", 30)
+if not dataLoaded then
+	warn("DataLoaded not found - player data may not have loaded!")
+	return
+end
+
+print("✓ Player data loaded, creating ore counter...")
+
+-- Wait for Events folder and RemoteEvent
+local eventsFolder = RepStorage:WaitForChild("Events", 10)
+if not eventsFolder then
+	warn("Events folder not found!")
+	return
+end
+
+local oreCountUpdateEvent = eventsFolder:WaitForChild("OreCountUpdate", 10)
+if not oreCountUpdateEvent then
+	warn("OreCountUpdate RemoteEvent not found!")
+	return
+end
+
+print("✓ Found OreCountUpdate RemoteEvent")
+
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "OreCountDisplay"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = playerGui
+
+-- Main display frame (top-right corner)
+local displayFrame = Instance.new("Frame")
+displayFrame.Name = "DisplayFrame"
+displayFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+displayFrame.BackgroundTransparency = 0.2
+displayFrame.BorderSizePixel = 0
+displayFrame.ZIndex = 5
+displayFrame.Visible = false  -- Start hidden until we get first update
+displayFrame.Parent = screenGui
+
+-- Function to update display size based on screen size
+local function updateDisplaySize()
+	local viewport = Camera.ViewportSize
+	local screenWidth = viewport.X
+	-- If screen width is less than 900 pixels (mobile), make GUI bigger
+	if screenWidth < 900 then
+		displayFrame.Size = UDim2.new(0.1, 0, 0.06, 0)  -- Bigger on mobile
+		displayFrame.Position = UDim2.new(0.89, 0, 0.93, 0)
+	else
+		displayFrame.Size = UDim2.new(0.065, 0, 0.035, 0) -- Desktop size
+		displayFrame.Position = UDim2.new(0.92, 0, 0.95, 0)
+	end
+end
+
+-- Update on initial load
+updateDisplaySize()
+
+-- Update when screen size changes
+Camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateDisplaySize)
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = displayFrame
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(60, 60, 80)
+stroke.Thickness = 1
+stroke.Transparency = 0.5
+stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+stroke.Parent = displayFrame
+
+-- Title label
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0.42, 0)
+titleLabel.Position = UDim2.new(0, 0, 0.08, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "Ore Limit:"
+titleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+titleLabel.TextScaled = true
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.ZIndex = 6
+titleLabel.Parent = displayFrame
+
+local titleTextConstraint = Instance.new("UITextSizeConstraint")
+titleTextConstraint.MaxTextSize = 16
+titleTextConstraint.Parent = titleLabel
+
+-- Count label
+local countLabel = Instance.new("TextLabel")
+countLabel.Name = "CountLabel"
+countLabel.Size = UDim2.new(1, 0, 0.47, 0)
+countLabel.Position = UDim2.new(0, 0, 0.45, 0)
+countLabel.BackgroundTransparency = 1
+countLabel.Text = "0/250"
+countLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
+countLabel.TextScaled = true
+countLabel.Font = Enum.Font.GothamBold
+countLabel.ZIndex = 6
+countLabel.Parent = displayFrame
+
+-- Add text size constraint to prevent text from getting too large
+local textSizeConstraint = Instance.new("UITextSizeConstraint")
+textSizeConstraint.MaxTextSize = 20
+textSizeConstraint.Parent = countLabel
+
+-- Function to update display
+local function updateDisplay(currentCount, maxCount)
+	-- Show the frame on first update
+	if not displayFrame.Visible then
+		displayFrame.Visible = true
+	end
+
+	countLabel.Text = currentCount .. "/" .. maxCount
+
+	-- Color-coded based on percentage
+	local percentage = currentCount / maxCount
+
+	if percentage >= 1.0 then
+		-- At limit - red
+		countLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+		stroke.Color = Color3.fromRGB(255, 100, 100)
+	elseif percentage >= 0.8 then
+		-- Approaching limit - yellow
+		countLabel.TextColor3 = Color3.fromRGB(255, 220, 100)
+		stroke.Color = Color3.fromRGB(255, 220, 100)
+	else
+		-- Normal - green
+		countLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
+		stroke.Color = Color3.fromRGB(60, 60, 80)
+	end
+
+	print(string.format("Ore count updated: %d/%d", currentCount, maxCount))
+end
+
+-- Listen for updates from server
+oreCountUpdateEvent.OnClientEvent:Connect(function(currentCount, maxCount)
+	print("Received ore count update:", currentCount, maxCount)
+	updateDisplay(currentCount, maxCount)
+end)
+
+-- Wait for settings to load, then listen for limit changes
+local settings = player:WaitForChild("Settings", 10)
+if settings then
+	local oreLimit = settings:WaitForChild("OreLimit", 10)
+	if oreLimit then
+		print("✓ OreLimit setting found:", oreLimit.Value)
+
+		-- Listen for limit changes (server will send updated count)
+		oreLimit.Changed:Connect(function()
+			print("Ore limit changed to:", oreLimit.Value)
+		end)
+	else
+		warn("OreLimit setting not found!")
+	end
+else
+	warn("Settings folder not found!")
+end
+
+print("✓ OreCountDisplay loaded successfully!")
