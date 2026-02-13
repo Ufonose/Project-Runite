@@ -1,5 +1,5 @@
 -- ServerStorage/Modules/ConveyorUpgradeApplier.lua
--- FIXED: Only look at items that ACTUALLY have conveyor parts
+-- Applies conveyor speed upgrades to all conveyor types equally
 
 local RepStorage = game:GetService("ReplicatedStorage")
 
@@ -61,12 +61,7 @@ function ConveyorUpgradeApplier.ApplyToConveyorPart(conveyorPart, upgradeLevel)
 	local convVelo = conveyorPart:FindFirstChild("ConvVelo")
 	if convVelo then
 		local baseSpeed = getBaseConveyorSpeed()
-
-		-- Check if this is a sloped conveyor (gets 0.5x upgrade instead of 1x)
-		local isSloped = (conveyorPart.Name == "ConvSlope" or conveyorPart.Name == "ConvSlopeMerge")
-		local speedBoost = isSloped and (upgradeLevel * 0.5) or upgradeLevel
-
-		local newSpeed = baseSpeed + speedBoost
+		local newSpeed = baseSpeed + upgradeLevel
 
 		-- Preserve direction (positive or negative)
 		local isReversed = convVelo.Value < 0
