@@ -7,80 +7,80 @@ UpgradesData.Upgrades = {
 	-- === MINER SPEED UPGRADES ===
 	IronMineSpeed = {
 		Name = "Iron Mine Speed",
-		Description = "Increases ore drop speed for all Iron Mines by 5% per level",
+		Description = "Makes all Iron Mines produce ore 3% faster per level",
 		Icon = "⛏️",
-		BaseCost = 1,
-		CostMultiplier = 1.15,
-		MaxLevel = 20,
+		BaseCost = 1, --6800k * 1.9 Max = 2194K
+		CostMultiplier = 1.9,
+		MaxLevel = 10,
 		SortOrder = 1,
 		Category = "Miners",
 		GetEffectText = function(level)
 			if level == 0 then
 				return "Not Upgraded"
 			else
-				local speedIncrease = level * 5
+				local speedIncrease = level * 3
 				return "+" .. speedIncrease .. "% Speed"
 			end
 		end,
 		ApplyEffect = function(level)
 			-- Returns speed multiplier: 1 + (level * 0.05)
 			-- Level 1 = 1.05x speed, Level 10 = 1.5x speed, Level 20 = 2.0x speed
-			return 1 + (level * 0.05)
+			return 1 + (level * 0.03)
 		end
 	},
 
 	CopperMineSpeed = {
 		Name = "Copper Mine Speed",
-		Description = "Increases ore drop speed for all Copper Mines by 5% per level",
+		Description = "Makes all Copper Mines produce ore 3% faster per level",
 		Icon = "⛏️",
-		BaseCost = 1,
-		CostMultiplier = 1.15,
-		MaxLevel = 20,
+		BaseCost = 1, --7900 * 1.9 Max = 2549K
+		CostMultiplier = 1.9,
+		MaxLevel = 10,
 		SortOrder = 2,
 		Category = "Miners",
 		GetEffectText = function(level)
 			if level == 0 then
 				return "Not Upgraded"
 			else
-				local speedIncrease = level * 5
+				local speedIncrease = level * 3
 				return "+" .. speedIncrease .. "% Speed"
 			end
 		end,
 		ApplyEffect = function(level)
-			return 1 + (level * 0.05)
+			return 1 + (level * 0.03)
 		end
 	},
 
 	GoldMineSpeed = {
 		Name = "Gold Mine Speed",
-		Description = "Increases ore drop speed for all Gold Mines by 5% per level",
+		Description = "Makes all Gold Mines produce ore 3% faster per level",
 		Icon = "⛏️",
-		BaseCost = 1,
-		CostMultiplier = 1.15,
-		MaxLevel = 20,
+		BaseCost = 1, --9000 * 1.9 Max = 2904K
+		CostMultiplier = 1.9,
+		MaxLevel = 10,
 		SortOrder = 3,
 		Category = "Miners",
 		GetEffectText = function(level)
 			if level == 0 then
 				return "Not Upgraded"
 			else
-				local speedIncrease = level * 5
+				local speedIncrease = level * 3
 				return "+" .. speedIncrease .. "% Speed"
 			end
 		end,
 		ApplyEffect = function(level)
-			return 1 + (level * 0.05)
+			return 1 + (level * 0.03)
 		end
 	},
 
 	-- === EXISTING UPGRADES ===
 	ConveyorSpeed = {
 		Name = "Conveyor Speed",
-		Description = "Increases the speed of all conveyors by 1 unit per level",
+		Description = "Increases conveyor speed by +1 per level",
 		Icon = "➡️",
-		BaseCost = 1,
-		CostMultiplier = 1.12,
-		MaxLevel = 20,
+		BaseCost = 6300, --6300 * 2.3 Max = 932k
+		CostMultiplier = 2.3,
+		MaxLevel = 7,
 		SortOrder = 4,
 		Category = "Automation",
 		GetEffectText = function(level)
@@ -97,10 +97,10 @@ UpgradesData.Upgrades = {
 
 	CashBonus = {
 		Name = "Cash Bonus",
-		Description = "Increases cash earned from processed ores by 5% per level",
+		Description = "Increases cash earned from all deposits by 5% per level",
 		Icon = "💰",
-		BaseCost = 1,
-		CostMultiplier = 1.18,
+		BaseCost = 1, -- 3700 * 1.4 Max = 2211K
+		CostMultiplier = 1.4,
 		MaxLevel = 20,
 		SortOrder = 5,
 		Category = "Economy",
@@ -115,14 +115,14 @@ UpgradesData.Upgrades = {
 			return 1 + (level * 0.05)
 		end
 	},
-	
+
 	GemDiscovery = {
 		Name = "Gem Discovery",
-		Description = "Increases the chance to find rare gems by 10% per level",
+		Description = "Increases gem drop rates by 10% of their base chance per level",
 		Icon = "💎",
-		BaseCost = 1,
-		CostMultiplier = 1.2,
-		MaxLevel = 20,
+		BaseCost = 1, --4600 * 1.75 Max = 708K
+		CostMultiplier = 1.75,
+		MaxLevel = 10,
 		SortOrder = 6,
 		Category = "Miners",
 		GetEffectText = function(level)
@@ -138,13 +138,13 @@ UpgradesData.Upgrades = {
 			return 1 + (level * 0.1)
 		end
 	},
-	
+
 	DoubleDropChance = {
 		Name = "Double Drop Chance",
-		Description = "Gives a chance for miners to drop 2 ores at once instead of 1",
+		Description = "Adds a 1% chance per level for miners to drop double ore or gems",
 		Icon = "✨",
-		BaseCost = 1,
-		CostMultiplier = 1.25,
+		BaseCost = 1, --8000 * 1.9 Max = 2581K
+		CostMultiplier = 1.9,
 		MaxLevel = 10,
 		SortOrder = 7,
 		Category = "Miners",
@@ -160,13 +160,13 @@ UpgradesData.Upgrades = {
 			return level
 		end
 	},
-	
+
 	MovementSpeed = {
 		Name = "Movement Speed",
-		Description = "Increases your walking speed by 1 per level",
+		Description = "Increases your walking speed by +1 per level",
 		Icon = "🏃",
-		BaseCost = 1,
-		CostMultiplier = 1.15,
+		BaseCost = 1, --1500 * 1.4 Max = 233K
+		CostMultiplier = 1.4,
 		MaxLevel = 16,  -- 16 base + 16 levels = 32 max walkspeed
 		SortOrder = 8,
 		Category = "Quality of Life",
