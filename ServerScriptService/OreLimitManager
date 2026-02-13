@@ -1,0 +1,201 @@
+-- ServerScriptService/OreLimitManager.lua
+-- Manages ore limits per plot and pauses miners when limit is reached
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local RepStorage = game:GetService("ReplicatedStorage")
+
+local OreLimitManager = {}
+
+-- Track ore counts per plot
+local plotOreCounts = {}
+
+-- Wait for Events folder
+local eventsFolder = RepStorage:WaitForChild("Events", 10)
+if not eventsFolder then
+	warn("Events folder not found in ReplicatedStorage!")
+	return OreLimitManager
+end
+
+-- Wait for RemoteEvent
+local oreCountUpdateEvent = eventsFolder:WaitForChild("OreCountUpdate", 10)
+if not oreCountUpdateEvent then
+	warn("OreCountUpdate RemoteEvent not found!")
+	return OreLimitManager
+end
+
+-- Function to count ores on a plot
+local function countOres(plot)
+	local count = 0
+
+	-- Navigate to OresDropped folder
+	local miscInfo = plot:FindFirstChild("MiscInfo")
+	if not miscInfo then
+		return 0
+	end
+
+	local oresDropped = miscInfo:FindFirstChild("OresDropped")
+	if not oresDropped then
+		return 0
+	end
+
+	-- Count all children with Cash value
+	for _, child in pairs(oresDropped:GetChildren()) do
+		-- Check if it's a BasePart with Cash
+		if child:IsA("BasePart") and child:FindFirstChild("Cash") then
+			count = count + 1
+			-- Check if it's a Model with Cash
+		elseif child:IsA("Model") and child:FindFirstChild("Cash") then
+			count = count + 1
+		end
+	end
+
+	return count
+end
+
+-- Function to update miner states based on ore limit
+local function updateMinerStates(player, plot)
+	local settings = player:FindFirstChild("Settings")
+	if not settings then 
+		return 
+	end
+
+	local oreLimit = settings:FindFirstChild("OreLimit")
+	local minesActive = settings:FindFirstChild("MinesActive")
+
+	if not oreLimit or not minesActive then
+		return
+	end
+
+	local currentCount = countOres(plot)
+	plotOreCounts[plot] = currentCount
+
+	-- Send update to client for display
+	local success, err = pcall(function()
+		oreCountUpdateEvent:FireClient(player, currentCount, oreLimit.Value)
+	end)
+
+	if not success then
+		warn("Failed to fire OreCountUpdate to client:", err)
+	end
+
+	-- Check if we should pause miners
+	local shouldPause = currentCount >= oreLimit.Value
+
+	-- Find all miners and update their pause state
+	local minersPaused = 0
+	local minersResumed = 0
+
+	for _, item in pairs(plot:GetDescendants()) do
+		if item:IsA("Model") and item:FindFirstChild("ItemStats") then
+			local success, itemStats = pcall(function()
+				return require(item.ItemStats)
+			end)
+
+			if success and itemStats.TabItem == "Mine" then
+				local currentlyPaused = item:GetAttribute("OreLimitPaused") or false
+
+				if shouldPause and not currentlyPaused then
+					item:SetAttribute("OreLimitPaused", true)
+					minersPaused = minersPaused + 1
+				elseif not shouldPause and currentlyPaused then
+					item:SetAttribute("OreLimitPaused", false)
+					minersResumed = minersResumed + 1
+				end
+			end
+		end
+	end
+
+	-- Debug output (only when changes occur)
+	if minersPaused > 0 then
+		print(string.format("⛔ Paused %d miners for %s - Ore count: %d/%d", 
+			minersPaused, player.Name, currentCount, oreLimit.Value))
+	elseif minersResumed > 0 then
+		print(string.format("✅ Resumed %d miners for %s - Ore count: %d/%d", 
+			minersResumed, player.Name, currentCount, oreLimit.Value))
+	end
+end
+
+-- Initialize for a player's plot
+function OreLimitManager.InitializePlot(player, plot)
+	print(string.format("Initializing ore limit for %s's plot...", player.Name))
+
+	plotOreCounts[plot] = 0
+
+	-- Wait a moment for player settings to fully load
+	task.wait(0.5)
+
+	-- Initial update (this sends the first count to client)
+	updateMinerStates(player, plot)
+
+	-- Listen for setting changes
+	local settings = player:FindFirstChild("Settings")
+	if settings then
+		local oreLimit = settings:FindFirstChild("OreLimit")
+		if oreLimit then
+			oreLimit.Changed:Connect(function()
+				print(player.Name, "changed ore limit to:", oreLimit.Value)
+				updateMinerStates(player, plot)
+			end)
+		end
+
+		local minesActive = settings:FindFirstChild("MinesActive")
+		if minesActive then
+			minesActive.Changed:Connect(function()
+				updateMinerStates(player, plot)
+			end)
+		end
+	end
+
+	-- Monitor ore changes in OresDropped folder
+	local miscInfo = plot:FindFirstChild("MiscInfo")
+	if miscInfo then
+		local oresDropped = miscInfo:FindFirstChild("OresDropped")
+		if oresDropped then
+			-- Update when ores are added
+			oresDropped.ChildAdded:Connect(function(child)
+				task.wait(0.1) -- Small delay to let ore fully spawn
+				updateMinerStates(player, plot)
+			end)
+
+			-- Update when ores are removed
+			oresDropped.ChildRemoved:Connect(function(child)
+				task.wait(0.1)
+				updateMinerStates(player, plot)
+			end)
+
+			print("✓ Monitoring OresDropped folder for", player.Name)
+		else
+			warn("OresDropped folder not found for", player.Name)
+		end
+	else
+		warn("MiscInfo folder not found for", player.Name)
+	end
+
+	print(string.format("✓ OreLimitManager initialized for %s", player.Name))
+end
+
+-- Periodic update (every 3 seconds as backup)
+local lastUpdate = 0
+RunService.Heartbeat:Connect(function()
+	local now = tick()
+	if now - lastUpdate >= 3 then
+		lastUpdate = now
+
+		for plot, _ in pairs(plotOreCounts) do
+			if plot.Parent then
+				local owner = Players:FindFirstChild(plot.Owner.Value)
+				if owner then
+					updateMinerStates(owner, plot)
+				end
+			else
+				-- Plot was deleted, clean up
+				plotOreCounts[plot] = nil
+			end
+		end
+	end
+end)
+
+print("OreLimitManager module loaded!")
+
+return OreLimitManager
