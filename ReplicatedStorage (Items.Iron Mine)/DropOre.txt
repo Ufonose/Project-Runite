@@ -1,5 +1,5 @@
 -- ReplicatedStorage/Items/[Miner]/DropOre.lua
--- COMPLETE UPDATED VERSION with both Gem Discovery and Double Drop
+-- UPDATED VERSION with Ore Limit support
 
 local Plrs = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
@@ -141,28 +141,39 @@ while true do
 
 	local plot_owner = Plrs:FindFirstChild(PLOT.Owner.Value)
 	if plot_owner ~= nil then
-		if plot_owner.Settings.MinesActive.Value then
-			-- Check for double drop chance
-			local doubleDropChance = 0
-			if _G.GetUpgradeMultiplier then
-				doubleDropChance = _G.GetUpgradeMultiplier(plot_owner, "DoubleDropChance")
-			end
+		-- Check if miners are active
+		if not plot_owner.Settings.MinesActive.Value then
+			-- Miners globally disabled
+			continue
+		end
 
-			-- Roll for double drop (1-10% chance)
-			local isDoubleDrop = (math.random() * 100) <= doubleDropChance
+		-- NEW: Check if this specific miner is paused due to ore limit
+		local oreLimitPaused = script.Parent.Parent:GetAttribute("OreLimitPaused")
+		if oreLimitPaused then
+			-- Miner paused by ore limit system
+			continue
+		end
 
-			-- Select ore type
-			local selectedOreName, selectedWorth = SelectRandomOre()
+		-- Check for double drop chance
+		local doubleDropChance = 0
+		if _G.GetUpgradeMultiplier then
+			doubleDropChance = _G.GetUpgradeMultiplier(plot_owner, "DoubleDropChance")
+		end
 
-			-- Drop first ore
+		-- Roll for double drop (1-10% chance)
+		local isDoubleDrop = (math.random() * 100) <= doubleDropChance
+
+		-- Select ore type
+		local selectedOreName, selectedWorth = SelectRandomOre()
+
+		-- Drop first ore
+		DropSingleOre(plot_owner, selectedOreName, selectedWorth)
+
+		-- Drop second ore if double drop triggered
+		if isDoubleDrop then
+			-- Small delay and different position for second ore
+			wait(0.05)
 			DropSingleOre(plot_owner, selectedOreName, selectedWorth)
-
-			-- Drop second ore if double drop triggered
-			if isDoubleDrop then
-				-- Small delay and different position for second ore
-				wait(0.05)
-				DropSingleOre(plot_owner, selectedOreName, selectedWorth)
-			end
 		end
 	end
 end
