@@ -224,7 +224,7 @@ function module.CREATE_MODERN_PLACEMENT_MENU(parent)
 	local placeBtn = createButton("Place", "✓", Color3.fromRGB(60, 120, 80), "Click", 1)  -- Green
 	local rotateBtn = createButton("Rotate", "↔", Color3.fromRGB(80, 100, 140), "R", 2)  -- Blue
 	local flipBtn = createButton("Flip", "⇄", Color3.fromRGB(120, 80, 120), "F", 3)  -- Purple
-	local cancelBtn = createButton("Cancel", "X", Color3.fromRGB(140, 60, 60), "Q", 4)  -- Red
+	local cancelBtn = createButton("Cancel", "X", Color3.fromRGB(140, 60, 60), "E", 4)  -- Red
 
 	return {
 		Container = container,
