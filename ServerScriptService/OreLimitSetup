@@ -1,0 +1,57 @@
+-- ServerScriptService/OreLimitSetup.lua
+-- Initializes the ore limit system for players
+
+local Players = game:GetService("Players")
+local ServerStorage = game:GetService("ServerStorage")
+local RepStorage = game:GetService("ReplicatedStorage")
+
+-- Wait for OreLimitManager to exist
+local OreLimitManager = require(script.Parent.OreLimitManager)
+
+print("OreLimitSetup: Waiting for players...")
+
+-- Function to setup ore limit for a player
+local function setupOreLimit(player)
+	-- Wait for player data to load
+	local dataLoaded = player:WaitForChild("DataLoaded", 30)
+	if not dataLoaded then
+		warn("Player data did not load for", player.Name)
+		return
+	end
+
+	-- Wait for plot to exist
+	local plotsFolder = workspace:WaitForChild("Plots", 10)
+	if not plotsFolder then
+		warn("Plots folder not found!")
+		return
+	end
+
+	-- Find player's plot
+	local plot = nil
+	for _, p in pairs(plotsFolder:GetChildren()) do
+		if p:FindFirstChild("Owner") and p.Owner.Value == player.Name then
+			plot = p
+			break
+		end
+	end
+
+	if plot then
+		-- Initialize ore limit manager for this plot
+		OreLimitManager.InitializePlot(player, plot)
+		print("Ore limit system initialized for", player.Name)
+	else
+		warn("Could not find plot for", player.Name)
+	end
+end
+
+-- Setup for existing players
+for _, player in pairs(Players:GetPlayers()) do
+	task.spawn(setupOreLimit, player)
+end
+
+-- Setup for new players
+Players.PlayerAdded:Connect(function(player)
+	task.spawn(setupOreLimit, player)
+end)
+
+print("OreLimitSetup loaded!")
