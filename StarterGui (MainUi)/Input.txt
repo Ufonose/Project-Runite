@@ -159,26 +159,25 @@ function module.LOAD(MODULE_INFO)
 			elseif not PLACEMENT.PLACING_ITEMS then
 				Main.OPEN_MENU(script.Parent.Parent.Shop)
 			end
-		elseif KEY_INPUT.KeyCode == Enum.KeyCode.Q then
-			if PLACEMENT.PLACING_ITEMS then
-				PLACEMENT.DESTROY_PLACING()
+		elseif KEY_INPUT.KeyCode == Enum.KeyCode.E then
+			-- Don't open inventory if we just used a proximity prompt:
+			if tick() - lastProximityPromptTime < PROXIMITY_COOLDOWN then
+				return  -- Ignore the E press
 			end
-		elseif KEY_INPUT.KeyCode == Enum.KeyCode.Z then
-			if not module.SELECTING_ITEMS and ItemSelection.SELECTED_COUNT > 0 then
+			-- E key now handles multiple actions based on context (AZERTY-friendly):
+			if PLACEMENT.PLACING_ITEMS then
+				-- Cancel placement (same as Q)
+				PLACEMENT.DESTROY_PLACING()
+			elseif not module.SELECTING_ITEMS and ItemSelection.SELECTED_COUNT > 0 then
+				-- Withdraw items (same as Z)
 				ItemSelection.WITHDRAW_ITEM()
+			else
+				-- Open inventory (default behavior)
+				Main.OPEN_MENU(script.Parent.Parent.Inv)
 			end
 		elseif KEY_INPUT.KeyCode == Enum.KeyCode.X then
 			if not module.SELECTING_ITEMS and ItemSelection.SELECTED_COUNT > 0 then
 				ItemSelection.SELL_ITEMS()
-			end
-		elseif KEY_INPUT.KeyCode == Enum.KeyCode.E then
-			-- ADD THIS CHECK - Don't open inventory if we just used a proximity prompt:
-			if tick() - lastProximityPromptTime < PROXIMITY_COOLDOWN then
-				return  -- Ignore the E press
-			end
-			-- EXISTING CODE:
-			if not PLACEMENT.PLACING_ITEMS then
-				Main.OPEN_MENU(script.Parent.Parent.Inv)
 			end
 		elseif KEY_INPUT.KeyCode == Enum.KeyCode.C then
 			if not module.SELECTING_ITEMS and ItemSelection.SELECTED_COUNT > 0 then
