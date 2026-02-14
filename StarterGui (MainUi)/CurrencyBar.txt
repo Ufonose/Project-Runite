@@ -125,8 +125,8 @@ function module.LOAD(MODULE_INFO)
 	end
 
 	-- Create currency displays
-	local CashDisplay = createCurrencyItem("Cash", "rbxassetid://108344576813204", Color3.fromRGB(85, 255, 127))
-	local ResearchDisplay = createCurrencyItem("ResearchTokens", "rbxassetid://78275915130351", Color3.fromRGB(138, 180, 255))
+	local CashDisplay = createCurrencyItem("Cash", "rbxassetid://120885568283714", Color3.fromRGB(85, 255, 127))
+	local ResearchDisplay = createCurrencyItem("ResearchTokens", "rbxassetid://138075961169617", Color3.fromRGB(138, 180, 255))
 
 	-- Cash Setup
 	Plr:WaitForChild("leaderstats")
