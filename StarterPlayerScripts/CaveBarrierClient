@@ -77,7 +77,7 @@ local function createBarrierGUI(barrier)
 	billboardGui.Size = UDim2.new(0, 200, 0, 85)  -- Same size as MinerHotspotClient
 	billboardGui.StudsOffset = Vector3.new(0, 5, 0)
 	billboardGui.AlwaysOnTop = true
-	billboardGui.MaxDistance = 35
+	billboardGui.MaxDistance = 60
 	billboardGui.Adornee = buyButton
 	billboardGui.Parent = barrier
 
@@ -171,7 +171,7 @@ local function createBarrierGUI(barrier)
 	costLabel.Size = UDim2.new(1, -10, 1, 0)
 	costLabel.Position = UDim2.new(0, 5, 0, 0)
 	costLabel.BackgroundTransparency = 1
-	costLabel.Text = "🔬 " .. unlockCost .. " Tokens"
+	costLabel.Text = "" .. unlockCost .. " Tokens"
 	costLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
 	costLabel.TextSize = 14
 	costLabel.Font = Enum.Font.GothamBold
