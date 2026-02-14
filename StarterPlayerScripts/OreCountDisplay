@@ -159,7 +159,7 @@ if settings then
 
 		-- Listen for limit changes (server will send updated count)
 		oreLimit.Changed:Connect(function()
-			print("Ore limit changed to:", oreLimit.Value)
+			--print("Ore limit changed to:", oreLimit.Value)
 		end)
 	else
 		warn("OreLimit setting not found!")
