@@ -1222,7 +1222,7 @@ function displayStatistics()
 		noDataLabel.Name = "NoData"
 		noDataLabel.Size = UDim2.new(1, 0, 0, 100 * SCALE_FACTOR)
 		noDataLabel.BackgroundTransparency = 1
-		noDataLabel.Text = "No items collected yet.\nStart collecting to see statistics!"
+		noDataLabel.Text = "No items deposited yet.\nStart depositing to see statistics!"
 		noDataLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 		noDataLabel.TextSize = 18
 		noDataLabel.Font = Enum.Font.Gotham
