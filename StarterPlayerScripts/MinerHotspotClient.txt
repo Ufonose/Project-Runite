@@ -46,7 +46,7 @@ local function createModernHotspotUI(parent, info)
 	billboardGui.Size = UDim2.new(0, 200, 0, 85)
 	billboardGui.StudsOffset = Vector3.new(0, 5, 0)
 	billboardGui.AlwaysOnTop = false
-	billboardGui.MaxDistance = 35  -- Only visible within 25 studs
+	billboardGui.MaxDistance = 60  -- Only visible within 25 studs
 	billboardGui.Adornee = parent
 	billboardGui.Parent = parent
 
@@ -149,20 +149,20 @@ local function createModernHotspotUI(parent, info)
 	costLabel.Parent = costContainer
 
 	if info.Config.Cost == 0 then
-		costLabel.Text = "✨ FREE!"
+		costLabel.Text = "FREE!"
 		costLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 	else
-		costLabel.Text = "🔬 " .. info.Config.Cost .. " Tokens"
+		costLabel.Text = "" .. info.Config.Cost .. " Tokens"
 		costLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
 	end
 
 	-- Function to reset cost display
 	local function resetCostDisplay()
 		if info.Config.Cost == 0 then
-			costLabel.Text = "✨ FREE!"
+			costLabel.Text = "FREE!"
 			costLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 		else
-			costLabel.Text = "🔬 " .. info.Config.Cost .. " Tokens"
+			costLabel.Text = "" .. info.Config.Cost .. " Tokens"
 			costLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
 		end
 	end
