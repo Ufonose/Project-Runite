@@ -118,7 +118,7 @@ end
 
 -- Initialize for a player's plot
 function OreLimitManager.InitializePlot(player, plot)
-	print(string.format("Initializing ore limit for %s's plot...", player.Name))
+	--print(string.format("Initializing ore limit for %s's plot...", player.Name))
 
 	plotOreCounts[plot] = 0
 
@@ -134,7 +134,7 @@ function OreLimitManager.InitializePlot(player, plot)
 		local oreLimit = settings:FindFirstChild("OreLimit")
 		if oreLimit then
 			oreLimit.Changed:Connect(function()
-				print(player.Name, "changed ore limit to:", oreLimit.Value)
+				--print(player.Name, "changed ore limit to:", oreLimit.Value)
 				updateMinerStates(player, plot)
 			end)
 		end
