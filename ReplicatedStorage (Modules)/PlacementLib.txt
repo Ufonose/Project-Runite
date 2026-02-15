@@ -199,7 +199,7 @@ local function obstacleCollision(obstacles)
 
 	-- COLLISION BUFFER: Shrink hitboxes slightly to prevent false collisions with adjacent items
 	-- Items on 6-stud grid placed next to each other should NOT trigger collision
-	local COLLISION_BUFFER = 0.2  -- 0.2 studs buffer on each side
+	local COLLISION_BUFFER = 1.7  -- 0.2 studs buffer on each side
 
 	-- PART 1: Check placed items
 	for _, model in pairs(obstacles:GetChildren()) do
