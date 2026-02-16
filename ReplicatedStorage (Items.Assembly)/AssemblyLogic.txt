@@ -1,9 +1,7 @@
--- ReplicatedStorage (Items.AssemblyMachine)/AssemblyLogic.txt
+-- ReplicatedStorage (Items.AssemblyMachine)/AssemblyLogic.lua
 
 local RepStorage = game:GetService("ReplicatedStorage")
-local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
 local ITEM_INFO = require(script.Parent.Parent.ItemStats)
-local PLOT = script.Parent.Parent.Parent.Parent
 
 local ASSEMBLY_INPUT = script.Parent:WaitForChild("AssemblyInput")
 local ASSEMBLY_OUTPUT = script.Parent:WaitForChild("AssemblyOutput")
@@ -58,9 +56,6 @@ local function assembleItem(ITEM)
 	if processedItems[ITEM] then return end
 	processedItems[ITEM] = true
 
-	--print("=== ASSEMBLY MACHINE ===")
-	--print("Item Name:", ITEM.Name)
-
 	-- Get the item model name
 	local itemModelTag = ITEM:FindFirstChild("OreModelName")
 	if not itemModelTag then
@@ -70,22 +65,18 @@ local function assembleItem(ITEM)
 	end
 
 	local itemModelName = itemModelTag.Value
-	--print("Item model name:", itemModelName)
 
 	-- Check if it's a plate
 	if not isPlate(itemModelName) then
-		--print("Not a plate, passing through")
 		processedItems[ITEM] = nil
 		return false -- Let it pass through
 	end
 
 	-- Extract the metal type (e.g., "Gold" from "Gold Plate")
 	local metalType = string.gsub(itemModelName, " Plate", "")
-	--print("Metal type:", metalType)
 
 	-- Get current output type from config
 	local outputType = ASSEMBLY_CONFIG.Value
-	--print("Output type:", outputType)
 
 	-- Build the output model name (e.g., "Gold Gear")
 	local outputModelName = metalType .. " " .. outputType
@@ -112,8 +103,6 @@ local function assembleItem(ITEM)
 		return true
 	end
 
-	--print("Found output model! Creating...")
-
 	-- Clone the output model
 	local newItem = outputModel:Clone()
 	newItem.Name = ITEM.Name -- Keep the original name
@@ -124,12 +113,15 @@ local function assembleItem(ITEM)
 	newItemModelTag.Name = "OreModelName"
 	newItemModelTag.Value = outputModelName
 
-	-- Copy Cash value
+	-- Copy Cash value and apply multiplier from ItemStats
 	if ITEM:FindFirstChild("Cash") then
 		local cashValue = Instance.new("NumberValue", newItem)
 		cashValue.Name = "Cash"
-		cashValue.Value = ITEM.Cash.Value
-		--print("Cash value copied:", cashValue.Value)
+
+		-- Use the Assembly Machine's own multiplier
+		local multiplier = ITEM_INFO.Multiplier or 1
+
+		cashValue.Value = ITEM.Cash.Value * multiplier
 	end
 
 	-- Copy upgrade tags
@@ -152,8 +144,6 @@ local function assembleItem(ITEM)
 
 	-- Parent to plot
 	newItem.Parent = ITEM.Parent
-
-	--print("Assembly complete! Created:", outputModelName)
 
 	-- Clean up tracking after a delay
 	task.delay(0.5, function()
@@ -240,8 +230,6 @@ local function updateDisplay()
 	if DISPLAY_SCREEN_2 then
 		createDisplayOnScreen(DISPLAY_SCREEN_2)
 	end
-
-	--print("Display updated - Current output:", ASSEMBLY_CONFIG.Value)
 end
 
 -- Update display when config changes
