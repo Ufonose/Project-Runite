@@ -3,6 +3,7 @@
 
 local Plrs = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
 local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
 local ITEM_INFO = require(script.Parent.Parent.ItemStats)
 local PLOT = script.Parent.Parent.Parent.Parent
@@ -95,7 +96,6 @@ local function GetWaitTime()
 	return waitTime
 end
 
--- Function to create and drop a single ore
 local function DropSingleOre(plot_owner, selectedOreName, selectedWorth)
 	local ORE, CASH_VALUE = ITEM_HANDLER.DROP_ORE(
 		PLOT, 
@@ -109,27 +109,33 @@ local function DropSingleOre(plot_owner, selectedOreName, selectedWorth)
 	)
 
 	if ORE then
-		-- Add random left/right offset
+		-- 1. Random Spread Offset
 		local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
 
-		local currentCFrame
 		if ORE:IsA("Model") then
-			currentCFrame = ORE:GetPivot()
-			local newCFrame = currentCFrame * CFrame.new(randomX, 0, 0)
-			ORE:PivotTo(newCFrame)
-		elseif ORE:IsA("BasePart") then
-			currentCFrame = ORE.CFrame
-			ORE.CFrame = currentCFrame * CFrame.new(randomX, 0, 0)
+			ORE:PivotTo(ORE:GetPivot() * CFrame.new(randomX, 0, 0))
+		else
+			ORE.CFrame = ORE.CFrame * CFrame.new(randomX, 0, 0)
 		end
 
+		-- 2. Parent the ore
 		ORE.Parent = PLOT.MiscInfo.OresDropped
 
-		-- Set network ownership
+		-- 3. Add Tag for the LocalScript to find it		
+		CollectionService:AddTag(ORE, "MovingOre")
+		ORE:SetAttribute("LaneOffset", (math.random(-80, 80) / 100))
+
+		-- 4. Physics Setup (Unanchor and Network Ownership)
 		if ORE:IsA("Model") then
-			if ORE.PrimaryPart then
-				ORE.PrimaryPart:SetNetworkOwner(plot_owner)
+			local primary = ORE.PrimaryPart or ORE:FindFirstChildWhichIsA("BasePart")
+			if primary then
+				primary:SetNetworkOwner(plot_owner)
 			end
-		elseif ORE:IsA("BasePart") then
+			for _, p in pairs(ORE:GetDescendants()) do
+				if p:IsA("BasePart") then p.Anchored = false end
+			end
+		else
+			ORE.Anchored = false
 			ORE:SetNetworkOwner(plot_owner)
 		end
 	end
