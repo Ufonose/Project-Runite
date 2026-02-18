@@ -152,7 +152,7 @@ function DataHandling.LOAD_PLOT(Plr, PLOT_DATA)
 
 				for _, descendant in pairs(ITEM_MODEL:GetDescendants()) do
 					-- Only reverse Conv and ConvSlope (NOT merge conveyors)
-					if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope") then
+					if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope" or descendant.Name == "SideBeam") then
 						if descendant:GetAttribute("NoFlip") then
 							continue
 						end
