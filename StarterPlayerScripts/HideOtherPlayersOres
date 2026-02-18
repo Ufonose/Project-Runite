@@ -1,0 +1,53 @@
+-- StarterPlayerScripts/HideOtherPlayersOres.lua
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local function isMyOre(ore)
+	-- Walk up the hierarchy to find the plot's Owner value
+	local current = ore.Parent
+	while current do
+		if current.Name == "OresDropped" then
+			local miscInfo = current.Parent -- MiscInfo
+			if miscInfo then
+				local plot = miscInfo.Parent -- Plot
+				if plot and plot:FindFirstChild("Owner") then
+					return plot.Owner.Value == player.Name
+				end
+			end
+		end
+		current = current.Parent
+	end
+	return false
+end
+
+local function hideOre(ore)
+	if ore:IsA("BasePart") then
+		ore.Transparency = 1
+	elseif ore:IsA("Model") then
+		for _, part in ipairs(ore:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.Transparency = 1
+			end
+		end
+	end
+end
+
+local function checkOre(obj)
+	-- Only process ores (they have a Cash value)
+	if not obj:FindFirstChild("Cash") then return end
+	if not isMyOre(obj) then
+		hideOre(obj)
+	end
+end
+
+-- Check all existing ores across all plots
+for _, plot in pairs(workspace.Plots:GetChildren()) do
+	local oresDropped = plot:FindFirstChild("MiscInfo") and plot.MiscInfo:FindFirstChild("OresDropped")
+	if oresDropped then
+		for _, ore in pairs(oresDropped:GetChildren()) do
+			checkOre(ore)
+		end
+		-- Watch for new ores being dropped on this plot
+		oresDropped.ChildAdded:Connect(checkOre)
+	end
+end
