@@ -1,0 +1,93 @@
+-- StarterPlayerScripts/LocalConveyorManager.lua
+local RunService = game:GetService("RunService")
+local CollectionService = game:GetService("CollectionService")
+
+local RAY_CAST_DISTANCE = 4 
+local DEFAULT_SPEED = 12
+local EDGE_BUFFER = 0.8 
+local CENTERING_SPEED = 5 
+
+-- LIFE-LIKE SETTINGS
+local VIBRATION_INTENSITY = 0.03 -- How much the ore "jitters" up and down
+local ROTATION_SPEED = 0.5 -- How fast the ore slowly spins
+local WOBBLE_STRENGTH = 5-- Degrees of tilt
+
+local rayParams = RaycastParams.new()
+rayParams.FilterType = Enum.RaycastFilterType.Exclude
+
+RunService.Heartbeat:Connect(function(dt)
+	local allOres = CollectionService:GetTagged("MovingOre")
+	rayParams.FilterDescendantsInstances = allOres
+	local timeTime = os.clock()
+
+	for _, ore in pairs(allOres) do
+		local rayOrigin = ore.Position
+		local rayDirection = Vector3.new(0, -RAY_CAST_DISTANCE, 0)
+		local result = workspace:Raycast(rayOrigin, rayDirection, rayParams)
+
+		if not result and ore.Anchored then
+			local moveDir = ore.AssemblyLinearVelocity.Magnitude > 0 and ore.AssemblyLinearVelocity.Unit or ore.CFrame.LookVector
+			result = workspace:Raycast(rayOrigin - (moveDir * EDGE_BUFFER), rayDirection, rayParams)
+		end
+
+		if result and result.Instance and result.Instance.Name:find("Conv") then
+			local part = result.Instance
+			local speed = part:FindFirstChild("ConvVelo") and part.ConvVelo.Value or DEFAULT_SPEED
+			local actualMoveVec = part.CFrame.LookVector * speed * dt
+
+			if not ore.Anchored and math.abs(ore.AssemblyLinearVelocity.Y) < 15 then
+				ore.Anchored = true
+			end
+
+			if not ore.Anchored then
+				ore.AssemblyLinearVelocity = part.CFrame.LookVector * speed
+			end
+
+			if ore.Anchored then
+				-- 1. U-SHAPE SLIDE LOGIC
+				local slideVec = Vector3.new(0, 0, 0)
+				local upright = part.CFrame.UpVector.Y 
+				if upright < 0.98 then 
+					slideVec = (part.CFrame.RightVector * -part.CFrame.RightVector.Y) * CENTERING_SPEED * dt
+				end
+
+				-- 2. "ALIVE" MATH (Vibration & Wobble)
+				local seed = ore:GetAttribute("OreID") or 0
+
+				-- High-speed vertical jitter (Micro-bouncing)
+				local jitterY = math.sin(timeTime * 25 + seed) * VIBRATION_INTENSITY
+
+				-- Low-speed random tilt (Wobble)
+				local wobbleX = math.sin(timeTime * 6 + seed) * math.rad(WOBBLE_STRENGTH)
+				local wobbleZ = math.cos(timeTime * 7 + seed) * math.rad(WOBBLE_STRENGTH)
+
+				-- Slow continuous spinning (Random jostling)
+				local spinY = (timeTime * ROTATION_SPEED + seed) % (math.pi * 2)
+
+				-- 3. FINAL POSITIONING
+				local laneOffset = ore:GetAttribute("LaneOffset") or 0
+				local relPos = part.CFrame:PointToObjectSpace(ore.Position)
+				local targetRelY = (part.Size.Y/2) + (ore.Size.Y/2) + jitterY
+				local targetRelX = math.lerp(relPos.X, laneOffset, 0.1)
+
+				-- Combine Tilt and Spin
+				local naturalRotation = CFrame.Angles(wobbleX, spinY, wobbleZ)
+
+				-- Apply to CFrame
+				local localNewPos = Vector3.new(targetRelX, targetRelY, relPos.Z)
+				ore.CFrame = (part.CFrame:ToWorldSpace(CFrame.new(localNewPos)) * naturalRotation) + actualMoveVec
+
+				ore.AssemblyLinearVelocity = part.CFrame.LookVector * speed
+			end
+		else
+			if ore.Anchored then
+				ore.Anchored = false
+				local exitVelocity = ore.AssemblyLinearVelocity
+				if exitVelocity.Magnitude < 1 then
+					exitVelocity = ore.CFrame.LookVector * DEFAULT_SPEED
+				end
+				ore.AssemblyLinearVelocity = exitVelocity * 1.2
+			end
+		end
+	end
+end)
