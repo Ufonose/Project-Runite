@@ -1,121 +1,88 @@
-local RepStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
+-- ServerScriptService/Items/ItemSplitter.lua
+local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
+
 local ITEM_INFO = require(script.Parent.ItemStats)
+local PLOT = script.Parent.Parent.Parent
 
 local SPLITTER = script.Parent
 local SPLIT_DETECTOR = SPLITTER:WaitForChild("SortDetector")
 
--- Simple alternating state (true = left, false = right)
-local sendLeft = true
+-- Settings
+local DETECT_INTERVAL = 0.05 
+local DETECTION_HEIGHT = 4
+local DETECTION_OFFSET = -1 
 
--- Detection settings - LOWERED to detect small objects
-local DETECTION_HEIGHT = 4  -- Total height of detection box
-local DETECTION_OFFSET = -1  -- Shift box DOWN to catch objects on surface
-
-local trackedOres = {}
-
--- Helper to get ore info
-local function getOreInfo(part)
-	local ore = nil
-
-	-- Check if part itself is ore
-	if part:FindFirstChild("Cash") then
-		ore = part
-		-- Check if parent model is ore
-	elseif part.Parent and part.Parent:IsA("Model") and part.Parent:FindFirstChild("Cash") then
-		ore = part.Parent:FindFirstChildWhichIsA("BasePart")
-	end
-
-	return ore
-end
-
--- Check if ore is on this splitter
-local function isOreOnSplitter(orePart)
-	local orePos = orePart.Position
-	local detectorPos = SPLIT_DETECTOR.Position
-
-	-- Check horizontal distance
-	local horizontalDistance = (Vector2.new(orePos.X, orePos.Z) - Vector2.new(detectorPos.X, detectorPos.Z)).Magnitude
-	local maxHorizontalDistance = math.max(SPLIT_DETECTOR.Size.X, SPLIT_DETECTOR.Size.Z) / 2
-
-	if horizontalDistance > maxHorizontalDistance then
-		return false
-	end
-
-	-- Check vertical distance
-	local verticalDistance = math.abs(orePos.Y - detectorPos.Y)
-	return verticalDistance <= (SPLIT_DETECTOR.Size.Y + DETECTION_HEIGHT) / 2
-end
+-- The global toggle (flips every time a NEW ore is assigned)
+local nextDirectionLeft = true
 
 -- Calculate split velocity
 local function getSplitVelocity(goLeft)
 	local baseCFrame = SPLIT_DETECTOR.CFrame
-	local speed = ITEM_INFO.SortSpeed or 20
+	local speed = ITEM_INFO.SortSpeed or 12 -- Slightly faster to ensure clearing
+	local angleDeg = ITEM_INFO.SortAngle or 45
 
-	if goLeft then
-		-- Rotate left by SortAngle degrees
-		local angle = math.rad(ITEM_INFO.SortAngle or 45)
-		return (baseCFrame * CFrame.Angles(0, angle, 0)).LookVector * speed
-	else
-		-- Rotate right by SortAngle degrees
-		local angle = math.rad(-(ITEM_INFO.SortAngle or 45))
-		return (baseCFrame * CFrame.Angles(0, angle, 0)).LookVector * speed
-	end
+	local angle = math.rad(goLeft and angleDeg or -angleDeg)
+	return (baseCFrame * CFrame.Angles(0, angle, 0)).LookVector * speed
 end
 
--- Main detection loop
-RunService.Heartbeat:Connect(function()
-	-- Calculate detection region - LOWERED to catch small objects
-	local detectorCFrame = SPLIT_DETECTOR.CFrame
-	local detectorSize = SPLIT_DETECTOR.Size
+-- ============================================================
+-- THE DETECTION & SPLIT LOOP
+-- ============================================================
+task.spawn(function()
+	local overlapParams = OverlapParams.new()
+	overlapParams.FilterType = Enum.RaycastFilterType.Exclude
+	overlapParams.FilterDescendantsInstances = {SPLITTER}
 
-	local detectionSize = Vector3.new(
-		detectorSize.X,
-		DETECTION_HEIGHT,
-		detectorSize.Z
-	)
+	while true do
+		task.wait(DETECT_INTERVAL)
 
-	-- Shift detection box DOWN so bottom is BELOW the surface
-	local detectionCFrame = detectorCFrame * CFrame.new(0, (DETECTION_HEIGHT/2) + DETECTION_OFFSET, 0)
+		local detectionSize = Vector3.new(SPLIT_DETECTOR.Size.X, DETECTION_HEIGHT, SPLIT_DETECTOR.Size.Z)
+		local detectionCFrame = SPLIT_DETECTOR.CFrame * CFrame.new(0, (DETECTION_HEIGHT/2) + DETECTION_OFFSET, 0)
 
-	-- Get all parts in region
-	local partsInRegion = workspace:GetPartBoundsInBox(detectionCFrame, detectionSize)
+		local partsInRegion = workspace:GetPartBoundsInBox(detectionCFrame, detectionSize, overlapParams)
 
-	-- Update tracked ores
-	for ore, data in pairs(trackedOres) do
-		-- Clean up if ore destroyed
-		if not ore.Parent then
-			trackedOres[ore] = nil
-			-- Clean up if traveled too far or too much time
-		elseif (ore.Position - data.startPosition).Magnitude > SPLIT_DETECTOR.Size.Z * 3 or (tick() - data.startTime) > 5 then
-			trackedOres[ore] = nil
-			-- Keep moving if still on splitter
-		elseif isOreOnSplitter(ore) then
-			local velocity = getSplitVelocity(data.goLeft)
-			ore.AssemblyLinearVelocity = velocity
-		else
-			-- Ore left the splitter
-			trackedOres[ore] = nil
-		end
-	end
+		for _, hit in pairs(partsInRegion) do
+			local ITEM = nil
 
-	-- Check for NEW ores in region
-	for _, part in pairs(partsInRegion) do
-		local ore = getOreInfo(part)
+			if hit:FindFirstChild("Cash") then
+				ITEM = hit
+			elseif hit.Parent and hit.Parent:FindFirstChild("Cash") then
+				ITEM = hit.Parent
+			end
 
-		-- Only track if NEW ore and actually on splitter
-		if ore and not trackedOres[ore] and isOreOnSplitter(ore) then
-			-- TOGGLE happens ONLY when new ore is detected
-			trackedOres[ore] = {
-				goLeft = sendLeft,
-				startTime = tick(),
-				startPosition = ore.Position
-			}
+			if ITEM then
+				-- 1. ASSIGN DIRECTION (If it doesn't have one yet)
+				local assignedDir = ITEM:GetAttribute("SplitDir")
 
-			-- Toggle for NEXT ore
-			sendLeft = not sendLeft
+				if assignedDir == nil then
+					-- This is a brand new ore! 
+					-- Assign the current global direction and then flip the global toggle
+					assignedDir = nextDirectionLeft and "Left" or "Right"
+					ITEM:SetAttribute("SplitDir", assignedDir)
+
+					nextDirectionLeft = not nextDirectionLeft
+					-- print("New Ore Assigned to: " .. assignedDir)
+				end
+
+				-- 2. APPLY PHYSICS BASED ON ASSIGNED DIRECTION
+				local isLeft = (assignedDir == "Left")
+				local velocity = getSplitVelocity(isLeft)
+
+				local targetPart = (ITEM:IsA("Model") and ITEM.PrimaryPart) or ITEM
+				if targetPart and targetPart:IsA("BasePart") then
+					targetPart.AssemblyLinearVelocity = velocity
+
+					-- 3. NETWORK OWNERSHIP
+					local plotOwnerName = PLOT:FindFirstChild("Owner") and PLOT.Owner.Value
+					if plotOwnerName and plotOwnerName ~= "" then
+						local plotOwner = Players:FindFirstChild(plotOwnerName)
+						if plotOwner and targetPart:GetNetworkOwner() ~= plotOwner then
+							pcall(function() targetPart:SetNetworkOwner(plotOwner) end)
+						end
+					end
+				end
+			end
 		end
 	end
 end)
-
-print("Splitter logic loaded with SMALL OBJECT DETECTION!")
