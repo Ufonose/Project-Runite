@@ -1,6 +1,8 @@
--- ReplicatedStorage (Items.Blast Furnace)/SmeltOre.txt (FIXED WITH COLLISION)
-
+-- ServerScriptService/Items/OreSmelter.lua
+local Players = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
+
 local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
 local ITEM_INFO = require(script.Parent.Parent.ItemStats)
 local PLOT = script.Parent.Parent.Parent.Parent
@@ -9,24 +11,23 @@ local SMELT_INPUT = script.Parent:WaitForChild("SmeltInput")
 local SMELT_OUTPUT = script.Parent:WaitForChild("SmeltOutput")
 local DISPLAY_SCREEN = script.Parent:WaitForChild("DisplayScreen")
 
--- Random spread settings
-local SPREAD_WIDTH = 3
+-- Settings
+local SPREAD_WIDTH = 2.7
+local DETECT_INTERVAL = 0.1 
+local REQUIRED_ORES = 5
+local SMELT_DELAY = 1
 
--- CONFIGURABLE: List of accepted ores
+-- Tracking
+local oreQueue = {}
+local isCurrentlySmelting = false
+local processedOres = {} -- For the scanning debounce
+
+-- Smelting Recipes
 local ACCEPTED_ORES = {
 	["Gold Ore_Cleaned"] = {Color = Color3.fromRGB(255, 215, 0), IngotName = "Gold Ingot"},
 	["Iron Ore_Cleaned"] = {Color = Color3.fromRGB(180, 180, 190), IngotName = "Iron Ingot"},
 	["Copper Ore_Cleaned"] = {Color = Color3.fromRGB(163, 72, 39), IngotName = "Copper Ingot"},
-	-- ADD MORE ORES HERE
 }
-
-local REQUIRED_ORES = 5
-local SMELT_DELAY = 1
-
-local oreQueue = {}
-local isCurrentlySmelting = false
-
--- [... all the display GUI code stays the same ...]
 
 -- Create or get the SurfaceGui
 local displayGui = DISPLAY_SCREEN:FindFirstChild("DisplayGui")
@@ -178,179 +179,74 @@ local function updateDisplay()
 	end
 end
 
--- Function to check if all ores are the same type
 local function areAllSameType()
 	if #oreQueue == 0 then return false end
-
 	local firstType = oreQueue[1].Type
 	for i = 2, #oreQueue do
-		if oreQueue[i].Type ~= firstType then
-			return false
-		end
+		if oreQueue[i].Type ~= firstType then return false end
 	end
 	return true
 end
 
--- Function to create ingot (FIXED WITH COLLISION GROUP)
 local function createIngot()
-	--print("=== CREATING INGOT ===")
+	local ingotName = areAllSameType() and ACCEPTED_ORES[oreQueue[1].Type].IngotName or "Impure Ingot"
 
-	local ingotName
-	if areAllSameType() then
-		local oreType = oreQueue[1].Type
-		ingotName = ACCEPTED_ORES[oreType].IngotName
-		--print("All ores are", oreType, "- Creating", ingotName)
-	else
-		ingotName = "Impure Ingot"
-		--print("Mixed ore types - Creating Impure Ingot")
-	end
-
-	-- Look for ingot model
 	local oreFolder = RepStorage:FindFirstChild("OreModels")
-	if not oreFolder then
-		warn("OreModels folder not found!")
-		return
-	end
+	local ingotModel = oreFolder and oreFolder:FindFirstChild(ingotName)
+	if not ingotModel then return end
 
-	local ingotModel = oreFolder:FindFirstChild(ingotName)
-	if not ingotModel then
-		warn("Ingot model '" .. ingotName .. "' not found!")
-		return
-	end
-
-	-- Clone the ingot
 	local newIngot = ingotModel:Clone()
+	newIngot.Name = ingotName
 
-	-- NEW: Set collision group for all parts
-	if newIngot:IsA("Model") then
-		for _, part in pairs(newIngot:GetDescendants()) do
-			if part:IsA("BasePart") then
-				part.CanCollide = true
-				part.Anchored = false
-				part.CollisionGroup = "Ores" -- ADD THIS!
-			end
-		end
-	elseif newIngot:IsA("BasePart") then
-		newIngot.CanCollide = true
-		newIngot.Anchored = false
-		newIngot.CollisionGroup = "Ores" -- ADD THIS!
-	end
+	-- Setup Tags for Local Conveyor logic
+	CollectionService:AddTag(newIngot, "MovingOre")
+	newIngot:SetAttribute("OreID", math.random(1, 1000000))
+	newIngot:SetAttribute("LaneOffset", (math.random(-40, 40) / 100))
 
-	-- Tag with ingot name
+	-- Custom Tag for Smelting Output
 	local ingotTag = Instance.new("StringValue", newIngot)
-	ingotTag.Name = "IngotType"
+	ingotTag.Name = "OreModelName" -- Keeping name consistent for potential further processing
 	ingotTag.Value = ingotName
 
-	-- Calculate total cash value
+	-- Cash calculation
 	local totalCash = 0
-	for _, ore in ipairs(oreQueue) do
-		totalCash = totalCash + ore.CashValue
-	end
+	for _, ore in ipairs(oreQueue) do totalCash = totalCash + ore.CashValue end
 
-	-- Add cash value
 	local cashValue = Instance.new("NumberValue", newIngot)
 	cashValue.Name = "Cash"
-	if ingotName == "Impure Ingot" then
-		cashValue.Value = 1
-	else
-		cashValue.Value = totalCash * 2
-	end
+	cashValue.Value = (ingotName == "Impure Ingot") and 100 or (totalCash * 2)
 
-	-- Random spread
+	-- Spawn and Physics
 	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
-
-	local spawnOffset = Vector3.new(randomX, 0, 0)
-
-	if newIngot:IsA("Model") then
-		local outputCFrame = SMELT_OUTPUT.CFrame * CFrame.new(spawnOffset)
-		newIngot:PivotTo(outputCFrame)
-	elseif newIngot:IsA("BasePart") then
-		newIngot.CFrame = SMELT_OUTPUT.CFrame * CFrame.new(spawnOffset)
-	end
-
-	-- Parent to plot
+	newIngot:PivotTo(SMELT_OUTPUT.CFrame * CFrame.new(randomX, 0, 0))
 	newIngot.Parent = PLOT.MiscInfo.OresDropped
 
-	-- Zero out velocity
-	task.wait(0.05)
-
-	if newIngot:IsA("Model") and newIngot.PrimaryPart then
-		newIngot.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-		newIngot.PrimaryPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-	elseif newIngot:IsA("BasePart") then
-		newIngot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-		newIngot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+	local p = (newIngot:IsA("Model") and newIngot.PrimaryPart) or newIngot
+	if p:IsA("BasePart") then
+		p.Anchored = false
+		-- Set Ownership to Plot Owner
+		local plotOwner = Players:FindFirstChild(PLOT.Owner.Value)
+		if plotOwner then p:SetNetworkOwner(plotOwner) end
 	end
-
-	--print("Ingot created:", ingotName, "Worth: $" .. cashValue.Value)
 end
 
--- Function to start smelting
-local function startSmelting()
-	if isCurrentlySmelting then
-		return
-	end
-
-	if #oreQueue < REQUIRED_ORES then
-		return
-	end
-
-	--print("=== STARTING SMELT PROCESS ===")
-	isCurrentlySmelting = true
-	updateDisplay()
-
-	wait(SMELT_DELAY)
-
-	createIngot()
-
-	oreQueue = {}
-	isCurrentlySmelting = false
-	updateDisplay()
-
-	--print("=== SMELT COMPLETE ===")
-end
-
--- Function to get ore from hit
-local function getOreFromHit(HIT)
-	if HIT:FindFirstChild("Cash") then
-		return HIT
-	end
-
-	if HIT.Parent and HIT.Parent:IsA("Model") and HIT.Parent:FindFirstChild("Cash") then
-		return HIT.Parent
-	end
-
-	return nil
-end
-
--- Function to process ore
 local function processOre(ORE)
-	if isCurrentlySmelting then
+	if isCurrentlySmelting or #oreQueue >= REQUIRED_ORES then
 		ORE:Destroy()
 		return
 	end
 
-	if #oreQueue >= REQUIRED_ORES then
+	local oreTag = ORE:FindFirstChild("OreModelName")
+	local oreType = oreTag and oreTag.Value or ""
+
+	-- DESTROY everything that is NOT Cleaned
+	if not string.find(oreType, "_Cleaned") or not ACCEPTED_ORES[oreType] then
 		ORE:Destroy()
 		return
 	end
 
-	local oreModelTag = ORE:FindFirstChild("OreModelName")
-	if not oreModelTag then
-		ORE:Destroy()
-		return
-	end
-
-	local oreType = oreModelTag.Value
-
-	if not ACCEPTED_ORES[oreType] then
-		ORE:Destroy()
-		return
-	end
-
-	local cashValue = ORE:FindFirstChild("Cash")
-	local cash = cashValue and cashValue.Value or 0
-
+	-- Add to queue
+	local cash = ORE:FindFirstChild("Cash") and ORE.Cash.Value or 0
 	table.insert(oreQueue, {
 		Type = oreType,
 		Color = ACCEPTED_ORES[oreType].Color,
@@ -358,36 +254,53 @@ local function processOre(ORE)
 	})
 
 	ORE:Destroy()
-
 	updateDisplay()
 
 	if #oreQueue >= REQUIRED_ORES then
-		while #oreQueue > REQUIRED_ORES do
-			table.remove(oreQueue)
-		end
-		startSmelting()
+		isCurrentlySmelting = true
+		updateDisplay()
+		task.wait(SMELT_DELAY)
+		createIngot()
+		oreQueue = {}
+		isCurrentlySmelting = false
+		updateDisplay()
 	end
 end
 
-local processedOres = {}
+-- ============================================================
+-- THE DETECTION LOOP (Scanning Mode)
+-- ============================================================
+task.spawn(function()
+	local overlapParams = OverlapParams.new()
+	overlapParams.FilterType = Enum.RaycastFilterType.Include
 
-SMELT_INPUT.Touched:Connect(function(HIT)
-	local ORE = getOreFromHit(HIT)
+	while true do
+		task.wait(DETECT_INTERVAL)
+		overlapParams.FilterDescendantsInstances = CollectionService:GetTagged("MovingOre")
 
-	if ORE and ORE:FindFirstChild("Cash") then
-		if processedOres[ORE] then return end
-		processedOres[ORE] = true
+		local partsInInput = workspace:GetPartBoundsInBox(SMELT_INPUT.CFrame, SMELT_INPUT.Size, overlapParams)
 
-		task.spawn(function()
-			processOre(ORE)
-		end)
+		for _, hit in pairs(partsInInput) do
+			local ORE = nil
+			if hit:FindFirstChild("Cash") then
+				ORE = hit
+			elseif hit.Parent and hit.Parent:FindFirstChild("Cash") then
+				ORE = hit.Parent
+			end
 
-		task.delay(0.5, function()
-			processedOres[ORE] = nil
-		end)
+			if ORE and not processedOres[ORE] then
+				processedOres[ORE] = true
+
+				-- Use ItemStats to upgrade before consuming the ore
+				ITEM_HANDLER.UPGRADE_ORE(PLOT, script.Parent.Parent, ORE, ITEM_INFO.Addition, ITEM_INFO.Multiplier, ITEM_INFO.ItemId, 30)
+
+				processOre(ORE)
+
+				task.delay(0.5, function() processedOres[ORE] = nil end)
+			end
+		end
 	end
 end)
 
 updateDisplay()
-
-print("Ore Smelter loaded!")
+print("Blast Furnace Scanning Logic Loaded!")
