@@ -1,4 +1,4 @@
--- ServerScriptService/Items/RollingMill.lua
+-- ServerScriptService/Items/PlateProcessor.lua
 local Players = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
@@ -7,100 +7,175 @@ local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
 local ITEM_INFO = require(script.Parent.Parent.ItemStats)
 local PLOT = script.Parent.Parent.Parent.Parent
 
-local ROLL_INPUT = script.Parent:WaitForChild("RollInput")
-local ROLL_OUTPUT = script.Parent:WaitForChild("RollOutput")
+local ASSEMBLY_INPUT = script.Parent:WaitForChild("AssemblyInput")
+local ASSEMBLY_OUTPUT = script.Parent:WaitForChild("AssemblyOutput")
+local DISPLAY_SCREEN = script.Parent:WaitForChild("DisplayScreen")
+local DISPLAY_SCREEN_2 = script.Parent:FindFirstChild("DisplayScreen2") 
+
+-- Config setup
+if not script.Parent.Parent:FindFirstChild("AssemblyConfig") then
+	local config = Instance.new("StringValue")
+	config.Name = "AssemblyConfig"
+	config.Value = "Gear"
+	config.Parent = script.Parent.Parent
+end
+local ASSEMBLY_CONFIG = script.Parent.Parent.AssemblyConfig
 
 local SPREAD_WIDTH = 2.7
 local DETECT_INTERVAL = 0.1 
-
 local processedItems = {}
 
-local function rollIngot(ITEM)
-	if not ITEM or processedItems[ITEM] then return end
+local function assembleItem(ITEM)
+	if not ITEM or processedItems[ITEM] then return false end
+
+	local itemModelTag = ITEM:FindFirstChild("OreModelName")
+	if not itemModelTag or not string.find(itemModelTag.Value, "Plate") then
+		return false -- Not a plate, let the loop know NOT to destroy it
+	end
+
+	-- It IS a plate, lock it
 	processedItems[ITEM] = true
+	local itemModelName = itemModelTag.Value
+	local metalType = string.gsub(itemModelName, " Plate", "")
+	local outputType = ASSEMBLY_CONFIG.Value
+	local outputModelName = metalType .. " " .. outputType
 
-	-- 1. IDENTIFY THE ITEM
-	-- Look for ANY tag that tells us what this is
-	local modelNameTag = ITEM:FindFirstChild("OreModelName") or ITEM:FindFirstChild("IngotType")
-	local itemName = modelNameTag and modelNameTag.Value or ITEM.Name
-
-	-- 2. THE BLACK HOLE RULE (Destroy everything that isn't an Ingot)
-	if not string.find(itemName, "Ingot") then
-		print("ROLLING MILL: Item is not an ingot, destroying: " .. itemName)
-		ITEM:Destroy()
-		return
-	end
-
-	-- 3. PREPARE THE PLATE
 	local oreFolder = RepStorage:FindFirstChild("OreModels")
-	local plateModelName = string.gsub(itemName, "Ingot", "Plate")
-	local plateModel = oreFolder and oreFolder:FindFirstChild(plateModelName)
+	local outputModel = oreFolder and oreFolder:FindFirstChild(outputModelName)
 
-	if not plateModel then
-		warn("ROLLING MILL: Plate model '" .. plateModelName .. "' not found! Destroying.")
-		ITEM:Destroy()
-		return
+	if not outputModel then
+		warn("Output model '" .. outputModelName .. "' not found!")
+		processedItems[ITEM] = nil
+		return true -- It was a plate, but we failed, so destroy it
 	end
 
-	-- 4. UPGRADE & CLONE
+	-- 1. UPGRADE VALUE
 	ITEM_HANDLER.UPGRADE_ORE(PLOT, script.Parent.Parent, ITEM, ITEM_INFO.Addition, ITEM_INFO.Multiplier, ITEM_INFO.ItemId, 30)
 
-	local newPlate = plateModel:Clone()
-	newPlate.Name = itemName .. "_Plate"
+	-- 2. CLONE & SETUP
+	local newItem = outputModel:Clone()
+	newItem.Name = ITEM.Name
+	CollectionService:AddTag(newItem, "MovingOre")
+	newItem:SetAttribute("OreID", math.random(1, 1000000))
+	newItem:SetAttribute("LaneOffset", (math.random(-80, 80) / 100))
 
-	-- Ensure the conveyor script sees it
-	CollectionService:AddTag(newPlate, "MovingOre")
-	newPlate:SetAttribute("OreID", math.random(1, 1000000))
-	newPlate:SetAttribute("LaneOffset", (math.random(-5, 5) / 100))
-
-	-- Metadata Tags
-	local newPlateTag = Instance.new("StringValue", newPlate)
-	newPlateTag.Name = "OreModelName"
-	newPlateTag.Value = plateModelName
+	local newItemTag = Instance.new("StringValue", newItem)
+	newItemTag.Name = "OreModelName"
+	newItemTag.Value = outputModelName
 
 	if ITEM:FindFirstChild("Cash") then
-		local cashValue = Instance.new("NumberValue", newPlate)
+		local cashValue = Instance.new("NumberValue", newItem)
 		cashValue.Name = "Cash"
 		cashValue.Value = ITEM.Cash.Value
 	end
 
-	-- 5. POSITION & PHYSICS
-	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
-	newPlate:PivotTo(ROLL_OUTPUT.CFrame * CFrame.new(randomX, 0, 0))
-	newPlate.Parent = ITEM.Parent
+	for _, child in pairs(ITEM:GetChildren()) do
+		if child:IsA("NumberValue") and child.Name ~= "Cash" then
+			child:Clone().Parent = newItem
+		end
+	end
 
-	local p = (newPlate:IsA("Model") and newPlate.PrimaryPart) or newPlate
+	-- 3. POSITION & PHYSICS
+	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
+	newItem:PivotTo(ASSEMBLY_OUTPUT.CFrame * CFrame.new(randomX, 0, 0))
+	newItem.Parent = ITEM.Parent
+
+	local p = (newItem:IsA("Model") and newItem.PrimaryPart) or newItem
 	if p:IsA("BasePart") then
 		p.Anchored = false
-		p.CanCollide = true
-		-- Hand control to the player immediately
 		local plotOwner = Players:FindFirstChild(PLOT.Owner.Value)
 		if plotOwner then p:SetNetworkOwner(plotOwner) end
 	end
 
-	-- 6. FINAL CLEANUP
+	-- 4. CLEANUP
 	ITEM:Destroy()
 	task.delay(1, function() processedItems[ITEM] = nil end)
+	return true
 end
+
+-- Function to create display on a screen
+local function createDisplayOnScreen(screen)
+	if not screen then return end
+
+	local displayGui = screen:FindFirstChild("DisplayGui")
+	if not displayGui then
+		displayGui = Instance.new("SurfaceGui")
+		displayGui.Name = "DisplayGui"
+		displayGui.Face = Enum.NormalId.Left
+		displayGui.AlwaysOnTop = false
+		displayGui.Parent = screen
+	end
+
+	-- Clear existing content
+	displayGui:ClearAllChildren()
+
+	-- Main frame
+	local mainFrame = Instance.new("Frame")
+	mainFrame.Name = "MainFrame"
+	mainFrame.Size = UDim2.new(1, 0, 1, 0)
+	mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	mainFrame.BorderSizePixel = 0
+	mainFrame.Parent = displayGui
+
+	-- Title
+	local titleLabel = Instance.new("TextLabel")
+	titleLabel.Size = UDim2.new(1, 0, 0.3, 0)
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Text = "PLATE PROCESSOR"
+	titleLabel.TextColor3 = Color3.fromRGB(207, 207, 207)
+	titleLabel.TextSize = 60
+	titleLabel.Font = Enum.Font.GothamBold
+	titleLabel.Parent = mainFrame
+
+	-- Current output display
+	local outputLabel = Instance.new("TextLabel")
+	outputLabel.Size = UDim2.new(1, -20, 0.35, 0)
+	outputLabel.Position = UDim2.new(0, 10, 0.35, 0)
+	outputLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+	outputLabel.BorderSizePixel = 0
+	outputLabel.Text = "Making: " .. ASSEMBLY_CONFIG.Value
+	outputLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+	outputLabel.TextSize = 50
+	outputLabel.Font = Enum.Font.GothamBold
+	outputLabel.Parent = mainFrame
+
+	local outputCorner = Instance.new("UICorner")
+	outputCorner.CornerRadius = UDim.new(0, 12)
+	outputCorner.Parent = outputLabel
+
+end
+
+-- Function to update display screen
+local function updateDisplay()
+	-- Update main screen
+	createDisplayOnScreen(DISPLAY_SCREEN)
+
+	-- Update second screen if it exists
+	if DISPLAY_SCREEN_2 then
+		createDisplayOnScreen(DISPLAY_SCREEN_2)
+	end
+end
+
+-- Update display when config changes
+ASSEMBLY_CONFIG.Changed:Connect(updateDisplay)
+
+-- Initial display update
+updateDisplay()
 
 -- ============================================================
 -- THE DETECTION LOOP
 -- ============================================================
 task.spawn(function()
 	local overlapParams = OverlapParams.new()
-	-- We remove the Include filter to ensure it sees EVERYTHING that hits the box
 	overlapParams.FilterType = Enum.RaycastFilterType.Exclude
-	overlapParams.FilterDescendantsInstances = {script.Parent} -- Don't detect the machine itself
+	overlapParams.FilterDescendantsInstances = {script.Parent}
 
 	while true do
 		task.wait(DETECT_INTERVAL)
-
-		-- Find every part inside the input box
-		local partsInInput = workspace:GetPartBoundsInBox(ROLL_INPUT.CFrame, ROLL_INPUT.Size, overlapParams)
+		local partsInInput = workspace:GetPartBoundsInBox(ASSEMBLY_INPUT.CFrame, ASSEMBLY_INPUT.Size, overlapParams)
 
 		for _, hit in pairs(partsInInput) do
 			local ITEM = nil
-			-- Find the "Ore" object by looking for the Cash value
 			if hit:FindFirstChild("Cash") then
 				ITEM = hit
 			elseif hit.Parent and hit.Parent:FindFirstChild("Cash") then
@@ -108,8 +183,12 @@ task.spawn(function()
 			end
 
 			if ITEM and not processedItems[ITEM] then
-				rollIngot(ITEM)
+				-- If assembleItem returns false, it means it wasn't a plate. 
+				-- We do nothing, allowing it to slide through.
+				assembleItem(ITEM)
 			end
 		end
 	end
 end)
+
+print("Plate Processor Scanning Logic Loaded!")
