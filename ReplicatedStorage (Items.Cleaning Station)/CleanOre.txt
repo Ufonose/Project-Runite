@@ -1,6 +1,9 @@
--- ReplicatedStorage (Items.OreCleanMachine)/CleanOre.txt
+-- ServerScriptService/Items/OreCleaner.lua
 
+local Players = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
+
 local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
 local ITEM_INFO = require(script.Parent.Parent.ItemStats)
 local PLOT = script.Parent.Parent.Parent.Parent
@@ -8,46 +11,29 @@ local PLOT = script.Parent.Parent.Parent.Parent
 local CLEAN_INPUT = script.Parent:WaitForChild("CleanInput")
 local CLEAN_OUTPUT = script.Parent:WaitForChild("CleanOutput")
 
--- Random spread settings
-local SPREAD_WIDTH = 4  -- Left/right spread in studs
+local SPREAD_WIDTH = 2.7 
+local DETECT_INTERVAL = 0.1 
 
--- Track recently cleaned ores to prevent duplicates
 local cleanedOres = {}
 
 local function cleanOre(ORE)
-	-- Prevent duplicate cleaning
-	if cleanedOres[ORE] then return end
-	cleanedOres[ORE] = true
+	if not ORE or cleanedOres[ORE] then return end
 
-	--print("=== CLEANING ORE ===")
-	--print("Ore Name:", ORE.Name)
-
-	-- Get the original ore model name
 	local oreModelTag = ORE:FindFirstChild("OreModelName")
-	if not oreModelTag then
-		warn("Ore doesn't have OreModelName tag! Cannot clean.")
-		cleanedOres[ORE] = nil
-		return
-	end
+	if not oreModelTag then return end
 
 	local originalModelName = oreModelTag.Value
-	--print("Original model name:", originalModelName)
 
-	-- ONLY process ores with "_Crushed" in the name
+	-- STRICT CHECK: Ignore everything that isn't crushed
 	if not string.find(originalModelName, "_Crushed") then
-		--print("Ore is not refined, ignoring")
-		cleanedOres[ORE] = nil
 		return
 	end
 
-	-- Check if already cleaned
-	if string.find(originalModelName, "_Cleaned") then
-		--print("Ore is already clean, ignoring")
-		cleanedOres[ORE] = nil
-		return
-	end
+	-- If it passed the check, lock it so we don't process it twice
+	cleanedOres[ORE] = true
 
-	-- UPGRADE THE ORE VALUE HERE (only for refined ores that will be cleaned)
+	-- 1. UPGRADE ONLY VALID ORES
+	-- Moving this here ensures ONLY _Crushed items get the value boost
 	ITEM_HANDLER.UPGRADE_ORE(
 		PLOT, 
 		script.Parent.Parent, 
@@ -58,102 +44,97 @@ local function cleanOre(ORE)
 		30
 	)
 
-	-- Look for the clean version
+	-- 2. PREPARE REFINED MODEL
 	local oreFolder = RepStorage:FindFirstChild("OreModels")
-	if not oreFolder then
-		warn("OreModels folder not found!")
+	local refinedModelName = string.gsub(originalModelName, "_Crushed", "_Cleaned")
+	local refinedModel = oreFolder and oreFolder:FindFirstChild(refinedModelName)
+
+	if not refinedModel then
+		warn("Cleaned model '" .. refinedModelName .. "' not found!")
 		cleanedOres[ORE] = nil
 		return
 	end
 
-	-- REPLACE "_Crushed" with "_Cleaned" (not append!)
-	local cleanModelName = string.gsub(originalModelName, "_Crushed", "_Cleaned")
-	--print("Looking for clean model:", cleanModelName)
+	-- 3. CLONE AND SETUP
+	local newOre = refinedModel:Clone()
+	newOre.Name = ORE.Name
+	CollectionService:AddTag(newOre, "MovingOre")
+	newOre:SetAttribute("OreID", math.random(1, 1000000))
+	newOre:SetAttribute("LaneOffset", (math.random(-80, 80) / 100))
 
-	local cleanModel = oreFolder:FindFirstChild(cleanModelName)
-
-	if not cleanModel then
-		warn("Clean model '" .. cleanModelName .. "' not found!")
-		--print("Make sure you have models like 'StoneOreModel_Cleaned' in OreModels folder")
-		cleanedOres[ORE] = nil
-		return
-	end
-
-	-- Validate clean model
-	if cleanModel:IsA("Model") and not cleanModel.PrimaryPart then
-		warn(cleanModelName .. " needs a PrimaryPart!")
-		cleanedOres[ORE] = nil
-		return
-	end
-
-	--print("Found clean model! Creating...")
-
-	-- Clone the clean model
-	local newOre = cleanModel:Clone()
-	newOre.Name = ORE.Name -- Keep the mine name
-	newOre.CollisionGroup = "Ores"
-
-	-- Tag with clean model name
-	local newOreModelTag = Instance.new("StringValue", newOre)
+	local newOreModelTag = Instance.new("StringValue")
 	newOreModelTag.Name = "OreModelName"
-	newOreModelTag.Value = cleanModelName
+	newOreModelTag.Value = refinedModelName
+	newOreModelTag.Parent = newOre
 
-	-- Copy Cash value
 	if ORE:FindFirstChild("Cash") then
-		local cashValue = Instance.new("NumberValue", newOre)
+		local cashValue = Instance.new("NumberValue")
 		cashValue.Name = "Cash"
 		cashValue.Value = ORE.Cash.Value
-		--print("Cash value copied:", cashValue.Value)
+		cashValue.Parent = newOre
 	end
 
-	-- Copy upgrade tags
 	for _, child in pairs(ORE:GetChildren()) do
 		if child:IsA("NumberValue") and child.Name ~= "Cash" then
 			child:Clone().Parent = newOre
 		end
 	end
 
-	-- ADD RANDOM SPREAD (left/right only)
+	-- 4. POSITIONING & PHYSICS
 	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
 
-	-- POSITION AT OUTPUT PART WITH RANDOM OFFSET
 	if newOre:IsA("Model") then
-		local outputCFrame = CLEAN_OUTPUT.CFrame * CFrame.new(randomX, 0, 0)
-		newOre:PivotTo(outputCFrame)
+		newOre:PivotTo(CLEAN_OUTPUT.CFrame * CFrame.new(randomX, 0, 0))
+		if newOre.PrimaryPart then newOre.PrimaryPart.Anchored = false end
 	else
 		newOre.CFrame = CLEAN_OUTPUT.CFrame * CFrame.new(randomX, 0, 0)
+		newOre.Anchored = false
 	end
 
-	-- Parent to same location
 	newOre.Parent = ORE.Parent
 
-	-- Destroy old ore
+	local plotOwner = Players:FindFirstChild(PLOT.Owner.Value)
+	if plotOwner then
+		local targetPart = newOre:IsA("Model") and newOre.PrimaryPart or newOre
+		if targetPart and targetPart:IsA("BasePart") then
+			targetPart:SetNetworkOwner(plotOwner)
+		end
+	end
+
+	-- 5. CLEANUP
+	local oldOreRef = ORE
 	ORE:Destroy()
 
-	--print("Cleaning complete! Spawned at random offset:", randomX)
-
-	-- Clean up tracking after a delay
-	task.delay(0.5, function()
-		cleanedOres[ORE] = nil
+	task.delay(1, function()
+		cleanedOres[oldOreRef] = nil
 	end)
 end
 
--- Detect ores touching the input
-CLEAN_INPUT.Touched:Connect(function(HIT)
-	local ORE = nil
+-- ============================================================
+-- THE DETECTION LOOP
+-- ============================================================
+task.spawn(function()
+	local overlapParams = OverlapParams.new()
+	overlapParams.FilterType = Enum.RaycastFilterType.Include
 
-	-- Check if part itself has Cash (single BasePart ore)
-	if HIT:FindFirstChild("Cash") then
-		ORE = HIT
-		-- Check if parent is a Model with Cash
-	elseif HIT.Parent and HIT.Parent:IsA("Model") and HIT.Parent:FindFirstChild("Cash") then
-		ORE = HIT.Parent
-	end
+	while true do
+		task.wait(DETECT_INTERVAL)
+		overlapParams.FilterDescendantsInstances = CollectionService:GetTagged("MovingOre")
 
-	-- Clean if valid ore found (upgrade happens inside cleanOre function)
-	if ORE and ORE:FindFirstChild("Cash") then
-		cleanOre(ORE)
+		local partsInInput = workspace:GetPartBoundsInBox(CLEAN_INPUT.CFrame, CLEAN_INPUT.Size, overlapParams)
+
+		for _, hit in pairs(partsInInput) do
+			local ORE = nil
+			if hit:FindFirstChild("Cash") then
+				ORE = hit
+			elseif hit.Parent and hit.Parent:FindFirstChild("Cash") then
+				ORE = hit.Parent
+			end
+
+			-- Just send it to the function; the function now decides if it's worth upgrading/cleaning
+			if ORE then
+				cleanOre(ORE)
+			end
+		end
 	end
 end)
-
-print("Ore Clean Machine loaded!")
