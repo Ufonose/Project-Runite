@@ -47,6 +47,13 @@ local function LOAD_DATA(Plr)
 	-- 1. Start ProfileStore Session
 	local session = PlayerSession.Load(Plr) 
 	if not session then return end
+	
+	local profile = PlayerSession.GetProfile(Plr)
+	if profile then
+		profile.OnSave:Connect(function()
+			profile.Data["PlotItemPlaced"] = DATA_FUNCTION_HANDLING.UNLOAD_PLOT(Plr)
+		end)
+	end
 
 	-- 2. Setup Simple Values (Rebirths, etc)
 	for val_name, val_data in pairs(PLAYER_DATA_INFO.SIMPLE_VALS) do
@@ -145,10 +152,15 @@ end)
 Plrs.PlayerAdded:Connect(LOAD_DATA)
 
 game:BindToClose(function()
+	local threads = {}
 	for _, plr in pairs(Plrs:GetPlayers()) do
-		task.spawn(function() 
+		table.insert(threads, task.spawn(function()
 			PREPARE_FINAL_SAVE(plr)
-			PlayerSession.Remove(plr)  -- EndSession blocks until save completes
-		end)
+			PlayerSession.Remove(plr)
+		end))
+	end
+	-- Wait for all threads to finish before server closes
+	for _, thread in ipairs(threads) do
+		repeat task.wait() until coroutine.status(thread) == "dead"
 	end
 end)
