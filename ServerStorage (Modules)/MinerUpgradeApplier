@@ -11,7 +11,7 @@ local MinerUpgradeApplier = {}
 
 -- Helper: Get player's upgrade level for a specific mine type from MODULE
 function MinerUpgradeApplier.GetPlayerUpgradeLevel(player, mineType)
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player)
 	if not session or not session["Upgrades"] then
 		return 0
 	end
