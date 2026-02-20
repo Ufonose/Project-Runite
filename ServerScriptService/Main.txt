@@ -50,7 +50,7 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 			if ITEM["CONVEYOR_REVERSED"] then
 				REAL_ITEM:SetAttribute("ConveyorReversed", true)
 				for _, descendant in pairs(REAL_ITEM:GetDescendants()) do
-					if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope" or descendant.Name == "SideBeam") then
+					if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope" or descendant.Name == "SideBeam" or descendant.Name == "SideStuck") then
 						if not descendant:GetAttribute("NoFlip") and descendant.Name ~= "ConvMerge" then
 							local cv = descendant:FindFirstChild("ConvVelo")
 							if cv then cv.Value = -cv.Value end
