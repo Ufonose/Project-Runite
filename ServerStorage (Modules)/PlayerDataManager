@@ -3,25 +3,26 @@ local ProfileStore = require(ServerStorage.Modules.ProfileStore)
 
 local PlayerDataManager = {}
 
--- 1. DATA TEMPLATE (Fully reconciled with UpgradesData and Settings)
 local DATA_TEMPLATE = {
 	Money = 400,
 	ResearchTokens = 0,
 	Items = {},
 	PlotItemPlaced = {},
 
-	-- Player Stats
 	Rebirth = 0,
 	InvSort = "Newest",
 
-	-- Settings
+	UnlockedBarriers = {}, -- FIXED: was missing from template
+	MinerHotspots = {
+		UnlockedHotspots = {},
+	},
+
 	settingHideResearch = false,
 	settingMinesActive = true,
 	settingNotificationSounds = true,
 	settingOreLimit = 250,
 	settingUISounds = true,
 
-	-- Upgrades
 	Upgrades = {
 		["IronMineSpeed"] = 0,
 		["CopperMineSpeed"] = 0,
@@ -33,7 +34,6 @@ local DATA_TEMPLATE = {
 		["MovementSpeed"] = 0,
 	},
 
-	-- Research
 	Research = {
 		["CompletedObjectives"] = {},
 		["ActiveObjectives"] = {},
@@ -42,15 +42,16 @@ local DATA_TEMPLATE = {
 	}
 }
 
-local PlayerStore = ProfileStore.New("Runite_vb2", DATA_TEMPLATE)
-local ActiveProfiles = {}
+local PlayerStore = ProfileStore.New("Runite_vb4", DATA_TEMPLATE)
+local ActiveProfiles = {} -- FIXED: now keyed by UserId (number)
 
 -- ============================================================
 -- CORE FUNCTIONS
 -- ============================================================
 
-function PlayerDataManager.Get(playerName)
-	local profile = ActiveProfiles[playerName]
+-- Pass the player object directly
+function PlayerDataManager.Get(player)
+	local profile = ActiveProfiles[player.UserId]
 	return profile and profile.Data or nil
 end
 
@@ -62,16 +63,15 @@ function PlayerDataManager.Load(player)
 	})
 
 	if profile ~= nil then
-		-- Automatically fills in missing keys (like new Upgrades) for existing players
-		profile:Reconcile() 
+		profile:Reconcile()
 
 		profile.OnSessionEnd:Connect(function()
-			ActiveProfiles[player.Name] = nil
+			ActiveProfiles[player.UserId] = nil -- FIXED: keyed by UserId
 			player:Kick("Data session ended - your progress has been saved.")
 		end)
 
 		if player.Parent == game:GetService("Players") then
-			ActiveProfiles[player.Name] = profile
+			ActiveProfiles[player.UserId] = profile -- FIXED: keyed by UserId
 			return profile.Data
 		else
 			profile:EndSession()
@@ -81,11 +81,12 @@ function PlayerDataManager.Load(player)
 	end
 end
 
-function PlayerDataManager.Remove(playerName)
-	local profile = ActiveProfiles[playerName]
+-- Pass the player object directly
+function PlayerDataManager.Remove(player)
+	local profile = ActiveProfiles[player.UserId]
 	if profile then
 		profile:EndSession()
-		ActiveProfiles[playerName] = nil
+		ActiveProfiles[player.UserId] = nil -- FIXED: keyed by UserId
 	end
 end
 
