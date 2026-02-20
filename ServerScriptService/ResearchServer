@@ -9,13 +9,27 @@ local ResearchData = require(ServerStorage.Modules.ResearchData)
 RepStorage.Events.GetResearchData.OnServerInvoke = function(player)
 	local research = ResearchHandler.GetPlayerResearch(player)
 
+	-- SAFETY FIX: If data isn't loaded yet, return a "loading" state instead of crashing
+	if not research then
+		warn("Research data requested before loading was complete for:", player.Name)
+		return {
+			CompletedObjectives = {},
+			ActiveObjectives = {},
+			ObjectiveProgress = {},
+			ResearchTokens = player:FindFirstChild("ResearchTokens") and player.ResearchTokens.Value or 0,
+			AllObjectives = ResearchData.Objectives,
+			ItemsCollected = {},
+			IsLoading = true -- Tell the UI we are still waiting
+		}
+	end
+
 	return {
 		CompletedObjectives = research.CompletedObjectives,
 		ActiveObjectives = research.ActiveObjectives,
 		ObjectiveProgress = research.ObjectiveProgress,
 		ResearchTokens = player.ResearchTokens.Value,
 		AllObjectives = ResearchData.Objectives,
-		ItemsCollected = research.ItemsCollected,  -- NEW: Include statistics
+		ItemsCollected = research.ItemsCollected,
 	}
 end
 
