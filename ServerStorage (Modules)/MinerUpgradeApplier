@@ -2,17 +2,17 @@
 -- Applies miner speed upgrades to existing miners in player plots
 
 local Plrs = game:GetService("Players")
+local ServerStorage = game:GetService("ServerStorage")
+
+-- MODULES
+local PlayerSession = require(ServerStorage.Modules.PlayerDataManager) -- ADDED
 
 local MinerUpgradeApplier = {}
 
--- Helper: Get player's upgrade level for a specific mine type
+-- Helper: Get player's upgrade level for a specific mine type from MODULE
 function MinerUpgradeApplier.GetPlayerUpgradeLevel(player, mineType)
-	if not _G["global_data"] or not _G["global_data"][player.Name] then
-		return 0
-	end
-
-	local upgrades = _G["global_data"][player.Name]["Upgrades"]
-	if not upgrades then
+	local session = PlayerSession.Get(player.Name)
+	if not session or not session["Upgrades"] then
 		return 0
 	end
 
@@ -28,7 +28,7 @@ function MinerUpgradeApplier.GetPlayerUpgradeLevel(player, mineType)
 		return 0
 	end
 
-	return upgrades[upgradeId] or 0
+	return session["Upgrades"][upgradeId] or 0
 end
 
 -- Helper: Determine mine type from miner name
@@ -57,7 +57,7 @@ function MinerUpgradeApplier.ApplyToMiner(miner, player)
 	local upgradeLevel = MinerUpgradeApplier.GetPlayerUpgradeLevel(player, mineType)
 
 	-- Store the upgrade level as an attribute on the miner
-	-- This will be read by the DropOre script
+	-- This is read by your individual Miner scripts to speed up the loop
 	miner:SetAttribute("SpeedUpgradeLevel", upgradeLevel)
 
 	return true
@@ -65,20 +65,8 @@ end
 
 -- Apply upgrades to all miners in a player's plot
 function MinerUpgradeApplier.ApplyToPlayerPlot(player, mineType)
-	-- Find player's plot
-	local plotFolder = workspace:FindFirstChild("Plots")
-	if not plotFolder then
-		warn("Plots folder not found!")
-		return 0
-	end
-
-	local playerPlot = nil
-	for _, plot in pairs(plotFolder:GetChildren()) do
-		if plot:FindFirstChild("Owner") and plot.Owner.Value == player.Name then
-			playerPlot = plot
-			break
-		end
-	end
+	-- Find player's plot using the standard method used in other scripts
+	local playerPlot = player.SetPlot.Value
 
 	if not playerPlot then
 		warn("Plot not found for", player.Name)
@@ -95,7 +83,7 @@ function MinerUpgradeApplier.ApplyToPlayerPlot(player, mineType)
 	-- Get upgrade level for this mine type
 	local upgradeLevel = MinerUpgradeApplier.GetPlayerUpgradeLevel(player, mineType)
 
-	-- Apply to all matching miners
+	-- Apply to all matching miners on the plot
 	local minersUpdated = 0
 	for _, item in pairs(placedItems:GetChildren()) do
 		local itemMineType = GetMineType(item.Name)
@@ -105,6 +93,7 @@ function MinerUpgradeApplier.ApplyToPlayerPlot(player, mineType)
 		end
 	end
 
+	print("MinerUpgradeApplier: Updated", minersUpdated, mineType, "items to level", upgradeLevel)
 	return minersUpdated
 end
 
