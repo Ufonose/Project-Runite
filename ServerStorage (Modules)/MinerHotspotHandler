@@ -25,13 +25,12 @@ MinerHotspotHandler.HotspotConfigs = {
 
 -- Initialize player's hotspot data in the Module
 function MinerHotspotHandler.InitializePlayer(player)
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player) -- FIXED
 	if not session then
 		warn("Player data session not found for", player.Name)
 		return false
 	end
 
-	-- Check if MinerHotspots table exists in the session
 	if not session["MinerHotspots"] then
 		session["MinerHotspots"] = {
 			UnlockedHotspots = {},
@@ -43,7 +42,7 @@ end
 -- Check if a hotspot is unlocked
 function MinerHotspotHandler.IsHotspotUnlocked(player, hotspotId)
 	if not MinerHotspotHandler.InitializePlayer(player) then return false end
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player) -- FIXED
 
 	return table.find(session["MinerHotspots"].UnlockedHotspots, hotspotId) ~= nil
 end
@@ -54,7 +53,7 @@ function MinerHotspotHandler.UnlockHotspot(player, hotspotId)
 		return false, "Player data not loaded"
 	end
 
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player) -- FIXED
 	local config = MinerHotspotHandler.HotspotConfigs[hotspotId]
 	if not config then return false, "Invalid hotspot" end
 
@@ -83,7 +82,6 @@ function MinerHotspotHandler.ActivateHotspot(player, hotspotId)
 	local hotspotFolder = plot:FindFirstChild("MinerHotspots")
 	if not hotspotFolder then return end
 
-	-- Find the specific hotspot model in the plot
 	local hotspot = nil
 	for _, h in pairs(hotspotFolder:GetChildren()) do
 		if h:FindFirstChild("HotspotId") and h.HotspotId.Value == hotspotId then
@@ -98,7 +96,6 @@ function MinerHotspotHandler.ActivateHotspot(player, hotspotId)
 	local minerModel = RepStorage.Items:FindFirstChild(config.MinerName)
 	if not minerModel then return end
 
-	-- Clone and set permanent attributes
 	local activeMiner = minerModel:Clone()
 	activeMiner:SetAttribute("HotspotMiner", true)
 	activeMiner:SetAttribute("HotspotId", hotspotId)
@@ -114,7 +111,6 @@ function MinerHotspotHandler.ActivateHotspot(player, hotspotId)
 
 	activeMiner.Parent = plot.PlacedItems
 
-	-- Handle Layering Stats
 	if activeMiner:FindFirstChild("ItemStats") then
 		local itemStats = require(activeMiner.ItemStats)
 		local layerValue = Instance.new("IntValue", activeMiner)
@@ -130,26 +126,22 @@ function MinerHotspotHandler.ActivateHotspot(player, hotspotId)
 		end
 	end
 
-	-- Collision Configuration
 	if activeMiner.PrimaryPart then
 		activeMiner.PrimaryPart.Transparency = 1
 		activeMiner.PrimaryPart.CanCollide = false
 		activeMiner.PrimaryPart.Anchored = true
 	end
 
-	-- Apply Speed Upgrades (Keeping _G here for the global function)
 	if _G.ApplyMinerUpgradesToItem then
 		_G.ApplyMinerUpgradesToItem(player, activeMiner)
 	end
 
-	-- Wake up miner scripts
 	for _, descendant in pairs(activeMiner:GetDescendants()) do
 		if descendant:IsA("Script") then
 			descendant.Disabled = descendant:FindFirstChild("ForceDisabled")
 		end
 	end
 
-	-- Cleanup Ghost visuals
 	if hotspot:FindFirstChild("GhostMiner") then hotspot.GhostMiner:Destroy() end
 	if hotspot:FindFirstChild("BuyButton") then hotspot.BuyButton:Destroy() end
 end
@@ -159,7 +151,7 @@ function MinerHotspotHandler.GetPlayerHotspots(player)
 	if not MinerHotspotHandler.InitializePlayer(player) then
 		return {UnlockedHotspots = {}}
 	end
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player) -- FIXED
 	return session["MinerHotspots"]
 end
 
