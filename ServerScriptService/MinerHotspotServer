@@ -22,7 +22,7 @@ end
 -- Unlock a hotspot
 RepStorage.Events.UnlockMinerHotspot.OnServerInvoke = function(player, hotspotId)
 	-- Use PlayerSession instead of _G
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player)
 	if not session then
 		warn("Player data not loaded in module for", player.Name)
 		return false, "Data not loaded"
@@ -34,7 +34,7 @@ end
 -- Get hotspot info
 RepStorage.Events.GetHotspotInfo.OnServerInvoke = function(player, hotspotId)
 	-- Use PlayerSession instead of _G
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player)
 	if not session then
 		warn("Player data not loaded in module for", player.Name)
 		return nil
@@ -46,7 +46,7 @@ RepStorage.Events.GetHotspotInfo.OnServerInvoke = function(player, hotspotId)
 	return {
 		Config = config,
 		IsUnlocked = isUnlocked,
-		PlayerTokens = player.ResearchTokens.Value,
+		PlayerTokens = session.ResearchTokens,
 	}
 end
 
@@ -61,7 +61,7 @@ local function InitializePlayerHotspots(player)
 	end
 
 	-- Final verification that the module has the data
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player)
 	if not session then
 		warn("Session data missing for", player.Name, "at initialization!")
 		return
