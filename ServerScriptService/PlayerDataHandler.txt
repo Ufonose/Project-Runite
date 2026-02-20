@@ -10,15 +10,20 @@ local CASH_LIB = require(RepStorage.Modules.CashLib)
 local MainLib = require(RepStorage.Modules.MainLib)
 local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
 
+-- Stores OnSave connections so we can disconnect them before the plot gets cleared
+local onSaveConnections = {} -- [UserId] = connection
+
 -- Final plot capture before session ends
--- NOTE: Simple values, settings, and cash are already kept in sync
--- via .Changed connectors set up during LOAD_DATA, so no need to re-copy them here.
--- PlotItemPlaced is also captured by OnSave on every auto-save,
--- but we do one final capture here as a safety net in case the plot
--- changed between the last auto-save and the player leaving.
 local function PREPARE_FINAL_SAVE(Plr)
 	local session = PlayerSession.Get(Plr)
 	if not session then return end
+
+	-- Disconnect OnSave hook FIRST so it can't fire during EndSession
+	-- and overwrite PlotItemPlaced with an empty table after CLEAR_PLOT runs
+	if onSaveConnections[Plr.UserId] then
+		onSaveConnections[Plr.UserId]:Disconnect()
+		onSaveConnections[Plr.UserId] = nil
+	end
 
 	session["PlotItemPlaced"] = DATA_FUNCTION_HANDLING.UNLOAD_PLOT(Plr)
 end
@@ -32,10 +37,10 @@ local function LOAD_DATA(Plr)
 	local session = PlayerSession.Load(Plr)
 	if not session then return end
 
-	-- Capture plot on every auto-save
+	-- Capture plot on every auto-save, store connection so we can disconnect on leave
 	local profile = PlayerSession.GetProfile(Plr)
 	if profile then
-		profile.OnSave:Connect(function()
+		onSaveConnections[Plr.UserId] = profile.OnSave:Connect(function()
 			profile.Data["PlotItemPlaced"] = DATA_FUNCTION_HANDLING.UNLOAD_PLOT(Plr)
 		end)
 	end
