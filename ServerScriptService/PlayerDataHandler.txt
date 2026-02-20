@@ -5,7 +5,7 @@ local Plrs = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 
 -- Modules
-local DATA_FUNCTION_HANDLING = require(ServerStorage.Modules.DataSavingHandler.DataHandling)
+local DATA_FUNCTION_HANDLING = require(ServerStorage.Modules.DataHandling)
 local PLAYER_DATA_INFO = require(ServerStorage.Modules.PlayerDataInfo)
 local CASH_LIB = require(RepStorage.Modules.CashLib)
 local MainLib = require(RepStorage.Modules.MainLib)
@@ -15,7 +15,7 @@ local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
 
 -- This function is now just for PREPARING data before a session ends
 local function PREPARE_FINAL_SAVE(Plr)
-	local session = PlayerSession.Get(Plr.Name)
+	local session = PlayerSession.Get(Plr)
 	if not session then return end
 
 	-- 1. Save Basic Values into Session
@@ -139,19 +139,16 @@ Plrs.PlayerRemoving:Connect(function(Plr)
 	local c = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
 	if c then c:Destroy() end
 
-	PlayerSession.Remove(Plr.Name) -- This calls EndSession() which saves to DB
+	PlayerSession.Remove(Plr) -- This calls EndSession() which saves to DB
 end)
 
-RepStorage.Events.LoadData.OnServerInvoke = LOAD_DATA
+Plrs.PlayerAdded:Connect(LOAD_DATA)
 
 game:BindToClose(function()
 	for _, plr in pairs(Plrs:GetPlayers()) do
 		task.spawn(function() 
 			PREPARE_FINAL_SAVE(plr)
-			PlayerSession.Remove(plr.Name) 
+			PlayerSession.Remove(plr)  -- EndSession blocks until save completes
 		end)
 	end
-
-	-- Always wait the full 8 seconds to ensure session locks are released
-	task.wait(8) 
 end)
