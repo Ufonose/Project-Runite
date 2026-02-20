@@ -69,12 +69,11 @@ local lastRenderCycle = tick()
 local lastPlacement = tick()
 
 local function round(n, to)
-	return n % to ~= 0 and (n % to) > to/2 and (n + to - (n % to)) or (n - (n % to))	
+	return n % to ~= 0 and (n % to) > to/2 and (n + to - (n % to)) or (n - (n % to))
 end
 
 local function project(px, py, pz)
 	px, py, pz = px - ox, py - oy, pz - oz
-
 	return px * dxx + py * dxy + pz * dxz, px * dzx + py * dzy + pz * dzz
 end
 
@@ -88,15 +87,12 @@ local function translate(px, pz, r)
 	elseif (r == 3) then
 		return pz, -px
 	end
-
-	-- Fallback (should never reach here, but helps Luau type checker)
 	return px, pz
 end
 
 local function angleLerp(a, b, d)
 	local x1, y1 = math.cos(a), math.sin(a)
 	local x2, y2 = math.cos(b), math.sin(b)
-
 	return math.atan2(y1 + (y2 - y1) * d, x1 + (x2 - x1) * d)
 end
 
@@ -164,8 +160,6 @@ local function floatEqual(a, b)
 	return (math.abs(a - b) < .01)
 end
 
--- Increased tolerance from 0.01 to 0.1 to prevent false collisions with adjacent items
--- This accounts for slight position differences between old and new raycast APIs
 local function floatGreater(a, b)
 	return (a - b) > .1
 end
@@ -198,8 +192,14 @@ local function obstacleCollision(obstacles)
 	local obstacles = obstacles or currentPlane.obstacles
 
 	-- COLLISION BUFFER: Shrink hitboxes slightly to prevent false collisions with adjacent items
-	-- Items on 6-stud grid placed next to each other should NOT trigger collision
-	local COLLISION_BUFFER = 1.7  -- 0.2 studs buffer on each side
+	local COLLISION_BUFFER = 0.2
+
+	-- FIX: Apply current rotation to the placing item's extents before collision checks.
+	-- Without this, a 12x6 item rotated 90° was still using 12 as its X extent and 6 as
+	-- its Z extent, making the bounding box wrong and skipping all collision detection.
+	local rotatedExtentsX, rotatedExtentsZ = translate(currentExtentsX, currentExtentsZ, cr)
+	rotatedExtentsX = math.abs(rotatedExtentsX)
+	rotatedExtentsZ = math.abs(rotatedExtentsZ)
 
 	-- PART 1: Check placed items
 	for _, model in pairs(obstacles:GetChildren()) do
@@ -254,15 +254,13 @@ local function obstacleCollision(obstacles)
 
 			if not skipThisObstacle then
 				local extentsX, extentsZ = calculateExtents(model.PrimaryPart)
-
 				local x, z = project(model.PrimaryPart.Position.X, model.PrimaryPart.Position.Y, model.PrimaryPart.Position.Z)
 
-				-- Apply buffer: shrink the bounding boxes to prevent adjacent items from colliding
-				-- Reduce each extent by COLLISION_BUFFER on each side
+				-- Use rotatedExtentsX/Z (accounts for cr rotation) instead of raw currentExtentsX/Z
 				local bufferedExtentsX = math.max(0, extentsX - COLLISION_BUFFER * 2)
-				local bufferedCurrentExtentsX = math.max(0, currentExtentsX - COLLISION_BUFFER * 2)
+				local bufferedCurrentExtentsX = math.max(0, rotatedExtentsX - COLLISION_BUFFER * 2)
 				local bufferedExtentsZ = math.max(0, extentsZ - COLLISION_BUFFER * 2)
-				local bufferedCurrentExtentsZ = math.max(0, currentExtentsZ - COLLISION_BUFFER * 2)
+				local bufferedCurrentExtentsZ = math.max(0, rotatedExtentsZ - COLLISION_BUFFER * 2)
 
 				if (not (floatLesser(x + bufferedExtentsX/2, px - bufferedCurrentExtentsX/2) or floatGreater(x - bufferedExtentsX/2, px + bufferedCurrentExtentsX/2) or floatLesser(z + bufferedExtentsZ/2, pz - bufferedCurrentExtentsZ/2) or floatGreater(z - bufferedExtentsZ/2, pz + bufferedCurrentExtentsZ/2))) then
 					collision = true
@@ -282,7 +280,6 @@ local function obstacleCollision(obstacles)
 							extentsX0, extentsZ0 = object.sx, object.sz
 						end
 
-						-- Apply buffer to individual object collision check too
 						local bufferedExtentsX0 = math.max(0, extentsX0 - COLLISION_BUFFER * 2)
 						local bufferedExtentsZ0 = math.max(0, extentsZ0 - COLLISION_BUFFER * 2)
 
@@ -363,10 +360,7 @@ local function inputCapture()
 
 	if (touch) then
 		local camera = workspace.CurrentCamera
-		-- FIXED: .p changed to .Position
-		local range = TOUCH_RANGE * (camera.Focus.Position - camera.CFrame.Position).magnitude/5	
-
-		-- FIXED: .p changed to .Position
+		local range = TOUCH_RANGE * (camera.Focus.Position - camera.CFrame.Position).magnitude/5
 		position = camera.Focus.Position + camera.CFrame.lookVector * (camera.CoordinateFrame.lookVector.Y/2 + .5) * range
 	else
 		-- Modern Raycast - Exclude placed items so raycast goes through them to hit base
@@ -385,8 +379,7 @@ local function inputCapture()
 			end
 		end
 
-		-- Exclude all placed items - this is KEY to prevent "skipping grid cells"
-		-- The raycast should pass through placed items to hit the base plane
+		-- Exclude all placed items so raycast hits base plane
 		if currentPlane and currentPlane.obstacles then
 			for _, item in pairs(currentPlane.obstacles:GetChildren()) do
 				table.insert(excludeList, item)
@@ -403,19 +396,15 @@ local function inputCapture()
 		raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 		raycastParams.IgnoreWater = true
 
-		-- Perform raycast - should hit base plane even when mouse is over placed items
 		local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
 
-		-- Accept any hit result (should be base plane since we excluded everything else)
 		if raycastResult then
 			position = raycastResult.Position
 
 			-- MOUSE ALIGNMENT FIX: Adjustable X and Z offsets for perfect cursor alignment
-			-- Adjust these values to move the item relative to your mouse cursor
-			local MOUSE_OFFSET_X = 2    -- Positive = right, Negative = left (in world space)
-			local MOUSE_OFFSET_Z = 0    -- Positive = forward, Negative = backward (in world space)
+			local MOUSE_OFFSET_X = 2
+			local MOUSE_OFFSET_Z = 0
 
-			-- Apply offset using the current plane's axes (so it respects plot rotation)
 			if currentXAxis and currentZAxis then
 				local offset = (currentXAxis * MOUSE_OFFSET_X) + (currentZAxis * MOUSE_OFFSET_Z)
 				position = position + offset
@@ -484,7 +473,7 @@ local function calc(position, rotation, force)
 	if (force or nx ~= cx or nz ~= cz or cr ~= nr) then
 		cx, cz, cr = nx, nz, nr
 		resting = false
-		currentPosition = (Vector3.new(ox, oy, oz) + currentXAxis * nx + currentZAxis * nz) 
+		currentPosition = (Vector3.new(ox, oy, oz) + currentXAxis * nx + currentZAxis * nz)
 		obstacleCollision()
 	end
 end
@@ -538,7 +527,7 @@ local function render()
 			SNAPBOX.Transparency = 1
 			object.model:SetPrimaryPartCFrame(centerCFrame * CFrame.Angles(0, object.r * math.pi/2, 0) + rotationCFrame * Vector3.new(x, object.sy/2, z))
 			SNAPBOX.CFrame = SNAP_POS
-		end		
+		end
 		if (springVelocity.magnitude < .01 and tweenAlpha >= 1) then
 			resting = true
 		end
@@ -598,7 +587,7 @@ local function enablePlacement(plane, models, prealigned)
 	currentPlane = plane
 	currentBase = plane.base
 
-	local planePosition = currentBase.CFrame * Vector3.new(0, currentBase.Size.Y/2, 0)	
+	local planePosition = currentBase.CFrame * Vector3.new(0, currentBase.Size.Y/2, 0)
 
 	resting = false
 	ox, oy, oz = planePosition.X, planePosition.Y, planePosition.Z
@@ -654,12 +643,12 @@ local function enablePlacement(plane, models, prealigned)
 				end
 			end
 
-			local lookVector = object.model.PrimaryPart.CFrame.lookVector	
+			local lookVector = object.model.PrimaryPart.CFrame.lookVector
 			local theta
 			local px, pz
 
 			if (prealigned) then
-				local position = object.model.PrimaryPart.CFrame * Vector3.new(0, -object.model.PrimaryPart.Size.Y/2 , 0)		
+				local position = object.model.PrimaryPart.CFrame * Vector3.new(0, -object.model.PrimaryPart.Size.Y/2, 0)
 				px, pz = project(position.X, position.Y, position.Z)
 
 				theta = math.acos(math.clamp(lookVector:Dot(currentZAxis), -1, 1))
@@ -668,10 +657,9 @@ local function enablePlacement(plane, models, prealigned)
 				if (cross:Dot(currentYAxis) > 0) then
 					theta = -theta
 				end
-
 			else
 				px, pz = object.model.PrimaryPart.Position.X, object.model.PrimaryPart.Position.Z
-				theta = math.atan2(lookVector.X, lookVector.Z)		
+				theta = math.atan2(lookVector.X, lookVector.Z)
 			end
 
 			local x, z = model.PrimaryPart.Size.X, model.PrimaryPart.Size.Z
@@ -683,21 +671,12 @@ local function enablePlacement(plane, models, prealigned)
 			end
 
 			local x1, x2 = px + x/2, px - x/2
-			local z1, z2 = pz + z/2, pz - z/2	
+			local z1, z2 = pz + z/2, pz - z/2
 
-			if (x2 < extentsXMin) then
-				extentsXMin = x2
-			end
-			if (x1 > extentsXMax) then
-				extentsXMax = x1
-			end
-
-			if (z2 < extentsZMin) then
-				extentsZMin = z2
-			end
-			if (z1 > extentsZMax) then
-				extentsZMax = z1
-			end
+			if (x2 < extentsXMin) then extentsXMin = x2 end
+			if (x1 > extentsXMax) then extentsXMax = x1 end
+			if (z2 < extentsZMin) then extentsZMin = z2 end
+			if (z1 > extentsZMax) then extentsZMax = z1 end
 
 			model.PrimaryPart.Transparency = .5
 			model.PrimaryPart.Anchored = true
@@ -713,7 +692,7 @@ local function enablePlacement(plane, models, prealigned)
 			local px, pz
 
 			if (prealigned) then
-				local position = object.model.PrimaryPart.CFrame * Vector3.new(0, -object.model.PrimaryPart.Size.Y/2, 0)		
+				local position = object.model.PrimaryPart.CFrame * Vector3.new(0, -object.model.PrimaryPart.Size.Y/2, 0)
 				px, pz = project(position.X, position.Y, position.Z)
 			else
 				px, pz = object.model.PrimaryPart.Position.X, object.model.PrimaryPart.Position.Z
@@ -750,7 +729,7 @@ local function disablePlacement(plane)
 		currentPlane = nil
 		module.currentPlane = nil
 		currentEvent:Destroy()
-		currentEvent = nil	
+		currentEvent = nil
 
 		if (currentTexture) then
 			currentTexture:Destroy()
@@ -772,7 +751,7 @@ local function setLoading(plane, isLoading)
 
 	plane.loading = isLoading
 
-	if (plane == currentPlane) then	
+	if (plane == currentPlane) then
 		if (isLoading) then
 			for i = 1, #currentObjects do
 				setState(currentObjects[i], states.loading)
