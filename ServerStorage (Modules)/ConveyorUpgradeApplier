@@ -97,7 +97,7 @@ end
 
 -- Get the current conveyor upgrade level from the MODULE
 function ConveyorUpgradeApplier.GetPlayerUpgradeLevel(player)
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player)
 	if session and session["Upgrades"] then
 		return session["Upgrades"]["ConveyorSpeed"] or 0
 	end
