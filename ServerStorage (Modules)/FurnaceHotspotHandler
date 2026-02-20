@@ -16,7 +16,7 @@ FurnaceHotspotHandler.HotspotConfig = {
 
 -- Initialize player's furnace hotspot data
 function FurnaceHotspotHandler.InitializePlayer(player)
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player)
 	if not session then
 		warn("PlayerDataManager session not found for", player.Name)
 		return false
@@ -39,7 +39,7 @@ function FurnaceHotspotHandler.IsHotspotUnlocked(player)
 		return false
 	end
 
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player)
 	return session["FurnaceHotspot"].Unlocked == true
 end
 
@@ -127,7 +127,7 @@ function FurnaceHotspotHandler.GetPlayerHotspot(player)
 		return {Unlocked = false}
 	end
 
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player)
 	return session["FurnaceHotspot"]
 end
 
