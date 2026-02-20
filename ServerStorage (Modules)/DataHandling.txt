@@ -3,9 +3,12 @@
 
 -- Services
 local RepStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage") -- Added
+
 -- Modules
 local MainLib = require(RepStorage.Modules.MainLib)
--- DataHandling
+local PlayerSession = require(ServerStorage.Modules.PlayerDataManager) -- ADDED
+
 local DataHandling = {}
 
 -- Cache base speed so we only look it up once
@@ -36,9 +39,9 @@ local function LOAD_ITEM_BASICS(ITEM)
 		if DESCENDANT:IsA("Script") then
 			DESCENDANT.Disabled = DESCENDANT:FindFirstChild("ForceDisabled")
 		end
-		if I%50 == 0 then
-			wait()
-		end
+		-- Removed wait() loop to speed up loading, 
+		-- but added task.wait() if the item is massive
+		if I % 100 == 0 then task.wait() end
 	end
 end
 
@@ -52,32 +55,21 @@ end
 
 -- Get base conveyor speed by finding an ACTUAL conveyor part
 local function getBaseConveyorSpeed()
-	-- Return cached value if we have it
-	if CACHED_BASE_SPEED then
-		return CACHED_BASE_SPEED
-	end
+	if CACHED_BASE_SPEED then return CACHED_BASE_SPEED end
 
-	print("Looking for base conveyor speed by checking actual conveyor parts...")
-
-	-- Look through ALL items to find one that CONTAINS a conveyor part
 	for _, repItem in pairs(RepStorage.Items:GetChildren()) do
-		-- Check if this item has any conveyor parts
 		for _, descendant in pairs(repItem:GetDescendants()) do
 			if descendant:IsA("BasePart") and isConveyorPart(descendant) then
-				-- Found a conveyor part! Check its ConvVelo
 				local convVelo = descendant:FindFirstChild("ConvVelo")
 				if convVelo and math.abs(convVelo.Value) > 0 then
 					CACHED_BASE_SPEED = math.abs(convVelo.Value)
-					print("✓ Found base conveyor speed:", CACHED_BASE_SPEED, "from", descendant.Name, "in item:", repItem.Name)
 					return CACHED_BASE_SPEED
 				end
 			end
 		end
 	end
 
-	-- Last resort fallback
 	CACHED_BASE_SPEED = 7
-	warn("⚠ Could not find base conveyor speed, using default:", CACHED_BASE_SPEED)
 	return CACHED_BASE_SPEED
 end
 
@@ -89,132 +81,98 @@ local function ApplyConveyorUpgradeToItem(item, upgradeLevel)
 	local conveyorsUpdated = 0
 
 	for _, descendant in pairs(item:GetDescendants()) do
-		-- Check if this is ANY conveyor part
 		if descendant:IsA("BasePart") and isConveyorPart(descendant) then
 			local convVelo = descendant:FindFirstChild("ConvVelo")
 			if convVelo then
-				-- Get the CURRENT value to check direction
-				local currentValue = convVelo.Value
-				local isReversed = currentValue < 0
-
-				-- Calculate new speed (all conveyors get full upgrade)
+				local isReversed = convVelo.Value < 0
 				local newSpeed = baseSpeed + upgradeLevel
 
-				-- Apply with correct direction
-				if isReversed then
-					convVelo.Value = -newSpeed
-				else
-					convVelo.Value = newSpeed
-				end
-
+				convVelo.Value = isReversed and -newSpeed or newSpeed
 				conveyorsUpdated = conveyorsUpdated + 1
 			end
 		end
 	end
-
 	return conveyorsUpdated
 end
 
 function DataHandling.LOAD_PLOT(Plr, PLOT_DATA)
 	Plr:WaitForChild("SetPlot")
 	local PLR_PLOT = Plr.SetPlot.Value
+	local session = PlayerSession.Get(Plr.Name)
 
-	-- Get player's conveyor upgrade level ONCE at the start
-	local conveyorUpgradeLevel = 0
-	if _G["global_data"] and _G["global_data"][Plr.Name] and _G["global_data"][Plr.Name]["Upgrades"] then
-		conveyorUpgradeLevel = _G["global_data"][Plr.Name]["Upgrades"]["ConveyorSpeed"] or 0
+	if not session then
+		warn("Could not load plot for", Plr.Name, "- Session data missing!")
+		return
 	end
 
-	if conveyorUpgradeLevel > 0 then
-		local baseSpeed = getBaseConveyorSpeed()
-		print("=== LOADING PLOT WITH CONVEYOR UPGRADES ===")
-		print("Player:", Plr.Name)
-		print("Base Speed:", baseSpeed)
-		print("Upgrade Level:", conveyorUpgradeLevel)
-		print("Expected Final Speed:", baseSpeed + conveyorUpgradeLevel)
+	-- Get player's conveyor upgrade level from MODULE session
+	local conveyorUpgradeLevel = 0
+	if session["Upgrades"] then
+		conveyorUpgradeLevel = session["Upgrades"]["ConveyorSpeed"] or 0
 	end
 
 	local totalConveyorsUpdated = 0
 
-	for I, item_data in pairs(PLOT_DATA) do
+	for _, item_data in pairs(PLOT_DATA) do
 		if item_data["item_pos"] then
 			local ITEM_MODEL = MainLib.ITEM_FROM_ID(item_data["ITEM_ID"])
+			if not ITEM_MODEL then continue end
+
 			if ITEM_MODEL.PrimaryPart ~= ITEM_MODEL.Hitbox then
 				ITEM_MODEL.PrimaryPart = ITEM_MODEL.Hitbox
 			end
+
 			ITEM_MODEL = ITEM_MODEL:Clone()
 			local item_pos = PLR_PLOT.BasePlot.CFrame * CFrame.new(unpack(item_data["item_pos"]))
 			ITEM_MODEL:SetPrimaryPartCFrame(item_pos)
 
-			-- Apply conveyor reversal if saved (only for non-merge conveyors)
+			-- Restore Reversal State
 			if item_data["CONVEYOR_REVERSED"] then
 				ITEM_MODEL:SetAttribute("ConveyorReversed", true)
-
 				for _, descendant in pairs(ITEM_MODEL:GetDescendants()) do
-					-- Only reverse Conv and ConvSlope (NOT merge conveyors)
 					if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope" or descendant.Name == "SideBeam") then
-						if descendant:GetAttribute("NoFlip") then
-							continue
-						end
-
+						if descendant:GetAttribute("NoFlip") then continue end
 						local convVelo = descendant:FindFirstChild("ConvVelo")
-						if convVelo then
-							convVelo.Value = -convVelo.Value
-						end
-
+						if convVelo then convVelo.Value = -convVelo.Value end
 						local beam = descendant:FindFirstChildOfClass("Beam")
-						if beam then
-							beam.TextureSpeed = -beam.TextureSpeed
-						end
+						if beam then beam.TextureSpeed = -beam.TextureSpeed end
 					end
 				end
 			end
 
-			-- Restore sorter configuration if saved
+			-- Restore Sorter Config
 			if item_data["SORT_CONFIG"] then
-				local sortConfig = ITEM_MODEL:FindFirstChild("SortConfig")
-				if not sortConfig then
-					sortConfig = Instance.new("Folder")
-					sortConfig.Name = "SortConfig"
-					sortConfig.Parent = ITEM_MODEL
-				end
-
+				local sortConfig = Instance.new("Folder", ITEM_MODEL)
+				sortConfig.Name = "SortConfig"
 				for oreName, direction in pairs(item_data["SORT_CONFIG"]) do
-					local config = Instance.new("StringValue")
+					local config = Instance.new("StringValue", sortConfig)
 					config.Name = oreName
 					config.Value = direction
-					config.Parent = sortConfig
 				end
 			end
 
-			-- Restore assembly machine configuration if saved
+			-- Restore Assembly Config
 			if item_data["ASSEMBLY_CONFIG"] then
-				local assemblyConfig = ITEM_MODEL:FindFirstChild("AssemblyConfig")
-				if not assemblyConfig then
-					assemblyConfig = Instance.new("StringValue")
-					assemblyConfig.Name = "AssemblyConfig"
-					assemblyConfig.Parent = ITEM_MODEL
-				end
+				local assemblyConfig = Instance.new("StringValue", ITEM_MODEL)
+				assemblyConfig.Name = "AssemblyConfig"
 				assemblyConfig.Value = item_data["ASSEMBLY_CONFIG"]
 			end
 
-			-- *** APPLY CONVEYOR UPGRADES TO ALL CONVEYOR TYPES BEFORE PARENTING ***
+			-- Apply Upgrades
 			if conveyorUpgradeLevel > 0 then
 				local updated = ApplyConveyorUpgradeToItem(ITEM_MODEL, conveyorUpgradeLevel)
 				totalConveyorsUpdated = totalConveyorsUpdated + updated
 			end
 
-			-- Parent to plot (scripts will start running after this)
 			ITEM_MODEL.Parent = PLR_PLOT.PlacedItems
 			LOAD_ITEM_BASICS(ITEM_MODEL)
 		else
-			_G["global_data"][Plr.Name]["Items"][tostring(item_data["ITEM_ID"])].Amount += 1
+			-- Handle items that failed to load into the world (return to inventory)
+			local idStr = tostring(item_data["ITEM_ID"])
+			if session["Items"][idStr] then
+				session["Items"][idStr].Amount += 1
+			end
 		end
-	end
-
-	if conveyorUpgradeLevel > 0 then
-		print("Total conveyors updated:", totalConveyorsUpdated)
-		print("=== FINISHED LOADING PLOT ===")
 	end
 end
 
@@ -222,15 +180,11 @@ function DataHandling.UNLOAD_PLOT(Plr)
 	if Plr:FindFirstChild("SetPlot") then
 		local PLR_PLOT = Plr.SetPlot.Value
 		local PLOT_DATA = {}
-		for I, ITEM in pairs(PLR_PLOT.PlacedItems:GetChildren()) do
+
+		for _, ITEM in pairs(PLR_PLOT.PlacedItems:GetChildren()) do
 			if ITEM:FindFirstChild("Hitbox") and ITEM:FindFirstChild("ItemStats") then
-
-				-- Skip hotspot items
-				if ITEM:GetAttribute("HotspotMiner") == true then
-					continue
-				end
-
-				if ITEM:GetAttribute("HotspotFurnace") == true then
+				-- Skip permanent plot items
+				if ITEM:GetAttribute("HotspotMiner") or ITEM:GetAttribute("HotspotFurnace") then
 					continue
 				end
 
@@ -240,32 +194,23 @@ function DataHandling.UNLOAD_PLOT(Plr)
 					["item_pos"] = {(PLR_PLOT.BasePlot.CFrame:Inverse() * ITEM.PrimaryPart.CFrame):components()}
 				}
 
-				-- Save conveyor reversal state
-				if ITEM:GetAttribute("ConveyorReversed") then
-					itemData["CONVEYOR_REVERSED"] = true
-				end
+				if ITEM:GetAttribute("ConveyorReversed") then itemData["CONVEYOR_REVERSED"] = true end
 
-				-- Save sorter configuration
 				local sortConfig = ITEM:FindFirstChild("SortConfig")
 				if sortConfig then
 					local configData = {}
 					for _, config in pairs(sortConfig:GetChildren()) do
-						if config:IsA("StringValue") then
-							configData[config.Name] = config.Value
-						end
+						if config:IsA("StringValue") then configData[config.Name] = config.Value end
 					end
-					if next(configData) then
-						itemData["SORT_CONFIG"] = configData
-					end
+					if next(configData) then itemData["SORT_CONFIG"] = configData end
 				end
 
-				-- Save assembly machine configuration
 				local assemblyConfig = ITEM:FindFirstChild("AssemblyConfig")
 				if assemblyConfig and assemblyConfig:IsA("StringValue") then
 					itemData["ASSEMBLY_CONFIG"] = assemblyConfig.Value
 				end
 
-				PLOT_DATA[#PLOT_DATA+1] = itemData
+				table.insert(PLOT_DATA, itemData)
 			end
 		end
 		return PLOT_DATA
