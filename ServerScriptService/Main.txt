@@ -2,184 +2,160 @@
 local RepStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local Plrs = game:GetService("Players")
+
 -- Modules
 local MAIN_LIB = require(RepStorage.Modules.MainLib)
--- Variables
-	-- Arrays
-local DEBOUNCE = {}
+local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
 
--- Define minimum quantities that must remain for each item (by item name)
+-- Variables
+local DEBOUNCE = {}
 local MINIMUM_ITEM_QUANTITIES = {
-	["Standard Conveyor"] = 18,
-	["Corner Conveyor"] = 4,
-	-- Add more items as needed
+	["Standard Conveyor"] = 8,
+	["Corner Conveyor"] = 2,
 }
 
 warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] loading...")
 
--- ServerScriptService/Main.lua - PLACE_ITEM function
--- This shows EXACTLY where to add the upgrade code
-
 function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
-	if Plr and PLACED_ITEMS and ITEMS then
-		local ITEM_FAILED = false
-		for I, ITEM in pairs(ITEMS) do
-			local ITEM_REP = RepStorage.Items:FindFirstChild(ITEM["ITEM_NAME"])
-			local ITEM_INFO = require(ITEM_REP.ItemStats)
+	if not (Plr and PLACED_ITEMS and ITEMS) then return false end
+	local session = PlayerSession.Get(Plr.Name)
+	if not session then return false end
 
-			-- Check if player has the item
-			if _G["global_data"][Plr.Name]["Items"][tostring(ITEM_INFO.ItemId)]["Amount"] > 0 then
-				local REAL_ITEM = ITEM_REP:Clone()
-				REAL_ITEM:SetPrimaryPartCFrame(ITEM["ITEM_LOCATION"])
+	local ITEM_FAILED = false
+	for I, ITEM in pairs(ITEMS) do
+		local ITEM_REP = RepStorage.Items:FindFirstChild(ITEM["ITEM_NAME"])
+		if not ITEM_REP then continue end
 
-				-- Store the placement layer
-				local layerValue = Instance.new("IntValue", REAL_ITEM)
-				layerValue.Name = "PlacementLayer"
-				if type(ITEM_INFO.PlacementLayer) == "table" then
-					layerValue.Value = ITEM_INFO.PlacementLayer[1]
-					local layersString = Instance.new("StringValue", REAL_ITEM)
-					layersString.Name = "PlacementLayers"
-					layersString.Value = table.concat(ITEM_INFO.PlacementLayer, ",")
-				else
-					layerValue.Value = ITEM_INFO.PlacementLayer or 1
-				end
+		local ITEM_INFO = require(ITEM_REP.ItemStats)
+		local itemKey = tostring(ITEM_INFO.ItemId)
 
-				-- Handle conveyor reversal
-				if ITEM["CONVEYOR_REVERSED"] then
-					REAL_ITEM:SetAttribute("ConveyorReversed", true)
+		-- Check Inventory via Module
+		if session["Items"][itemKey] and session["Items"][itemKey]["Amount"] > 0 then
+			local REAL_ITEM = ITEM_REP:Clone()
+			REAL_ITEM:SetPrimaryPartCFrame(ITEM["ITEM_LOCATION"])
 
-					for _, descendant in pairs(REAL_ITEM:GetDescendants()) do
-						if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope" or descendant.Name == "SideBeam") then
-							if descendant:GetAttribute("NoFlip") or descendant.Name == "ConvMerge" then
-								continue
-							end
-
-							local convVelo = descendant:FindFirstChild("ConvVelo")
-							if convVelo then
-								convVelo.Value = -convVelo.Value
-							end
-
-							local beam = descendant:FindFirstChildOfClass("Beam")
-							if beam then
-								beam.TextureSpeed = -beam.TextureSpeed
-							end
-						end
-					end
-				end
-
-				-- Handle sorter configuration
-				if ITEM["SORT_CONFIG"] then
-					local sortConfig = REAL_ITEM:FindFirstChild("SortConfig") or Instance.new("Folder", REAL_ITEM)
-					sortConfig.Name = "SortConfig"
-
-					for portId, oreType in pairs(ITEM["SORT_CONFIG"]) do
-						local portValue = sortConfig:FindFirstChild(portId) or Instance.new("StringValue", sortConfig)
-						portValue.Name = portId
-						portValue.Value = oreType
-					end
-				end
-
-				-- Parent the item to the plot
-				REAL_ITEM.Parent = PLACED_ITEMS
-
-				-- *** ADD THIS HERE - Apply conveyor upgrades AFTER parenting but BEFORE deducting inventory ***
-				pcall(function()
-					if _G.ApplyConveyorUpgradesToItem then
-						_G.ApplyConveyorUpgradesToItem(Plr, REAL_ITEM)
-					end
-				end)
-				
-				-- Apply miner speed upgrades if available
-				if _G.ApplyMinerUpgradesToItem then
-					_G.ApplyMinerUpgradesToItem(Plr, REAL_ITEM)
-				end
-
-				-- Deduct from inventory
-				_G["global_data"][Plr.Name]["Items"][tostring(ITEM_INFO.ItemId)]["Amount"] -= 1
-
-				-- Enable scripts and update inventory (asynchronous)
-				spawn(function()
-					for E, DESCENDANT in pairs(REAL_ITEM:GetDescendants()) do
-						if DESCENDANT:IsA("Script") then
-							DESCENDANT.Disabled = DESCENDANT:FindFirstChild("ForceDisabled")
-						end
-						if E%50 == 0 then
-							wait()
-						end
-					end
-
-					RepStorage.Events.InventoryUpdate:FireClient(Plr)
-				end)
+			-- Handle Placement Layers (From your DataHandling logic)
+			local layerValue = Instance.new("IntValue", REAL_ITEM)
+			layerValue.Name = "PlacementLayer"
+			if type(ITEM_INFO.PlacementLayer) == "table" then
+				layerValue.Value = ITEM_INFO.PlacementLayer[1]
+				local layersString = Instance.new("StringValue", REAL_ITEM)
+				layersString.Name = "PlacementLayers"
+				layersString.Value = table.concat(ITEM_INFO.PlacementLayer, ",")
 			else
-				ITEM_FAILED = true
+				layerValue.Value = ITEM_INFO.PlacementLayer or 1
 			end
+
+			-- Handle Conveyor Reversal Attributes
+			if ITEM["CONVEYOR_REVERSED"] then
+				REAL_ITEM:SetAttribute("ConveyorReversed", true)
+				for _, descendant in pairs(REAL_ITEM:GetDescendants()) do
+					if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope" or descendant.Name == "SideBeam") then
+						if not descendant:GetAttribute("NoFlip") and descendant.Name ~= "ConvMerge" then
+							local cv = descendant:FindFirstChild("ConvVelo")
+							if cv then cv.Value = -cv.Value end
+							local beam = descendant:FindFirstChildOfClass("Beam")
+							if beam then beam.TextureSpeed = -beam.TextureSpeed end
+						end
+					end
+				end
+			end
+
+			-- Handle Sorter/Assembly Configs
+			if ITEM["SORT_CONFIG"] then
+				local sortConfig = REAL_ITEM:FindFirstChild("SortConfig") or Instance.new("Folder", REAL_ITEM)
+				sortConfig.Name = "SortConfig"
+				for portId, oreType in pairs(ITEM["SORT_CONFIG"]) do
+					local portValue = sortConfig:FindFirstChild(portId) or Instance.new("StringValue", sortConfig)
+					portValue.Name = portId
+					portValue.Value = oreType
+				end
+			end
+
+			REAL_ITEM.Parent = PLACED_ITEMS
+
+			-- Apply Global Upgrades (Conveyors/Miners)
+			pcall(function()
+				if _G.ApplyConveyorUpgradesToItem then _G.ApplyConveyorUpgradesToItem(Plr, REAL_ITEM) end
+				if _G.ApplyMinerUpgradesToItem then _G.ApplyMinerUpgradesToItem(Plr, REAL_ITEM) end
+			end)
+
+			-- Deduct Inventory
+			session["Items"][itemKey]["Amount"] -= 1
+
+			task.spawn(function()
+				for _, D in pairs(REAL_ITEM:GetDescendants()) do
+					if D:IsA("Script") then D.Disabled = D:FindFirstChild("ForceDisabled") end
+				end
+				RepStorage.Events.InventoryUpdate:FireClient(Plr)
+			end)
+		else
+			ITEM_FAILED = true
 		end
-		return not ITEM_FAILED
 	end
-	return false
+	return not ITEM_FAILED
 end
 
-
 function GET_INVENTORY(Plr, INVENTORY_TYPE)
-	local INV_GETTING = Plr		-- Make this be the Plot Owner if possible but if not be the Plr
-	return _G["global_data"][INV_GETTING.Name][INVENTORY_TYPE]
+	local session = PlayerSession.Get(Plr.Name)
+	return session and session[INVENTORY_TYPE] or {}
 end
 
 function BUY_ITEM(Plr, ITEM_ID, AMOUNT)
 	local CASH = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
-	if CASH then
-		local CANT_BUY_TYPES = {"special", "cantbuy"}
-		local AMOUNT = AMOUNT or 1
-		local ITEM_ID = ITEM_ID
-		local COST_VAL = 0
-		if type(ITEM_ID) ~= "table" then
-			ITEM_ID = {ITEM_ID}
-		end
-		local BOUGHT_ITEMS = {}
-		for I, REAL_ID in pairs(ITEM_ID) do
-			local REAL_ITEM = MAIN_LIB.ITEM_FROM_ID(REAL_ID)
-			local ITEM_INFO = require(REAL_ITEM.ItemStats)
-			if table.find(CANT_BUY_TYPES, ITEM_INFO.ItemType) == nil then	-- string.lower(ITEM_INFO.ItemType) == "special" or string.lower(ITEM_INFO.CostType) == "cantbuy" then
-				if CASH.Value >= math.floor(ITEM_INFO.Cost*AMOUNT) then
-					COST_VAL += math.floor(ITEM_INFO.Cost*AMOUNT)
-					BOUGHT_ITEMS[#BOUGHT_ITEMS+1] = REAL_ID
-				end
+	if not CASH then return false end
+
+	local CANT_BUY_TYPES = {"special", "cantbuy"}
+	local amt = AMOUNT or 1
+	local IDs = type(ITEM_ID) == "table" and ITEM_ID or {ITEM_ID}
+	local costTotal = 0
+	local validIDs = {}
+
+	for _, id in pairs(IDs) do
+		local itemModel = MAIN_LIB.ITEM_FROM_ID(id)
+		local stats = require(itemModel.ItemStats)
+		if not table.find(CANT_BUY_TYPES, stats.ItemType) then
+			if CASH.Value >= math.floor(stats.Cost * amt) then
+				costTotal += math.floor(stats.Cost * amt)
+				table.insert(validIDs, id)
 			end
 		end
-		if #BOUGHT_ITEMS == #ITEM_ID then
-			CASH.Value -= COST_VAL
-			for I, ITEM_ID in pairs(BOUGHT_ITEMS) do
-				ServerStorage.Events.ItemGive:Invoke(Plr, ITEM_ID, AMOUNT)
-			end
-			return true
+	end
+
+	if #validIDs == #IDs then
+		CASH.Value -= costTotal
+		for _, id in pairs(validIDs) do
+			ItemGive(Plr, id, amt)
 		end
+		return true
 	end
 	return false
 end
 
 function SELL_ITEM(Plr, ITEMS)
 	local CASH = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
-	if CASH then
-		local CANT_SELL_TYPES = {"special", "cantbuy"}
-		local ITEM_ID = ITEMS
-		if type(ITEM_ID) ~= "table" then
-			ITEM_ID = {ITEM_ID}
-		end
+	local session = PlayerSession.Get(Plr.Name) -- Get ProfileStore data
 
-		-- Count items being sold by name
+	if CASH and session then
+		local CANT_SELL_TYPES = {"special", "cantbuy"}
+		local ITEM_LIST = type(ITEMS) == "table" and ITEMS or {ITEMS}
+
+		-- 1. Count items being sold by name
 		local itemsBeingSold = {}
-		for I, REAL_ID in pairs(ITEM_ID) do
-			local ITEM_INFO = require(REAL_ID.ItemStats)
-			local itemName = MAIN_LIB.ITEM_FROM_ID(ITEM_INFO.ItemId).Name
+		for _, item in pairs(ITEM_LIST) do
+			local stats = require(item.ItemStats)
+			local itemName = MAIN_LIB.ITEM_FROM_ID(stats.ItemId).Name
 			itemsBeingSold[itemName] = (itemsBeingSold[itemName] or 0) + 1
 		end
 
-		-- Count TOTAL items (placed on plot + in inventory)
-		local PLR_PLOT = Plr.SetPlot.Value
-		local PLACED_ITEMS = PLR_PLOT:FindFirstChild("PlacedItems")
+		-- 2. Count TOTAL items (placed on plot + in inventory)
+		-- Adjust this path if your plot system uses a different folder name
+		local PLR_PLOT = Plr:FindFirstChild("SetPlot") and Plr.SetPlot.Value
+		local PLACED_ITEMS = PLR_PLOT and PLR_PLOT:FindFirstChild("PlacedItems")
+
 		local totalItemCounts = {}
 
-		-- Count items placed on the plot
+		-- Count items currently placed on the plot
 		if PLACED_ITEMS then
 			for _, item in pairs(PLACED_ITEMS:GetChildren()) do
 				if item:FindFirstChild("ItemStats") then
@@ -190,21 +166,18 @@ function SELL_ITEM(Plr, ITEMS)
 			end
 		end
 
-		-- ADD items in inventory
-		if _G["global_data"] and _G["global_data"][Plr.Name] and _G["global_data"][Plr.Name]["Items"] then
-			for itemId, itemData in pairs(_G["global_data"][Plr.Name]["Items"]) do
-				if itemData.Amount and itemData.Amount > 0 then
-					-- FIXED: itemId is now a string, convert to number for ITEM_FROM_ID
-					local item = MAIN_LIB.ITEM_FROM_ID(tonumber(itemId))
-					if item then
-						local itemName = item.Name
-						totalItemCounts[itemName] = (totalItemCounts[itemName] or 0) + itemData.Amount
-					end
+		-- Count items currently in ProfileStore inventory
+		for itemId, itemData in pairs(session["Items"]) do
+			if itemData.Amount and itemData.Amount > 0 then
+				local itemTemplate = MAIN_LIB.ITEM_FROM_ID(tonumber(itemId))
+				if itemTemplate then
+					local itemName = itemTemplate.Name
+					totalItemCounts[itemName] = (totalItemCounts[itemName] or 0) + itemData.Amount
 				end
 			end
 		end
 
-		-- Check if selling would drop below minimum for any item
+		-- 3. Check if selling would drop below minimum
 		for itemName, sellCount in pairs(itemsBeingSold) do
 			local minimumRequired = MINIMUM_ITEM_QUANTITIES[itemName]
 			if minimumRequired then
@@ -215,31 +188,24 @@ function SELL_ITEM(Plr, ITEMS)
 					RepStorage.Events.MessageClient:FireClient(Plr, "screen", {
 						["message"] = "Cannot sell! You must keep at least " .. minimumRequired .. " " .. itemName .. "s."
 					})
-					return false
+					return false -- Stop the whole sale
 				end
 			end
 		end
 
-		-- Proceed with selling
-		for I, REAL_ID in pairs(ITEM_ID) do
-			-- Check hotspot items
-			if REAL_ID:GetAttribute("HotspotMiner") == true then
-				warn("Cannot sell hotspot miner!")
-				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "Hotspot miners cannot be sold!"})
-				return false
+		-- 4. Proceed with selling if checks pass
+		for _, item in pairs(ITEM_LIST) do
+			-- Check hotspot attributes
+			if item:GetAttribute("HotspotMiner") or item:GetAttribute("HotspotFurnace") then
+				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "Hotspot items cannot be sold!"})
+				continue 
 			end
 
-			if REAL_ID:GetAttribute("HotspotFurnace") == true then
-				warn("Cannot sell hotspot furnace!")
-				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "The central furnace cannot be sold!"})
-				return false
-			end
-
-			local ITEM_INFO = require(REAL_ID.ItemStats)
-			if table.find(CANT_SELL_TYPES, ITEM_INFO.ItemType) == nil then
-				local sellValue = math.floor(ITEM_INFO.Cost * 0.3)  -- 30% of buy price
+			local ITEM_INFO = require(item.ItemStats)
+			if not table.find(CANT_SELL_TYPES, ITEM_INFO.ItemType) then
+				local sellValue = math.floor(ITEM_INFO.Cost * 0.3)
 				CASH.Value += sellValue
-				REAL_ID:Destroy()
+				item:Destroy()
 			end
 		end
 		return true
@@ -248,34 +214,30 @@ function SELL_ITEM(Plr, ITEMS)
 end
 
 function WITHDRAW_ITEMS(Plr, ITEMS)
-	if DEBOUNCE[Plr.Name] then
-		return false
-	else
-		DEBOUNCE[Plr.Name] = true
-		spawn(function()
-			wait(.3)
-			DEBOUNCE[Plr.Name] = nil
-		end)
+	local session = PlayerSession.Get(Plr.Name)
+	if not session or DEBOUNCE[Plr.Name] then return false end
+
+	DEBOUNCE[Plr.Name] = true
+	task.delay(0.3, function() DEBOUNCE[Plr.Name] = nil end)
+
+	local ITEM_LIST = type(ITEMS) == "table" and ITEMS or {ITEMS}
+	for _, item in pairs(ITEM_LIST) do
+		if item:GetAttribute("HotspotMiner") or item:GetAttribute("HotspotFurnace") then continue end
+
+		local stats = require(item.ItemStats)
+		session["Items"][tostring(stats.ItemId)]["Amount"] += 1
+		item:Destroy()
 	end
-	if Plr then
-		for I, ITEM in pairs(ITEMS) do
-			if ITEM:GetAttribute("HotspotMiner") == true then
-				warn("Cannot withdraw hotspot miner!")
-				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "Hotspot miners cannot be moved!"})
-				return false
-			end
+	RepStorage.Events.InventoryUpdate:FireClient(Plr)
+	return true
+end
 
-			if ITEM:GetAttribute("HotspotFurnace") == true then
-				warn("Cannot withdraw hotspot furnace!")
-				RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = "The central furnace cannot be moved!"})
-				return false
-			end
-
-			local ITEM_INFO = require(ITEM.ItemStats)
-			-- FIXED: Changed item_info to ITEM_INFO and added tostring()
-			_G["global_data"][Plr.Name]["Items"][tostring(ITEM_INFO.ItemId)]["Amount"] += 1
-			ITEM:Destroy()
-		end
+function ItemGive(Plr, ITEM_ID, AMOUNT)
+	local session = PlayerSession.Get(Plr.Name)
+	local idStr = tostring(ITEM_ID)
+	if session and session["Items"][idStr] then
+		session["Items"][idStr]["Amount"] += AMOUNT
+		RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = AMOUNT.." "..MAIN_LIB.ITEM_FROM_ID(ITEM_ID).Name.."(s) added to Inventory"})
 		RepStorage.Events.InventoryUpdate:FireClient(Plr)
 		return true
 	end
@@ -283,37 +245,18 @@ function WITHDRAW_ITEMS(Plr, ITEMS)
 end
 
 function toggle_update(plr, toggle_name)
-	local real_setting = plr.Settings:FindFirstChild(toggle_name)
-	if real_setting ~= nil then
-		real_setting.Value = not real_setting.Value
-		return true
-	end
-	warn(toggle_name.." doesn't exist for "..plr.Name.." so it's either failed to load or not been implemented!")
+	local setting = plr.Settings:FindFirstChild(toggle_name)
+	if setting then setting.Value = not setting.Value return true end
 	return false
 end
 
--- Function/Event Responses
+-- Remote Listeners
 RepStorage.Events.GetInventoryType.OnServerInvoke = GET_INVENTORY
 RepStorage.Events.WithdrawItems.OnServerInvoke = WITHDRAW_ITEMS
-RepStorage.Events.UpdateStorting.OnServerInvoke = UPDATE_STORT
 RepStorage.Events.UpdateToggle.OnServerInvoke = toggle_update
 RepStorage.Events.PlaceItem.OnServerInvoke = PLACE_ITEM
 RepStorage.Events.SellItem.OnServerInvoke = SELL_ITEM
 RepStorage.Events.BuyItem.OnServerInvoke = BUY_ITEM
-
--- Server Locked Stuff
-function ItemGive(Plr, ITEM_ID, AMOUNT)
-	-- FIXED: Added tostring() for item ID
-	if _G["global_data"][Plr.Name]["Items"][tostring(ITEM_ID)] then
-		_G["global_data"][Plr.Name]["Items"][tostring(ITEM_ID)]["Amount"] += AMOUNT
-		RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = ""..AMOUNT.." "..MAIN_LIB.ITEM_FROM_ID(ITEM_ID).Name.."'s added to your Inventory"})
-		RepStorage.Events.InventoryUpdate:FireClient(Plr)
-		return true
-	end
-	return false
-end
-
--- Server Locked Functions/Events
 ServerStorage.Events.ItemGive.OnInvoke = ItemGive
 
-warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] loaded!")
+warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] fully loaded!")
