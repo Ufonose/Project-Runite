@@ -40,7 +40,7 @@ end
 
 function CLEAR_PLOT(Plr, PLR_PLOT)
 	if Plr then
-		local session = PlayerSession.Get(Plr.Name)
+		local session = PlayerSession.Get(Plr)
 		if not session then return end
 
 		-- 1. Clear items from the physical plot
@@ -73,7 +73,7 @@ end
 
 function REBIRTH(Plr)
 	if Plr then
-		local session = PlayerSession.Get(Plr.Name)
+		local session = PlayerSession.Get(Plr)
 		local PLR_PLOT = Plr.SetPlot.Value
 		local plrCash = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
 
