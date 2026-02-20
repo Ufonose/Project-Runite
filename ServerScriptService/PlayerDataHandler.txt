@@ -35,8 +35,8 @@ local function PREPARE_FINAL_SAVE(Plr)
 	local plr_cash = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
 	if plr_cash then session["Money"] = plr_cash.Value end
 
-	-- 4. Save Plot (Keep this as JSON string if that's how your system likes it)
-	session["PlotItemPlaced"] = HttpService:JSONEncode(DATA_FUNCTION_HANDLING.UNLOAD_PLOT(Plr))
+	-- 4. Save Plot
+	session["PlotItemPlaced"] = DATA_FUNCTION_HANDLING.UNLOAD_PLOT(Plr)
 end
 
 local function LOAD_DATA(Plr)
@@ -103,8 +103,7 @@ local function LOAD_DATA(Plr)
 	end
 
 	-- 6. Plot Loading
-	local rawPlot = session["PlotItemPlaced"]
-	local plot_table = (type(rawPlot) == "string" and rawPlot ~= "") and HttpService:JSONDecode(rawPlot) or {}
+	local plot_table = session["PlotItemPlaced"] or {}
 	DATA_FUNCTION_HANDLING.LOAD_PLOT(Plr, plot_table)
 
 	-- 7. Leaderstats Setup (Visualizing Money as Cash)
@@ -153,9 +152,6 @@ game:BindToClose(function()
 		end)
 	end
 
-	-- Give ProfileStore time to release session locks (Standard is 5-10 seconds)
-	local start = os.clock()
-	while os.clock() - start < 8 and #Plrs:GetPlayers() > 0 do
-		task.wait(1)
-	end
+	-- Always wait the full 8 seconds to ensure session locks are released
+	task.wait(8) 
 end)
