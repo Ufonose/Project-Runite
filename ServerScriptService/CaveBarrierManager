@@ -27,7 +27,7 @@ local function getBarrierValue(barrier, valueName)
 end
 
 local function isBarrierUnlocked(player, barrierID)
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player)
 	if not session or not session["UnlockedBarriers"] then return false end
 
 	return session["UnlockedBarriers"][barrierID] == true
@@ -67,7 +67,7 @@ end
 -- ============================================================================
 
 local function attemptUnlockBarrier(player, barrier)
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player)
 	if not session then return end
 
 	local barrierID = getBarrierValue(barrier, "BarrierID")
@@ -125,7 +125,7 @@ local function setupBarriersForPlayer(player)
 			if triggeringPlayer ~= player then return end
 
 			-- Check if data is available in module
-			if not PlayerSession.Get(player.Name) then return end
+			if not PlayerSession.Get(player) then return end
 
 			if isBarrierUnlocked(player, barrierID) then
 				barrier:Destroy()
