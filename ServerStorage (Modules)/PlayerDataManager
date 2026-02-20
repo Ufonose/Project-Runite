@@ -12,9 +12,14 @@ local DATA_TEMPLATE = {
 	Rebirth = 0,
 	InvSort = "Newest",
 
-	UnlockedBarriers = {}, -- FIXED: was missing from template
+	UnlockedBarriers = {},
+	-- FIXED: was missing from template
 	MinerHotspots = {
 		UnlockedHotspots = {},
+	},
+	
+	FurnaceHotspot = {
+		Unlocked = true,
 	},
 
 	settingHideResearch = false,
