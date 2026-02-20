@@ -1,51 +1,59 @@
--- ServerStorage (Modules)/ResearchHandler (WITH ITEM UNLOCK NOTIFICATIONS)
+-- ServerStorage (Modules)/ResearchHandler
+-- UPDATED: Integrated with PlayerDataManager
 
 local ServerStorage = game:GetService("ServerStorage")
 local RepStorage = game:GetService("ReplicatedStorage")
+
+-- MODULES
+local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
 local ResearchData = require(ServerStorage.Modules.ResearchData)
 
 local ResearchHandler = {}
 
 -- Helper function to get item name from item ID
 local function getItemNameFromId(itemId)
-	-- Search through ReplicatedStorage.Items to find the item with matching ID
 	for _, item in pairs(RepStorage.Items:GetChildren()) do
 		local itemStats = item:FindFirstChild("ItemStats")
 		if itemStats then
 			local stats = require(itemStats)
 			if stats.ItemId == itemId then
-				return item.Name  -- Return the actual item name
+				return item.Name
 			end
 		end
 	end
 	return "Unknown Item"
 end
 
--- Initialize player research data if it doesn't exist
+-- Initialize player research data if it doesn't exist in the module session
 function ResearchHandler.InitializePlayer(player)
-	if not _G["global_data"][player.Name]["Research"] then
+	local session = PlayerSession.Get(player.Name)
+	if not session then return false end
+
+	if not session["Research"] then
 		print("Initializing research data for", player.Name)
-		_G["global_data"][player.Name]["Research"] = {
+		session["Research"] = {
 			CompletedObjectives = {},
 			ActiveObjectives = {},
 			ObjectiveProgress = {},
-			ItemsCollected = {},  -- Track all items collected
+			ItemsCollected = {},
 		}
 	end
 
-	-- Add ItemsCollected if it doesn't exist (for existing saves)
-	if not _G["global_data"][player.Name]["Research"]["ItemsCollected"] then
-		_G["global_data"][player.Name]["Research"]["ItemsCollected"] = {}
+	-- Ensure ItemsCollected sub-table exists
+	if not session["Research"]["ItemsCollected"] then
+		session["Research"]["ItemsCollected"] = {}
 	end
+
+	return true
 end
 
--- NEW: Track item collection (called for ALL items processed, not just research)
+-- Track item collection (called when ores are processed)
 function ResearchHandler.TrackItemCollection(player, itemName, amount)
-	ResearchHandler.InitializePlayer(player)
+	if not ResearchHandler.InitializePlayer(player) then return end
 
-	local research = _G["global_data"][player.Name]["Research"]
+	local session = PlayerSession.Get(player.Name)
+	local research = session["Research"]
 
-	-- Track the item
 	if not research.ItemsCollected[itemName] then
 		research.ItemsCollected[itemName] = 0
 	end
@@ -54,25 +62,17 @@ end
 
 -- Start tracking an objective
 function ResearchHandler.StartObjective(player, objectiveId)
-	ResearchHandler.InitializePlayer(player)
+	if not ResearchHandler.InitializePlayer(player) then return false end
 
-	local research = _G["global_data"][player.Name]["Research"]
+	local session = PlayerSession.Get(player.Name)
+	local research = session["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
-	if not objective then
-		warn("Objective", objectiveId, "not found!")
-		return false
-	end
+	if not objective then return false end
 
-	-- Check if already completed
-	if table.find(research.CompletedObjectives, objectiveId) then
-		return false, "Already completed"
-	end
-
-	-- Check if already active
-	if table.find(research.ActiveObjectives, objectiveId) then
-		return false, "Already active"
-	end
+	-- Check status
+	if table.find(research.CompletedObjectives, objectiveId) then return false, "Already completed" end
+	if table.find(research.ActiveObjectives, objectiveId) then return false, "Already active" end
 
 	-- Check prerequisites
 	if not ResearchData.CanStartObjective(objectiveId, research.CompletedObjectives) then
@@ -93,18 +93,14 @@ end
 
 -- Deposit an item towards an objective
 function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
-	ResearchHandler.InitializePlayer(player)
+	if not ResearchHandler.InitializePlayer(player) then return false end
 
-	local research = _G["global_data"][player.Name]["Research"]
+	local session = PlayerSession.Get(player.Name)
+	local research = session["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
-	if not objective then 
+	if not objective or not table.find(research.ActiveObjectives, objectiveId) then 
 		return false 
-	end
-
-	-- Check if objective is active
-	if not table.find(research.ActiveObjectives, objectiveId) then
-		return false
 	end
 
 	-- Find the requirement
@@ -116,9 +112,7 @@ function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
 		end
 	end
 
-	if not requirement then
-		return false
-	end
+	if not requirement then return false end
 
 	-- Update progress
 	local progressKey = tostring(objectiveId)
@@ -126,10 +120,8 @@ function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
 	local newProgress = math.min(currentProgress + amount, requirement.Amount)
 	research.ObjectiveProgress[progressKey][itemName] = newProgress
 
-	-- Check if objective is complete
-	local isComplete = ResearchHandler.CheckObjectiveComplete(player, objectiveId)
-
-	if isComplete then
+	-- Check completion
+	if ResearchHandler.CheckObjectiveComplete(player, objectiveId) then
 		ResearchHandler.CompleteObjective(player, objectiveId)
 	end
 
@@ -138,14 +130,16 @@ end
 
 -- Check if an objective is complete
 function ResearchHandler.CheckObjectiveComplete(player, objectiveId)
-	local research = _G["global_data"][player.Name]["Research"]
+	local session = PlayerSession.Get(player.Name)
+	if not session then return false end
+
+	local research = session["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
 	if not objective or not research.ObjectiveProgress[tostring(objectiveId)] then
 		return false
 	end
 
-	-- Check all requirements
 	for _, requirement in pairs(objective.Requirements) do
 		local progress = research.ObjectiveProgress[tostring(objectiveId)][requirement.ItemName] or 0
 		if progress < requirement.Amount then
@@ -158,7 +152,10 @@ end
 
 -- Complete an objective and give rewards
 function ResearchHandler.CompleteObjective(player, objectiveId)
-	local research = _G["global_data"][player.Name]["Research"]
+	local session = PlayerSession.Get(player.Name)
+	if not session then return false end
+
+	local research = session["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
 	if not objective then return false end
@@ -168,41 +165,34 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 
 	-- Remove from active
 	local index = table.find(research.ActiveObjectives, objectiveId)
-	if index then
-		table.remove(research.ActiveObjectives, index)
-	end
+	if index then table.remove(research.ActiveObjectives, index) end
 
-	-- Give rewards
+	-- Research Tokens
 	local tokenReward = objective.Rewards.ResearchTokens or 0
 	if tokenReward > 0 then
 		player.ResearchTokens.Value = player.ResearchTokens.Value + tokenReward
 	end
 
-	-- Unlock machines
+	-- Unlock machines in the Module-based Inventory
 	local unlockedMachines = {}
 	if objective.Rewards.UnlockMachines then
 		for _, machineId in pairs(objective.Rewards.UnlockMachines) do
 			local itemKey = tostring(machineId)
-			if _G["global_data"][player.Name]["Items"][itemKey] then
-				_G["global_data"][player.Name]["Items"][itemKey]["Unlocked"] = true
-
-				-- Get the machine name for the notification
-				local machineName = getItemNameFromId(machineId)
-				table.insert(unlockedMachines, machineName)
+			if session["Items"][itemKey] then
+				session["Items"][itemKey]["Unlocked"] = true
+				table.insert(unlockedMachines, getItemNameFromId(machineId))
 			end
 		end
 	end
 
-	-- Build notification message (client will automatically split at "completed!" and style the reward text in blue)
+	-- UI Notification
 	local notificationMessage = objective.Name .. " completed!"
-
 	if tokenReward > 0 then
 		notificationMessage = notificationMessage .. " +" .. tokenReward .. " Research Tokens"
 	elseif #unlockedMachines > 0 then
 		notificationMessage = notificationMessage .. " 🔓 Unlocked: " .. table.concat(unlockedMachines, ", ")
 	end
 
-	-- Notify player
 	RepStorage.Events.MessageClient:FireClient(player, "screen", {
 		["message"] = notificationMessage
 	})
@@ -213,7 +203,8 @@ end
 -- Get player's research data
 function ResearchHandler.GetPlayerResearch(player)
 	ResearchHandler.InitializePlayer(player)
-	return _G["global_data"][player.Name]["Research"]
+	local session = PlayerSession.Get(player.Name)
+	return session and session["Research"]
 end
 
 return ResearchHandler
