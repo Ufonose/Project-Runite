@@ -1,51 +1,80 @@
--- ServerScriptService/PlotHandling.txt (SIMPLIFIED - NO HEIGHT CHECK)
+-- ServerScriptService/PlotHandling
 
 -- Services
 local RepStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 local Plrs = game:GetService("Players")
+
 -- Modules
 local Enums = require(RepStorage.Modules.CustomEnums)
 local MainLib = require(RepStorage.Modules.MainLib)
 
+-- ============================================================
+-- TEMPLATE STORAGE SETUP
+-- Store a clean copy of each plot's CaveUnlocks and MinerHotspots
+-- BEFORE any player can modify them, so we can restore on leave
+-- ============================================================
+local templateStorage = ServerStorage:FindFirstChild("PlotTemplates")
+if not templateStorage then
+	templateStorage = Instance.new("Folder")
+	templateStorage.Name = "PlotTemplates"
+	templateStorage.Parent = ServerStorage
+end
+
 for I, PLOT in pairs(workspace.Plots:GetChildren()) do
 	PLOT.Owner.Value = "Empty Plot"
+
+	-- Save clean template for this plot
+	local plotTemplate = Instance.new("Folder")
+	plotTemplate.Name = PLOT.Name
+	plotTemplate.Parent = templateStorage
+
+	local caveUnlocks = PLOT:FindFirstChild("CaveUnlocks")
+	if caveUnlocks then
+		caveUnlocks:Clone().Parent = plotTemplate
+	end
+
+	local minerHotspots = PLOT:FindFirstChild("MinerHotspots")
+	if minerHotspots then
+		minerHotspots:Clone().Parent = plotTemplate
+	end
+
+	-- Misc folders setup
 	for I, MISC_FOLDER_NAME in pairs(Enums.Arrays.MISC_PLOT_FOLDERS) do
 		local FOLDER = Instance.new("Folder", PLOT.MiscInfo)
 		FOLDER.Name = MISC_FOLDER_NAME
 	end
 
-	-- ULTRA SIMPLE: If an ore touches the BasePlot directly, destroy it
-	-- Ores on conveyors won't touch the BasePlot because the conveyor is in between
+	-- Destroy ores that fall onto the BasePlot
 	PLOT.BasePlot.Touched:Connect(function(HIT)
-		-- Check if HIT is part of an ore (has Cash)
 		local ORE_TO_DESTROY = nil
 
-		-- Check if HIT itself has Cash (single-part ore)
 		if HIT:FindFirstChild("Cash") then
 			ORE_TO_DESTROY = HIT
-			-- Check if HIT's parent is a Model with Cash (model ore)
 		elseif HIT.Parent and HIT.Parent:IsA("Model") and HIT.Parent:FindFirstChild("Cash") then
 			ORE_TO_DESTROY = HIT.Parent
 		end
 
-		-- If we found an ore, destroy it
 		if ORE_TO_DESTROY then
 			ORE_TO_DESTROY:Destroy()
 		end
 	end)
 end
 
+-- ============================================================
+-- PLAYER FUNCTIONS
+-- ============================================================
+
 local function SPAWN_PLAYER(Plr)
 	Plr.Character:WaitForChild("HumanoidRootPart")
 	local REAL_PLOT = Plr.SetPlot.Value
 
-	-- Get the SpawnLocation
 	local spawnPart = REAL_PLOT:FindFirstChild("SpawnLocation")
 
 	if spawnPart then
-		for I=1, 5 do
+		for I = 1, 5 do
 			Plr.Character:WaitForChild("HumanoidRootPart")
-			Plr.Character.HumanoidRootPart.CFrame = CFrame.new(spawnPart.Position+Vector3.new(0, Enums.Nums.SPAWN_REG_HEIGHT, 0))
+			Plr.Character.HumanoidRootPart.CFrame = CFrame.new(spawnPart.Position + Vector3.new(0, Enums.Nums.SPAWN_REG_HEIGHT, 0))
 			wait()
 		end
 	else
@@ -57,11 +86,12 @@ local function PLR_ADDED(Plr)
 	local PLOT_INFO = Instance.new("ObjectValue", Plr)
 	PLOT_INFO.Name = "SetPlot"
 	PLOT_INFO.Value = MainLib.SET_PLOT(Plr)
-	-- Plot Setup
+
 	PLOT_INFO.Value.Owner.Value = Plr.Name
-	-- Player Spawning
+
 	Plr.CharacterAdded:Connect(function()
 		SPAWN_PLAYER(Plr)
 	end)
 end
+
 Plrs.PlayerAdded:Connect(PLR_ADDED)
