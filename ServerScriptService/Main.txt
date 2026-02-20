@@ -18,7 +18,7 @@ warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] loading...")
 
 function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 	if not (Plr and PLACED_ITEMS and ITEMS) then return false end
-	local session = PlayerSession.Get(Plr.Name)
+	local session = PlayerSession.Get(Plr)
 	if not session then return false end
 
 	local ITEM_FAILED = false
@@ -97,7 +97,7 @@ function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 end
 
 function GET_INVENTORY(Plr, INVENTORY_TYPE)
-	local session = PlayerSession.Get(Plr.Name)
+	local session = PlayerSession.Get(Plr)
 	return session and session[INVENTORY_TYPE] or {}
 end
 
@@ -134,7 +134,7 @@ end
 
 function SELL_ITEM(Plr, ITEMS)
 	local CASH = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
-	local session = PlayerSession.Get(Plr.Name) -- Get ProfileStore data
+	local session = PlayerSession.Get(Plr) -- Get ProfileStore data
 
 	if CASH and session then
 		local CANT_SELL_TYPES = {"special", "cantbuy"}
@@ -214,7 +214,7 @@ function SELL_ITEM(Plr, ITEMS)
 end
 
 function WITHDRAW_ITEMS(Plr, ITEMS)
-	local session = PlayerSession.Get(Plr.Name)
+	local session = PlayerSession.Get(Plr)
 	if not session or DEBOUNCE[Plr.Name] then return false end
 
 	DEBOUNCE[Plr.Name] = true
@@ -233,7 +233,7 @@ function WITHDRAW_ITEMS(Plr, ITEMS)
 end
 
 function ItemGive(Plr, ITEM_ID, AMOUNT)
-	local session = PlayerSession.Get(Plr.Name)
+	local session = PlayerSession.Get(Plr)
 	local idStr = tostring(ITEM_ID)
 	if session and session["Items"][idStr] then
 		session["Items"][idStr]["Amount"] += AMOUNT
