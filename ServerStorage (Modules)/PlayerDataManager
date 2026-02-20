@@ -1,0 +1,67 @@
+local ServerStorage = game:GetService("ServerStorage")
+local ProfileStore = require(ServerStorage.Modules.ProfileStore)
+
+local PlayerDataManager = {}
+
+-- 1. DATA TEMPLATE (Following all safety warnings)
+local DATA_TEMPLATE = {
+	Money = 400,
+	ResearchTokens = 0,
+	Items = {}, -- Correct: ["3"] = {Amount = 1, Unlocked = true}
+	Upgrades = {
+		["ConveyorSpeed"] = 0,
+		["IronMineSpeed"] = 0,
+		["CopperMineSpeed"] = 0,
+		["GoldMineSpeed"] = 0,
+	},
+	Research = {
+		["CompletedObjectives"] = {}, -- List of strings/IDs
+		["ActiveObjectives"] = {},    -- List of strings/IDs
+		["ObjectiveProgress"] = {},   -- ["Obj1"] = { ["Iron"] = 10 }
+		["ItemsCollected"] = {},      -- ["Iron"] = 500
+	}
+}
+
+local PlayerStore = ProfileStore.New("Runite_v2", DATA_TEMPLATE)
+local ActiveProfiles = {}
+
+function PlayerDataManager.Get(playerName)
+	local profile = ActiveProfiles[playerName]
+	return profile and profile.Data or nil
+end
+
+function PlayerDataManager.Load(player)
+	local profile = PlayerStore:StartSessionAsync(tostring(player.UserId), {
+		Cancel = function()
+			return player.Parent ~= game:GetService("Players")
+		end,
+	})
+
+	if profile ~= nil then
+		profile:Reconcile() -- Fixes missing keys if you update the template
+
+		profile.OnSessionEnd:Connect(function()
+			ActiveProfiles[player.Name] = nil
+			player:Kick("Data session ended.")
+		end)
+
+		if player.Parent == game:GetService("Players") then
+			ActiveProfiles[player.Name] = profile
+			return profile.Data
+		else
+			profile:EndSession()
+		end
+	else
+		player:Kick("Failed to load data.")
+	end
+end
+
+function PlayerDataManager.Remove(playerName)
+	local profile = ActiveProfiles[playerName]
+	if profile then
+		profile:EndSession()
+		ActiveProfiles[playerName] = nil
+	end
+end
+
+return PlayerDataManager
