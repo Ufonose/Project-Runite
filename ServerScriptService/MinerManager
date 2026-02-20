@@ -19,7 +19,11 @@ local function SelectRandomOre(itemInfo, plot)
 	end
 
 	local gemBoostMultiplier = 1
-	local plot_owner = Plrs:FindFirstChild(plot.Owner.Value)
+
+	-- SAFETY FIX: Ensure plot and Owner exist before indexing
+	local ownerAttr = plot:FindFirstChild("Owner")
+	local plot_owner = ownerAttr and Plrs:FindFirstChild(ownerAttr.Value)
+
 	if plot_owner and _G.GetUpgradeMultiplier then
 		gemBoostMultiplier = _G.GetUpgradeMultiplier(plot_owner, "GemDiscovery")
 	end
@@ -42,7 +46,7 @@ local function SelectRandomOre(itemInfo, plot)
 
 	for i, item in ipairs(adjustedTable) do
 		if not item.IsGem then
-			local reductionRatio = (commonOreChance - totalGemBonus) / commonOreChance
+			local reductionRatio = (commonOreChance > 0) and (commonOreChance - totalGemBonus) / commonOreChance or 1
 			adjustedTable[i].Chance = item.Chance * reductionRatio
 		end
 	end
@@ -53,7 +57,7 @@ local function SelectRandomOre(itemInfo, plot)
 		accumulated = accumulated + dropData.Chance
 		if roll <= accumulated then return dropData.Name, dropData.Worth end
 	end
-	return adjustedTable[1].Name, adjustedTable[1].Worth
+	return (adjustedTable[1] and adjustedTable[1].Name) or itemInfo.OreModelName, (adjustedTable[1] and adjustedTable[1].Worth) or itemInfo.DropWorth
 end
 
 local function GetWaitTime(itemInfo, minerModel)
@@ -112,19 +116,38 @@ end
 -- ============================================================
 
 local function startMiner(miner)
-	local itemInfo = require(miner:WaitForChild("ItemStats"))
-	-- Assuming Miner is inside plot like Plot.Items.Miner
-	local plot = miner.Parent.Parent 
+	local itemStats = miner:WaitForChild("ItemStats", 5)
+	if not itemStats or not itemStats:IsA("ModuleScript") then return end
+	local itemInfo = require(itemStats :: ModuleScript)
+
+	-- FIX: More robust plot finding to avoid indexing errors
+	local plot = nil
+	local current = miner.Parent
+	while current and current ~= workspace do
+		if current:FindFirstChild("Owner") and current:FindFirstChild("PlacedItems") then
+			plot = current
+			break
+		end
+		current = current.Parent
+	end
+
+	if not plot then return end
 
 	task.spawn(function()
-		while miner.Parent do
+		while miner and miner.Parent do
 			local waitTime = GetWaitTime(itemInfo, miner)
 			task.wait(waitTime)
 
-			local plot_owner = Plrs:FindFirstChild(plot.Owner.Value)
+			local ownerObj = plot:FindFirstChild("Owner")
+			local plot_owner = ownerObj and Plrs:FindFirstChild(ownerObj.Value)
+
 			if plot_owner then
 				-- Global Active Check
+				if not plot_owner:FindFirstChild("Settings") or not plot_owner.Settings:FindFirstChild("MinesActive") then
+					continue
+				end
 				if not plot_owner.Settings.MinesActive.Value then continue end
+
 				-- Local Pause Check
 				if miner:GetAttribute("OreLimitPaused") then continue end
 
@@ -144,5 +167,5 @@ end
 
 CollectionService:GetInstanceAddedSignal("Machine_Miner"):Connect(startMiner)
 for _, m in pairs(CollectionService:GetTagged("Machine_Miner")) do
-	startMiner(m)
+	task.spawn(startMiner, m)
 end
