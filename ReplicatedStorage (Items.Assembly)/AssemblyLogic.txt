@@ -57,7 +57,7 @@ local function assembleItem(ITEM)
 	newItem.Name = ITEM.Name
 	CollectionService:AddTag(newItem, "MovingOre")
 	newItem:SetAttribute("OreID", math.random(1, 1000000))
-	newItem:SetAttribute("LaneOffset", (math.random(-80, 80) / 100))
+	newItem:SetAttribute("LaneOffset", (math.random(-40, 40) / 100))
 
 	local newItemTag = Instance.new("StringValue", newItem)
 	newItemTag.Name = "OreModelName"
