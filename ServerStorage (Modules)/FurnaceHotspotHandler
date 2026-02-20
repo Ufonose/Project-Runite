@@ -1,8 +1,9 @@
--- ServerStorage > Modules > FurnaceHotspotHandler
-
 local RepStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local Players = game:GetService("Players")
+
+-- MODULES
+local PlayerSession = require(ServerStorage.Modules.PlayerDataManager) -- ADDED
 
 local FurnaceHotspotHandler = {}
 
@@ -15,21 +16,17 @@ FurnaceHotspotHandler.HotspotConfig = {
 
 -- Initialize player's furnace hotspot data
 function FurnaceHotspotHandler.InitializePlayer(player)
-	-- Check if global data exists
-	if not _G["global_data"] then
-		warn("_G['global_data'] does not exist!")
+	local session = PlayerSession.Get(player.Name)
+	if not session then
+		warn("PlayerDataManager session not found for", player.Name)
 		return false
 	end
 
-	if not _G["global_data"][player.Name] then
-		warn("_G['global_data'][" .. player.Name .. "] does not exist! Player data not loaded.")
-		return false
-	end
-
-	if not _G["global_data"][player.Name]["FurnaceHotspot"] then
+	-- Initialize the category in our new module data if it doesn't exist
+	if not session["FurnaceHotspot"] then
 		print("Initializing FurnaceHotspot data for", player.Name)
-		_G["global_data"][player.Name]["FurnaceHotspot"] = {
-			Unlocked = true,  -- ALWAYS UNLOCKED
+		session["FurnaceHotspot"] = {
+			Unlocked = true, -- ALWAYS UNLOCKED
 		}
 	end
 
@@ -42,7 +39,8 @@ function FurnaceHotspotHandler.IsHotspotUnlocked(player)
 		return false
 	end
 
-	return _G["global_data"][player.Name]["FurnaceHotspot"].Unlocked == true
+	local session = PlayerSession.Get(player.Name)
+	return session["FurnaceHotspot"].Unlocked == true
 end
 
 -- Activate the furnace hotspot (spawn the real furnace)
@@ -59,7 +57,6 @@ function FurnaceHotspotHandler.ActivateHotspot(player)
 		return 
 	end
 
-	-- Find the Position part
 	local positionPart = hotspotFolder:FindFirstChild("Position")
 	if not positionPart then
 		warn("No Position part found in FurnaceHotspot!")
@@ -78,7 +75,6 @@ function FurnaceHotspotHandler.ActivateHotspot(player)
 	local activeFurnace = furnaceModel:Clone()
 
 	-- MARK AS HOTSPOT FURNACE (permanent, can't be moved/sold)
-	-- THIS IS THE CRITICAL LINE - EXACT SAME AS MINERS
 	activeFurnace:SetAttribute("HotspotFurnace", true)
 
 	-- IMPORTANT: Set PrimaryPart to Hitbox
@@ -86,24 +82,15 @@ function FurnaceHotspotHandler.ActivateHotspot(player)
 		activeFurnace.PrimaryPart = activeFurnace.Hitbox
 	end
 
-	if positionPart then
-		activeFurnace:SetPrimaryPartCFrame(positionPart.CFrame)
-	end
+	activeFurnace:SetPrimaryPartCFrame(positionPart.CFrame)
 
 	-- MUST parent BEFORE adding layer info
 	activeFurnace.Parent = plot.PlacedItems
 
-	-- Add/Update layer info - ALWAYS set it even if it exists
+	-- Add/Update layer info
 	if activeFurnace:FindFirstChild("ItemStats") then
 		local itemStats = require(activeFurnace.ItemStats)
 
-		-- Remove old layer values if they exist
-		local oldLayer = activeFurnace:FindFirstChild("PlacementLayer")
-		if oldLayer then oldLayer:Destroy() end
-		local oldLayers = activeFurnace:FindFirstChild("PlacementLayers")
-		if oldLayers then oldLayers:Destroy() end
-
-		-- Create new layer values
 		local layerValue = Instance.new("IntValue", activeFurnace)
 		layerValue.Name = "PlacementLayer"
 
@@ -112,14 +99,12 @@ function FurnaceHotspotHandler.ActivateHotspot(player)
 			local layersString = Instance.new("StringValue", activeFurnace)
 			layersString.Name = "PlacementLayers"
 			layersString.Value = table.concat(itemStats.PlacementLayer, ",")
-			print("Set multi-layer:", layersString.Value)
 		else
 			layerValue.Value = itemStats.PlacementLayer or 1
-			print("Set single layer:", layerValue.Value)
 		end
 	end
 
-	-- Make sure Hitbox is configured properly for collision detection
+	-- Configuration for collision
 	if activeFurnace.PrimaryPart then
 		activeFurnace.PrimaryPart.Transparency = 1
 		activeFurnace.PrimaryPart.CanCollide = false
@@ -134,7 +119,6 @@ function FurnaceHotspotHandler.ActivateHotspot(player)
 	end
 
 	print("Activated Furnace Hotspot for", player.Name)
-	print("Furnace placed at:", activeFurnace:GetPrimaryPartCFrame())
 end
 
 -- Get player's furnace hotspot data
@@ -143,7 +127,8 @@ function FurnaceHotspotHandler.GetPlayerHotspot(player)
 		return {Unlocked = false}
 	end
 
-	return _G["global_data"][player.Name]["FurnaceHotspot"]
+	local session = PlayerSession.Get(player.Name)
+	return session["FurnaceHotspot"]
 end
 
 return FurnaceHotspotHandler
