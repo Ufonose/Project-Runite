@@ -115,7 +115,7 @@ function DataHandling.LOAD_PLOT(Plr, PLOT_DATA)
 			if item_data["CONVEYOR_REVERSED"] then
 				ITEM_MODEL:SetAttribute("ConveyorReversed", true)
 				for _, descendant in pairs(ITEM_MODEL:GetDescendants()) do
-					if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope" or descendant.Name == "SideBeam") then
+					if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope" or descendant.Name == "SideBeam" or descendant.Name == "SideStuck") then
 						if descendant:GetAttribute("NoFlip") then continue end
 						local convVelo = descendant:FindFirstChild("ConvVelo")
 						if convVelo then convVelo.Value = -convVelo.Value end
