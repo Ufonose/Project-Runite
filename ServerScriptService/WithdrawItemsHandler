@@ -41,7 +41,7 @@ end
 
 -- Function to withdraw all items from a player's plot
 local function withdrawAllItems(player)
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player)
 	if not session then
 		warn("Data session not found for", player.Name)
 		return false
