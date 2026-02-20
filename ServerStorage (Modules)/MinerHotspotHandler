@@ -2,114 +2,50 @@ local RepStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local Players = game:GetService("Players")
 
+-- MODULES
+local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
+
 local MinerHotspotHandler = {}
 
 -- Define all miner hotspots
 MinerHotspotHandler.HotspotConfigs = {
-	[1] = {
-		Id = 1,
-		MinerName = "Iron Mine 1",
-		Cost = 4, -- Free starter mine
-		Description = "",
-	},
-	[2] = {
-		Id = 2,
-		MinerName = "Iron Mine 2",
-		Cost = 10,
-		Description = "",
-	},
-	[3] = {
-		Id = 3,
-		MinerName = "Copper Mine 1",
-		Cost = 1,
-		Description = "",
-	},
-	[4] = {
-		Id = 4,
-		MinerName = "Copper Mine 2",
-		Cost = 15,
-		Description = "",
-	},
-	[5] = {
-		Id = 5,
-		MinerName = "Iron Mine 3",
-		Cost = 110,
-		Description = "",
-	},
-	[6] = {
-		Id = 6,
-		MinerName = "Copper Mine 3",
-		Cost = 200,
-		Description = "",
-	},
-	[7] = {
-		Id = 7,
-		MinerName = "Gold Mine 2",
-		Cost = 90,
-		Description = "",
-	},
-	[8] = {
-		Id = 8,
-		MinerName = "Gold Mine 3",
-		Cost = 220,
-		Description = "",
-	},
-	[9] = {
-		Id = 9,
-		MinerName = "Iron Mine 4",
-		Cost = 0,
-		Description = "",
-	},
-	[10] = {
-		Id = 10,
-		MinerName = "Iron Mine 5",
-		Cost = 0,
-		Description = "",
-	},
-	[11] = {
-		Id = 11,
-		MinerName = "Copper Mine 4",
-		Cost = 27,
-		Description = "",
-	},
-	[12] = {
-		Id = 12,
-		MinerName = "Gold Mine 1",
-		Cost = 1,
-		Description = "",
-	}
+	[1] = {Id = 1, MinerName = "Iron Mine 1", Cost = 4, Description = ""},
+	[2] = {Id = 2, MinerName = "Iron Mine 2", Cost = 10, Description = ""},
+	[3] = {Id = 3, MinerName = "Copper Mine 1", Cost = 1, Description = ""},
+	[4] = {Id = 4, MinerName = "Copper Mine 2", Cost = 15, Description = ""},
+	[5] = {Id = 5, MinerName = "Iron Mine 3", Cost = 110, Description = ""},
+	[6] = {Id = 6, MinerName = "Copper Mine 3", Cost = 200, Description = ""},
+	[7] = {Id = 7, MinerName = "Gold Mine 2", Cost = 90, Description = ""},
+	[8] = {Id = 8, MinerName = "Gold Mine 3", Cost = 220, Description = ""},
+	[9] = {Id = 9, MinerName = "Iron Mine 4", Cost = 0, Description = ""},
+	[10] = {Id = 10, MinerName = "Iron Mine 5", Cost = 0, Description = ""},
+	[11] = {Id = 11, MinerName = "Copper Mine 4", Cost = 27, Description = ""},
+	[12] = {Id = 12, MinerName = "Gold Mine 1", Cost = 1, Description = ""}
 }
 
--- Initialize player's hotspot data
+-- Initialize player's hotspot data in the Module
 function MinerHotspotHandler.InitializePlayer(player)
-	-- Check if global data exists
-	if not _G["global_data"] then
-		warn("_G['global_data'] does not exist!")
+	local session = PlayerSession.Get(player.Name)
+	if not session then
+		warn("Player data session not found for", player.Name)
 		return false
 	end
 
-	if not _G["global_data"][player.Name] then
-		warn("_G['global_data'][" .. player.Name .. "] does not exist! Player data not loaded.")
-		return false
-	end
-
-	if not _G["global_data"][player.Name]["MinerHotspots"] then
-		print("Initializing MinerHotspots data for", player.Name)
-		_G["global_data"][player.Name]["MinerHotspots"] = {
+	-- Check if MinerHotspots table exists in the session
+	if not session["MinerHotspots"] then
+		session["MinerHotspots"] = {
 			UnlockedHotspots = {},
 		}
 	end
-
 	return true
 end
 
 -- Check if a hotspot is unlocked
 function MinerHotspotHandler.IsHotspotUnlocked(player, hotspotId)
-	if not MinerHotspotHandler.InitializePlayer(player) then
-		return false
-	end
+	if not MinerHotspotHandler.InitializePlayer(player) then return false end
+	local session = PlayerSession.Get(player.Name)
 
-	return table.find(_G["global_data"][player.Name]["MinerHotspots"].UnlockedHotspots, hotspotId) ~= nil
+	return table.find(session["MinerHotspots"].UnlockedHotspots, hotspotId) ~= nil
 end
 
 -- Unlock a hotspot
@@ -118,49 +54,36 @@ function MinerHotspotHandler.UnlockHotspot(player, hotspotId)
 		return false, "Player data not loaded"
 	end
 
+	local session = PlayerSession.Get(player.Name)
 	local config = MinerHotspotHandler.HotspotConfigs[hotspotId]
-	if not config then
-		warn("Hotspot", hotspotId, "not found in config!")
-		return false, "Invalid hotspot"
-	end
+	if not config then return false, "Invalid hotspot" end
 
-	-- Check if already unlocked
 	if MinerHotspotHandler.IsHotspotUnlocked(player, hotspotId) then
 		return false, "Already unlocked"
 	end
 
-	-- Check if player has enough research tokens
 	if player.ResearchTokens.Value < config.Cost then
 		return false, "Not enough tokens"
 	end
 
-	-- Deduct tokens and unlock
-	player.ResearchTokens.Value = player.ResearchTokens.Value - config.Cost
-	table.insert(_G["global_data"][player.Name]["MinerHotspots"].UnlockedHotspots, hotspotId)
+	-- Deduct tokens and update module table
+	player.ResearchTokens.Value -= config.Cost
+	table.insert(session["MinerHotspots"].UnlockedHotspots, hotspotId)
 
-	print(player.Name, "unlocked hotspot", hotspotId)
-
-	-- Activate the miner at this hotspot
+	-- Activate the miner
 	MinerHotspotHandler.ActivateHotspot(player, hotspotId)
-
 	return true
 end
 
 -- Activate a hotspot (spawn the real miner)
 function MinerHotspotHandler.ActivateHotspot(player, hotspotId)
 	local plot = player.SetPlot.Value
-	if not plot then 
-		warn("No plot for", player.Name)
-		return 
-	end
+	if not plot then return end
 
 	local hotspotFolder = plot:FindFirstChild("MinerHotspots")
-	if not hotspotFolder then 
-		warn("No MinerHotspots folder in plot")
-		return 
-	end
+	if not hotspotFolder then return end
 
-	-- Find the hotspot model
+	-- Find the specific hotspot model in the plot
 	local hotspot = nil
 	for _, h in pairs(hotspotFolder:GetChildren()) do
 		if h:FindFirstChild("HotspotId") and h.HotspotId.Value == hotspotId then
@@ -169,51 +92,31 @@ function MinerHotspotHandler.ActivateHotspot(player, hotspotId)
 		end
 	end
 
-	if not hotspot then
-		warn("Hotspot", hotspotId, "not found in plot!")
-		return
-	end
+	if not hotspot then return end
 
 	local config = MinerHotspotHandler.HotspotConfigs[hotspotId]
 	local minerModel = RepStorage.Items:FindFirstChild(config.MinerName)
+	if not minerModel then return end
 
-	if not minerModel then
-		warn("Miner", config.MinerName, "not found!")
-		return
-	end
-
-	-- Clone the miner and place it at the hotspot
+	-- Clone and set permanent attributes
 	local activeMiner = minerModel:Clone()
-
-	-- MARK AS HOTSPOT MINER (permanent, can't be moved/sold)
 	activeMiner:SetAttribute("HotspotMiner", true)
 	activeMiner:SetAttribute("HotspotId", hotspotId)
 
-	-- IMPORTANT: Set PrimaryPart to Hitbox
 	if activeMiner:FindFirstChild("Hitbox") then
 		activeMiner.PrimaryPart = activeMiner.Hitbox
 	end
 
 	local positionPart = hotspot:FindFirstChild("Position")
-
 	if positionPart then
 		activeMiner:SetPrimaryPartCFrame(positionPart.CFrame)
 	end
 
-	-- MUST parent BEFORE adding layer info
 	activeMiner.Parent = plot.PlacedItems
 
-	-- Add/Update layer info - ALWAYS set it even if it exists
+	-- Handle Layering Stats
 	if activeMiner:FindFirstChild("ItemStats") then
 		local itemStats = require(activeMiner.ItemStats)
-
-		-- Remove old layer values if they exist
-		local oldLayer = activeMiner:FindFirstChild("PlacementLayer")
-		if oldLayer then oldLayer:Destroy() end
-		local oldLayers = activeMiner:FindFirstChild("PlacementLayers")
-		if oldLayers then oldLayers:Destroy() end
-
-		-- Create new layer values
 		local layerValue = Instance.new("IntValue", activeMiner)
 		layerValue.Name = "PlacementLayer"
 
@@ -222,45 +125,33 @@ function MinerHotspotHandler.ActivateHotspot(player, hotspotId)
 			local layersString = Instance.new("StringValue", activeMiner)
 			layersString.Name = "PlacementLayers"
 			layersString.Value = table.concat(itemStats.PlacementLayer, ",")
-			print("Set multi-layer:", layersString.Value)
 		else
 			layerValue.Value = itemStats.PlacementLayer or 1
-			print("Set single layer:", layerValue.Value)
 		end
 	end
 
-	-- Make sure Hitbox is configured properly for collision detection
+	-- Collision Configuration
 	if activeMiner.PrimaryPart then
 		activeMiner.PrimaryPart.Transparency = 1
 		activeMiner.PrimaryPart.CanCollide = false
 		activeMiner.PrimaryPart.Anchored = true
 	end
-	
-	-- Apply miner speed upgrades
+
+	-- Apply Speed Upgrades (Keeping _G here for the global function)
 	if _G.ApplyMinerUpgradesToItem then
 		_G.ApplyMinerUpgradesToItem(player, activeMiner)
-		print("Applied speed upgrades to hotspot miner:", config.MinerName)
 	end
-	-- Enable scripts
+
+	-- Wake up miner scripts
 	for _, descendant in pairs(activeMiner:GetDescendants()) do
 		if descendant:IsA("Script") then
 			descendant.Disabled = descendant:FindFirstChild("ForceDisabled")
 		end
 	end
 
-	-- Hide the ghost miner and buy button
-	local ghostMiner = hotspot:FindFirstChild("GhostMiner")
-	if ghostMiner then
-		ghostMiner:Destroy()
-	end
-
-	local buyButton = hotspot:FindFirstChild("BuyButton")
-	if buyButton then
-		buyButton:Destroy()
-	end
-
-	print("Activated hotspot", hotspotId, "for", player.Name)
-	print("Miner placed at:", activeMiner:GetPrimaryPartCFrame())
+	-- Cleanup Ghost visuals
+	if hotspot:FindFirstChild("GhostMiner") then hotspot.GhostMiner:Destroy() end
+	if hotspot:FindFirstChild("BuyButton") then hotspot.BuyButton:Destroy() end
 end
 
 -- Get player's hotspot data
@@ -268,8 +159,8 @@ function MinerHotspotHandler.GetPlayerHotspots(player)
 	if not MinerHotspotHandler.InitializePlayer(player) then
 		return {UnlockedHotspots = {}}
 	end
-
-	return _G["global_data"][player.Name]["MinerHotspots"]
+	local session = PlayerSession.Get(player.Name)
+	return session["MinerHotspots"]
 end
 
 return MinerHotspotHandler
