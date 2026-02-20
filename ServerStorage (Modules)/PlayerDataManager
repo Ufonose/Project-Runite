@@ -64,6 +64,7 @@ function PlayerDataManager.Load(player)
 
 	if profile ~= nil then
 		profile:Reconcile()
+		profile:AddUserId(player.UserId)
 
 		profile.OnSessionEnd:Connect(function()
 			ActiveProfiles[player.UserId] = nil -- FIXED: keyed by UserId
@@ -88,6 +89,10 @@ function PlayerDataManager.Remove(player)
 		profile:EndSession()
 		ActiveProfiles[player.UserId] = nil -- FIXED: keyed by UserId
 	end
+end
+
+function PlayerDataManager.GetProfile(player)
+	return ActiveProfiles[player.UserId]
 end
 
 return PlayerDataManager
