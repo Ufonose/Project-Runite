@@ -3,22 +3,31 @@
 local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
 
+-- MODULES
+local PlayerSession = require(ServerStorage.Modules.PlayerDataManager) -- Added
 local FurnaceHotspotHandler = require(ServerStorage.Modules.FurnaceHotspotHandler)
 
 print("=== FURNACE HOTSPOT SERVER STARTING ===")
 
 -- Initialize player's furnace hotspot when they join
 local function InitializePlayerFurnaceHotspot(player)
-	-- Wait for DataLoaded
+	-- 1. Wait for DataLoaded (Signal from PlayerDataHandler)
 	local dataLoaded = player:WaitForChild("DataLoaded", 30)
 	if not dataLoaded then
 		warn("DataLoaded not found for", player.Name)
 		return
 	end
 
+	-- 2. Ensure Session Data is available in our new module
+	local session = PlayerSession.Get(player.Name)
+	if not session then
+		warn("Session data not found in PlayerDataManager for", player.Name)
+		return
+	end
+
 	print("Player data loaded for", player.Name, "- initializing furnace hotspot")
 
-	-- Wait for SetPlot
+	-- 3. Wait for SetPlot
 	local setPlot = player:WaitForChild("SetPlot", 10)
 	if not setPlot or not setPlot.Value then
 		warn("SetPlot not found for", player.Name)
@@ -36,30 +45,39 @@ local function InitializePlayerFurnaceHotspot(player)
 	print("Found FurnaceHotspot folder for", player.Name)
 
 	-- ALWAYS activate the furnace hotspot (it's auto-unlocked)
+	-- Note: Ensure FurnaceHotspotHandler is also updated to use PlayerDataManager!
 	if FurnaceHotspotHandler.IsHotspotUnlocked(player) then
 		print("Auto-activating furnace hotspot for", player.Name)
 		FurnaceHotspotHandler.ActivateHotspot(player)
 	else
 		-- This shouldn't happen since it's always unlocked, but just in case
-		warn("Furnace hotspot not unlocked for", player.Name, "- this is unexpected!")
-		-- Force unlock and activate
-		if _G["global_data"] and _G["global_data"][player.Name] then
-			_G["global_data"][player.Name]["FurnaceHotspot"] = {Unlocked = true}
-			FurnaceHotspotHandler.ActivateHotspot(player)
+		warn("Furnace hotspot not unlocked for", player.Name, "- force unlocking...")
+
+		-- Use our NEW Module instead of _G
+		if not session["UnlockedBarriers"] then
+			session["UnlockedBarriers"] = {}
 		end
+		session["UnlockedBarriers"]["FurnaceHotspot"] = true
+
+		FurnaceHotspotHandler.ActivateHotspot(player)
 	end
 end
 
 -- Initialize furnace hotspot for players when they join
 Players.PlayerAdded:Connect(function(player)
-	-- Wait for character
 	player.CharacterAdded:Connect(function()
-		-- Initialize furnace hotspot (waits for data internally)
 		task.spawn(function()
 			InitializePlayerFurnaceHotspot(player)
 		end)
 	end)
 end)
+
+-- Handle players already in the server (Studio testing)
+for _, player in pairs(Players:GetPlayers()) do
+	task.spawn(function()
+		InitializePlayerFurnaceHotspot(player)
+	end)
+end
 
 print("FurnaceHotspotServer loaded!")
 print("=== FURNACE HOTSPOT SERVER READY ===")
