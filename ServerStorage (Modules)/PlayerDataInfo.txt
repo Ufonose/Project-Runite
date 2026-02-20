@@ -34,14 +34,6 @@ PLAYER_DATA.SIMPLE_VALS = {
 		["VALUE_TYPE"] = "StringValue",
 		["DEFAULT"] = "Newest",
 	},
-	["Citrine"] = {
-		["VALUE_TYPE"] = "NumberValue",
-		["DEFAULT"] = 0,
-	},
-	["KnowledgePoints"] = {
-		["VALUE_TYPE"] = "NumberValue",
-		["DEFAULT"] = 0,
-	},
 	["ResearchTokens"] = {
 		["VALUE_TYPE"] = "NumberValue",
 		["DEFAULT"] = 0,
