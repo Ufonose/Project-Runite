@@ -19,7 +19,7 @@ local function InitializePlayerFurnaceHotspot(player)
 	end
 
 	-- 2. Ensure Session Data is available in our new module
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player)
 	if not session then
 		warn("Session data not found in PlayerDataManager for", player.Name)
 		return
@@ -65,10 +65,8 @@ end
 
 -- Initialize furnace hotspot for players when they join
 Players.PlayerAdded:Connect(function(player)
-	player.CharacterAdded:Connect(function()
-		task.spawn(function()
-			InitializePlayerFurnaceHotspot(player)
-		end)
+	task.spawn(function()
+		InitializePlayerFurnaceHotspot(player) -- ✅ correct name
 	end)
 end)
 
