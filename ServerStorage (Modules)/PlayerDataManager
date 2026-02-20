@@ -72,8 +72,10 @@ function PlayerDataManager.Load(player)
 		profile:AddUserId(player.UserId)
 
 		profile.OnSessionEnd:Connect(function()
-			ActiveProfiles[player.UserId] = nil -- FIXED: keyed by UserId
-			player:Kick("Data session ended - your progress has been saved.")
+			ActiveProfiles[player.UserId] = nil
+			if player.Parent == game:GetService("Players") then
+				player:Kick("Data session ended - your progress has been saved.")
+			end
 		end)
 
 		if player.Parent == game:GetService("Players") then
@@ -91,8 +93,7 @@ end
 function PlayerDataManager.Remove(player)
 	local profile = ActiveProfiles[player.UserId]
 	if profile then
-		profile:EndSession()
-		ActiveProfiles[player.UserId] = nil -- FIXED: keyed by UserId
+		profile:EndSession() -- OnSessionEnd handles the nil cleanup
 	end
 end
 
