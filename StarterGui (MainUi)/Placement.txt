@@ -65,7 +65,7 @@ function module.LOAD(MODULE_INFO)
 
 			-- Find Conv and ConvSlope parts (SKIP ConvMerge!)
 			for _, descendant in pairs(ITEM:GetDescendants()) do
-				if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope" or descendant.Name == "SideBeam") then
+				if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope" or descendant.Name == "SideBeam" or descendant.Name == "SideStuck") then
 					-- Skip ConvMerge parts (they should never flip)
 					if descendant.Name == "ConvMerge" then
 						print("Skipping ConvMerge - cannot flip direction")
