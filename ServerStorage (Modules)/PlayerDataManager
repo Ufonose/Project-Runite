@@ -47,7 +47,7 @@ local DATA_TEMPLATE = {
 	}
 }
 
-local PlayerStore = ProfileStore.New("Runite_vb4", DATA_TEMPLATE)
+local PlayerStore = ProfileStore.New("Runite_v4", DATA_TEMPLATE)
 local ActiveProfiles = {} -- FIXED: now keyed by UserId (number)
 
 -- ============================================================
