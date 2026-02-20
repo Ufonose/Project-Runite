@@ -1,0 +1,104 @@
+-- ServerScriptService/ConveyorManagerUnstuck
+local RunService = game:GetService("RunService")
+
+local conveyorParts = {}
+
+-- Find the root item model that holds the ConveyorReversed attribute
+local function getRootItem(part)
+	local ancestor = part.Parent
+	while ancestor and ancestor ~= workspace do
+		if ancestor:IsA("Model") and ancestor:GetAttribute("ConveyorReversed") ~= nil then
+			return ancestor
+		end
+		ancestor = ancestor.Parent
+	end
+	return nil
+end
+
+local function getSpeed(data)
+	local baseSpeed = data.baseSpeed
+	if data.rootItem and data.rootItem:GetAttribute("ConveyorReversed") == true then
+		return -baseSpeed
+	end
+	return baseSpeed
+end
+
+local function registerConveyor(conveyorPart)
+	if conveyorPart.Name == "ConvMerge" or conveyorPart.Name == "SideStuckMerge" then
+		conveyorPart:SetAttribute("NoFlip", true)
+	end
+
+	local speedValue = conveyorPart:FindFirstChild("ConvVelo")
+	local baseSpeed = 7
+	if speedValue and speedValue:IsA("ValueBase") then
+		baseSpeed = math.abs(speedValue.Value)
+	elseif conveyorPart:GetAttribute("Speed") then
+		baseSpeed = math.abs(conveyorPart:GetAttribute("Speed"))
+	end
+
+	table.insert(conveyorParts, {
+		part = conveyorPart,
+		baseSpeed = baseSpeed,
+		rootItem = getRootItem(conveyorPart), -- Cached once, never walked again
+	})
+end
+
+local function unregisterConveyor(conveyorPart)
+	for i, data in ipairs(conveyorParts) do
+		if data.part == conveyorPart then
+			table.remove(conveyorParts, i)
+			break
+		end
+	end
+end
+
+for _, plot in pairs(workspace.Plots:GetChildren()) do
+	for _, descendant in pairs(plot:GetDescendants()) do
+		if descendant:IsA("BasePart") and (descendant.Name == "SideStuck" or descendant.Name == "SideStuckMerge") then
+			registerConveyor(descendant)
+		end
+	end
+end
+
+workspace.DescendantAdded:Connect(function(descendant)
+	if descendant:IsA("BasePart") and (descendant.Name == "SideStuck" or descendant.Name == "SideStuckMerge") then
+		task.wait(0.1)
+		registerConveyor(descendant)
+	end
+end)
+
+workspace.DescendantRemoving:Connect(function(descendant)
+	if descendant:IsA("BasePart") and (descendant.Name == "SideStuck" or descendant.Name == "SideStuckMerge") then
+		unregisterConveyor(descendant)
+	end
+end)
+
+local updateCounter = 0
+RunService.Heartbeat:Connect(function()
+	updateCounter = updateCounter + 1
+	if updateCounter >= 2 then
+		updateCounter = 0
+
+		for _, data in ipairs(conveyorParts) do
+			local part = data.part
+			if part and part.Parent then
+				local speed = getSpeed(data)
+
+				local forwardVelo = part.CFrame.LookVector * speed
+
+				part.AssemblyLinearVelocity = forwardVelo
+
+				local touching = part:GetTouchingParts()
+				for _, hit in pairs(touching) do
+					if hit.Name == "Ore" or hit:GetAttribute("IsOre") then
+						if hit:CanSetNetworkOwnership() then
+							hit:SetNetworkOwner(nil)
+						end
+					end
+				end
+			end
+		end
+	end
+end)
+
+print("Conveyor Manager Unstuck (Classic Mode) loaded! Managing", #conveyorParts, "parts.")
