@@ -1,25 +1,25 @@
+-- ReplicatedStorage/Modules/MainLib
+
 -- Services
 local RepStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+
 -- Modules
 local ITEM_HANDLING = require(RepStorage.Modules.ItemHandler)
 local TIER_HANDLER = require(RepStorage.Modules.TierHandler)
 
--- MainLib
 local module = {}
 
 function module.SET_PLOT(Plr)
-	-- Variables
-	-- Arrays
 	local OPEN_PLOTS = {}
-	-- Objects
 	local PLOTS = workspace.Plots
-	-- Get the Open Plots
+
 	for I, PLOT in pairs(PLOTS:GetChildren()) do
 		if PLOT.Owner.Value == "Empty Plot" then
-			OPEN_PLOTS[#OPEN_PLOTS+1] = PLOT
+			OPEN_PLOTS[#OPEN_PLOTS + 1] = PLOT
 		end
 	end
-	-- Choose a random plot if there is more than one, if not then return that one plot's name.
+
 	if #OPEN_PLOTS == 1 then
 		return OPEN_PLOTS[1]
 	else
@@ -28,19 +28,56 @@ function module.SET_PLOT(Plr)
 end
 
 function module.CLEAR_PLOT(Plr)
-	-- Objects
-	local PLOTS = workspace.Plots
 	local REAL_PLOT = Plr.SetPlot.Value
-	-- Clear the owner of the plot
+
+	-- Clear owner
 	REAL_PLOT.Owner.Value = "Empty Plot"
-	-- Clear Placed Items
+
+	-- Clear placed items
 	REAL_PLOT.PlacedItems:ClearAllChildren()
-	-- Clear Misc Info (Ores etc.)
+
+	-- Clear misc info (ores, etc.)
 	for I, MISC_INFO in pairs(REAL_PLOT.MiscInfo:GetChildren()) do
 		MISC_INFO:ClearAllChildren()
 	end
-	-- Now it's done, tell the game it's cleared!
-	warn(Plr.Name.." PLOT HAS BEEN CLEARED, SUCCESS!")
+
+	-- ============================================================
+	-- RESTORE CaveUnlocks and MinerHotspots from the saved template
+	-- This ensures the next player gets a fully intact plot
+	-- ============================================================
+	local plotTemplates = ServerStorage:FindFirstChild("PlotTemplates")
+
+	if plotTemplates then
+		local template = plotTemplates:FindFirstChild(REAL_PLOT.Name)
+
+		if template then
+			-- Restore CaveUnlocks
+			local caveTemplate = template:FindFirstChild("CaveUnlocks")
+			if caveTemplate then
+				local existing = REAL_PLOT:FindFirstChild("CaveUnlocks")
+				if existing then
+					existing:Destroy()
+				end
+				caveTemplate:Clone().Parent = REAL_PLOT
+			end
+
+			-- Restore MinerHotspots
+			local hotspotTemplate = template:FindFirstChild("MinerHotspots")
+			if hotspotTemplate then
+				local existing = REAL_PLOT:FindFirstChild("MinerHotspots")
+				if existing then
+					existing:Destroy()
+				end
+				hotspotTemplate:Clone().Parent = REAL_PLOT
+			end
+		else
+			warn("No PlotTemplate found for plot:", REAL_PLOT.Name)
+		end
+	else
+		warn("PlotTemplates folder not found in ServerStorage!")
+	end
+
+	warn(Plr.Name .. " PLOT HAS BEEN CLEARED, SUCCESS!")
 end
 
 function module.ITEM_FROM_ID(ITEM_ID)
@@ -59,7 +96,7 @@ function module.GET_ITEM_TIER_INFO(ITEM_NAME)
 		if TIER_DATA["TIER_ID"] == ITEM_TIER_ID then
 			return TIER_NAME, TIER_DATA
 		end
-	end 
+	end
 end
 
 return module
