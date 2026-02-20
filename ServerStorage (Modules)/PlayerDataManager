@@ -3,27 +3,51 @@ local ProfileStore = require(ServerStorage.Modules.ProfileStore)
 
 local PlayerDataManager = {}
 
--- 1. DATA TEMPLATE (Following all safety warnings)
+-- 1. DATA TEMPLATE (Fully reconciled with UpgradesData and Settings)
 local DATA_TEMPLATE = {
 	Money = 400,
 	ResearchTokens = 0,
-	Items = {}, -- Correct: ["3"] = {Amount = 1, Unlocked = true}
+	Items = {},
+	PlotItemPlaced = {},
+
+	-- Player Stats
+	Rebirth = 0,
+	InvSort = "Newest",
+
+	-- Settings
+	settingHideResearch = false,
+	settingMinesActive = true,
+	settingNotificationSounds = true,
+	settingOreLimit = 250,
+	settingUISounds = true,
+
+	-- Upgrades
 	Upgrades = {
-		["ConveyorSpeed"] = 0,
 		["IronMineSpeed"] = 0,
 		["CopperMineSpeed"] = 0,
 		["GoldMineSpeed"] = 0,
+		["ConveyorSpeed"] = 0,
+		["CashBonus"] = 0,
+		["GemDiscovery"] = 0,
+		["DoubleDropChance"] = 0,
+		["MovementSpeed"] = 0,
 	},
+
+	-- Research
 	Research = {
-		["CompletedObjectives"] = {}, -- List of strings/IDs
-		["ActiveObjectives"] = {},    -- List of strings/IDs
-		["ObjectiveProgress"] = {},   -- ["Obj1"] = { ["Iron"] = 10 }
-		["ItemsCollected"] = {},      -- ["Iron"] = 500
+		["CompletedObjectives"] = {},
+		["ActiveObjectives"] = {},
+		["ObjectiveProgress"] = {},
+		["ItemsCollected"] = {},
 	}
 }
 
-local PlayerStore = ProfileStore.New("Runite_v2", DATA_TEMPLATE)
+local PlayerStore = ProfileStore.New("Runite_vb2", DATA_TEMPLATE)
 local ActiveProfiles = {}
+
+-- ============================================================
+-- CORE FUNCTIONS
+-- ============================================================
 
 function PlayerDataManager.Get(playerName)
 	local profile = ActiveProfiles[playerName]
@@ -38,11 +62,12 @@ function PlayerDataManager.Load(player)
 	})
 
 	if profile ~= nil then
-		profile:Reconcile() -- Fixes missing keys if you update the template
+		-- Automatically fills in missing keys (like new Upgrades) for existing players
+		profile:Reconcile() 
 
 		profile.OnSessionEnd:Connect(function()
 			ActiveProfiles[player.Name] = nil
-			player:Kick("Data session ended.")
+			player:Kick("Data session ended - your progress has been saved.")
 		end)
 
 		if player.Parent == game:GetService("Players") then
@@ -52,7 +77,7 @@ function PlayerDataManager.Load(player)
 			profile:EndSession()
 		end
 	else
-		player:Kick("Failed to load data.")
+		player:Kick("Failed to load data. Please rejoin.")
 	end
 end
 
