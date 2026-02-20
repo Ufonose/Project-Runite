@@ -2,40 +2,24 @@
 local RepStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local Plrs = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
 
 -- Modules
 local DATA_FUNCTION_HANDLING = require(ServerStorage.Modules.DataHandling)
 local PLAYER_DATA_INFO = require(ServerStorage.Modules.PlayerDataInfo)
 local CASH_LIB = require(RepStorage.Modules.CashLib)
 local MainLib = require(RepStorage.Modules.MainLib)
-
--- OUR NEW MODULE (ProfileStore Powered)
 local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
 
--- This function is now just for PREPARING data before a session ends
+-- Final plot capture before session ends
+-- NOTE: Simple values, settings, and cash are already kept in sync
+-- via .Changed connectors set up during LOAD_DATA, so no need to re-copy them here.
+-- PlotItemPlaced is also captured by OnSave on every auto-save,
+-- but we do one final capture here as a safety net in case the plot
+-- changed between the last auto-save and the player leaving.
 local function PREPARE_FINAL_SAVE(Plr)
 	local session = PlayerSession.Get(Plr)
 	if not session then return end
 
-	-- 1. Save Basic Values into Session
-	for val_name, _ in pairs(PLAYER_DATA_INFO.SIMPLE_VALS) do
-		local val_obj = Plr:FindFirstChild(val_name)
-		if val_obj then session[val_name] = val_obj.Value end
-	end
-
-	-- 2. Save Settings into Session
-	for val_name, _ in pairs(PLAYER_DATA_INFO.SETTINGS_VALUES) do
-		if val_name == "MinesActive" then continue end
-		local val_obj = Plr.Settings:FindFirstChild(val_name)
-		if val_obj then session["setting"..val_name] = val_obj.Value end
-	end
-
-	-- 3. Save Cash into Session
-	local plr_cash = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
-	if plr_cash then session["Money"] = plr_cash.Value end
-
-	-- 4. Save Plot
 	session["PlotItemPlaced"] = DATA_FUNCTION_HANDLING.UNLOAD_PLOT(Plr)
 end
 
@@ -45,9 +29,10 @@ local function LOAD_DATA(Plr)
 	loadingTag.Name = "Loading"
 
 	-- 1. Start ProfileStore Session
-	local session = PlayerSession.Load(Plr) 
+	local session = PlayerSession.Load(Plr)
 	if not session then return end
-	
+
+	-- Capture plot on every auto-save
 	local profile = PlayerSession.GetProfile(Plr)
 	if profile then
 		profile.OnSave:Connect(function()
@@ -71,20 +56,18 @@ local function LOAD_DATA(Plr)
 		local v = Instance.new(val_data["VALUE_TYPE"] or "BoolValue", settingsFolder)
 		v.Name = val_name
 
-		-- FIX: Check if the value exists in the session first (even if it's false)
 		local savedValue = session["setting"..val_name]
 
 		if val_name == "MinesActive" then
 			v.Value = true
 		elseif savedValue ~= nil then
-			v.Value = savedValue -- This correctly picks up "false" (Off)
+			v.Value = savedValue
 		else
 			v.Value = val_data["DEFAULT"]
 		end
 
-		-- Sync changes immediately
-		v.Changed:Connect(function(newVal) 
-			session["setting"..val_name] = newVal 
+		v.Changed:Connect(function(newVal)
+			session["setting"..val_name] = newVal
 		end)
 	end
 
@@ -113,13 +96,13 @@ local function LOAD_DATA(Plr)
 	local plot_table = session["PlotItemPlaced"] or {}
 	DATA_FUNCTION_HANDLING.LOAD_PLOT(Plr, plot_table)
 
-	-- 7. Leaderstats Setup (Visualizing Money as Cash)
+	-- 7. Leaderstats Setup
 	local ls = Instance.new("Folder", Plr); ls.Name = "leaderstats"
 	local cStat = Instance.new("StringValue", ls); cStat.Name = "Cash"
 	local rStat = Instance.new("StringValue", ls); rStat.Name = "Rebirths"
 
 	local function updateVisuals()
-		session["Money"] = plr_cash.Value 
+		session["Money"] = plr_cash.Value
 		cStat.Value = "$" .. CASH_LIB.SUFFIX_NUM(plr_cash.Value)
 		local rb = Plr:FindFirstChild("Rebirth")
 		rStat.Value = tostring(rb and (rb.Value + 1) or 1)
@@ -132,7 +115,7 @@ local function LOAD_DATA(Plr)
 	-- 8. Final Completion Signal
 	local dsTag = Instance.new("BoolValue")
 	dsTag.Name = "DataLoaded"
-	dsTag.Parent = Plr 
+	dsTag.Parent = Plr
 
 	loadingTag:Destroy()
 	print("✅ LOAD_DATA finalized for " .. Plr.Name)
@@ -146,7 +129,7 @@ Plrs.PlayerRemoving:Connect(function(Plr)
 	local c = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
 	if c then c:Destroy() end
 
-	PlayerSession.Remove(Plr) -- This calls EndSession() which saves to DB
+	PlayerSession.Remove(Plr)
 end)
 
 Plrs.PlayerAdded:Connect(LOAD_DATA)
@@ -159,7 +142,6 @@ game:BindToClose(function()
 			PlayerSession.Remove(plr)
 		end))
 	end
-	-- Wait for all threads to finish before server closes
 	for _, thread in ipairs(threads) do
 		repeat task.wait() until coroutine.status(thread) == "dead"
 	end
