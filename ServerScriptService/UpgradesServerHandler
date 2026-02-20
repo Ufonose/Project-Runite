@@ -19,7 +19,7 @@ local MinerUpgradeApplier = require(ServerStorage:WaitForChild("Modules"):WaitFo
 
 -- Helper to get player upgrades from the module session
 local function GetPlayerUpgrades(player)
-	local session = PlayerSession.Get(player.Name)
+	local session = PlayerSession.Get(player)
 	if not session then
 		warn("Player data not loaded in module for", player.Name)
 		return {}
@@ -77,7 +77,7 @@ if BuyUpgradeRemote then
 		local upgradeData = UpgradesData.Upgrades[upgradeId]
 		if not upgradeData then return false end
 
-		local session = PlayerSession.Get(player.Name)
+		local session = PlayerSession.Get(player)
 		if not session then return false end
 
 		local upgrades = GetPlayerUpgrades(player)
