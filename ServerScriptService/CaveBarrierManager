@@ -2,9 +2,12 @@
 -- Handles cave barrier unlocking with research tokens
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage") -- Added
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 
+-- MODULES
+local PlayerSession = require(ServerStorage.Modules.PlayerDataManager) -- Added
 local RemoteEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("CaveBarrierEvent")
 
 -- ============================================================================
@@ -23,20 +26,11 @@ local function getBarrierValue(barrier, valueName)
 	return nil
 end
 
-local function getPlayerPlot(player)
-	local setPlot = player:FindFirstChild("SetPlot")
-	if setPlot and setPlot:IsA("ObjectValue") and setPlot.Value then
-		return setPlot.Value
-	end
-	return nil
-end
-
 local function isBarrierUnlocked(player, barrierID)
-	if not _G["global_data"] then return false end
-	if not _G["global_data"][player.Name] then return false end
-	if not _G["global_data"][player.Name]["UnlockedBarriers"] then return false end
+	local session = PlayerSession.Get(player.Name)
+	if not session or not session["UnlockedBarriers"] then return false end
 
-	return _G["global_data"][player.Name]["UnlockedBarriers"][barrierID] == true
+	return session["UnlockedBarriers"][barrierID] == true
 end
 
 -- ============================================================================
@@ -73,31 +67,33 @@ end
 -- ============================================================================
 
 local function attemptUnlockBarrier(player, barrier)
+	local session = PlayerSession.Get(player.Name)
+	if not session then return end
+
 	local barrierID = getBarrierValue(barrier, "BarrierID")
 	local unlockCost = getBarrierValue(barrier, "UnlockCost")
 
 	if not barrierID or not unlockCost then return end
-
 	if isBarrierUnlocked(player, barrierID) then return end
 
 	local researchTokens = player:FindFirstChild("ResearchTokens")
 	if not researchTokens then return end
 
 	if researchTokens.Value < unlockCost then
-		-- FIX: Send barrierID as first parameter so client knows which GUI to update
 		RemoteEvent:FireClient(player, "InsufficientTokens", barrierID, unlockCost, researchTokens.Value)
 		return
 	end
 
+	-- Deduct Currency
 	researchTokens.Value = researchTokens.Value - unlockCost
 
-	if not _G["global_data"][player.Name]["UnlockedBarriers"] then
-		_G["global_data"][player.Name]["UnlockedBarriers"] = {}
+	-- Save to our New Module
+	if not session["UnlockedBarriers"] then
+		session["UnlockedBarriers"] = {}
 	end
-	_G["global_data"][player.Name]["UnlockedBarriers"][barrierID] = true
+	session["UnlockedBarriers"][barrierID] = true
 
 	RemoteEvent:FireClient(player, "UnlockSuccess", barrierID)
-
 	removeBarrier(barrier)
 end
 
@@ -106,7 +102,7 @@ end
 -- ============================================================================
 
 local function setupBarriersForPlayer(player)
-	local setPlot = player:WaitForChild("SetPlot", 5)
+	local setPlot = player:WaitForChild("SetPlot", 10)
 	if not setPlot then return end
 
 	local plot = setPlot.Value
@@ -115,7 +111,7 @@ local function setupBarriersForPlayer(player)
 	local caveUnlocks = plot:FindFirstChild("CaveUnlocks")
 	if not caveUnlocks then return end
 
-	-- Connect ProximityPrompts immediately
+	-- Connect ProximityPrompts
 	for _, barrier in ipairs(caveUnlocks:GetChildren()) do
 		if not barrier:IsA("Model") then continue end
 
@@ -128,7 +124,8 @@ local function setupBarriersForPlayer(player)
 		prompt.Triggered:Connect(function(triggeringPlayer)
 			if triggeringPlayer ~= player then return end
 
-			if not _G["global_data"] or not _G["global_data"][player.Name] then return end
+			-- Check if data is available in module
+			if not PlayerSession.Get(player.Name) then return end
 
 			if isBarrierUnlocked(player, barrierID) then
 				barrier:Destroy()
@@ -139,18 +136,11 @@ local function setupBarriersForPlayer(player)
 		end)
 	end
 
-	-- Wait for data, then remove unlocked barriers
+	-- Wait for data to be loaded into the module
 	local dataLoaded = player:WaitForChild("DataLoaded", 30)
 	if not dataLoaded then return end
 
-	local waited = 0
-	while (not _G["global_data"] or not _G["global_data"][player.Name]) and waited < 10 do
-		task.wait(0.1)
-		waited = waited + 0.1
-	end
-
-	if not _G["global_data"] or not _G["global_data"][player.Name] then return end
-
+	-- Immediate check for already unlocked barriers to destroy them
 	for _, barrier in ipairs(caveUnlocks:GetChildren()) do
 		if barrier:IsA("Model") then
 			local id = getBarrierValue(barrier, "BarrierID")
