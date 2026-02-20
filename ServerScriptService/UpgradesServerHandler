@@ -1,5 +1,5 @@
 -- ServerScriptService/UpgradesServerHandler.lua
--- UPDATED: Added miner speed upgrade handling
+-- UPDATED: Integrated with PlayerDataManager
 
 local RepStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -12,25 +12,28 @@ if not EventsFolder then
 end
 
 -- Load modules
+local PlayerSession = require(ServerStorage:WaitForChild("Modules"):WaitForChild("PlayerDataManager")) -- ADDED
 local UpgradesData = require(RepStorage:WaitForChild("Modules"):WaitForChild("UpgradesData"))
 local ConveyorUpgradeApplier = require(ServerStorage:WaitForChild("Modules"):WaitForChild("ConveyorUpgradeApplier"))
 local MinerUpgradeApplier = require(ServerStorage:WaitForChild("Modules"):WaitForChild("MinerUpgradeApplier"))
 
--- Helper to get player upgrades from global data
+-- Helper to get player upgrades from the module session
 local function GetPlayerUpgrades(player)
-	if not _G["global_data"] or not _G["global_data"][player.Name] then
-		warn("Player data not loaded for", player.Name)
+	local session = PlayerSession.Get(player.Name)
+	if not session then
+		warn("Player data not loaded in module for", player.Name)
 		return {}
 	end
 
-	if not _G["global_data"][player.Name]["Upgrades"] then
-		_G["global_data"][player.Name]["Upgrades"] = {}
+	-- Initialize Upgrades table if it doesn't exist in the session
+	if not session["Upgrades"] then
+		session["Upgrades"] = {}
 	end
 
-	return _G["global_data"][player.Name]["Upgrades"]
+	return session["Upgrades"]
 end
 
--- Get all player upgrades
+-- Get all player upgrades (for the UI)
 local GetPlayerUpgradesRemote = EventsFolder:FindFirstChild("GetPlayerUpgrades")
 if GetPlayerUpgradesRemote then
 	GetPlayerUpgradesRemote.OnServerInvoke = function(player)
@@ -45,17 +48,13 @@ if GetPlayerUpgradesRemote then
 
 		return upgrades
 	end
-else
-	warn("GetPlayerUpgrades RemoteFunction not found!")
 end
 
--- Get upgrades data
+-- Get upgrades data info (names, costs, icons)
 local GetUpgradesDataRemote = EventsFolder:FindFirstChild("GetUpgradesData")
 if GetUpgradesDataRemote then
 	GetUpgradesDataRemote.OnServerInvoke = function(player)
-		-- Convert upgrades data to be client-safe (no functions)
 		local clientSafeData = {}
-
 		for upgradeId, upgradeData in pairs(UpgradesData.Upgrades) do
 			clientSafeData[upgradeId] = {
 				Name = upgradeData.Name,
@@ -67,103 +66,71 @@ if GetUpgradesDataRemote then
 				SortOrder = upgradeData.SortOrder,
 			}
 		end
-
 		return clientSafeData
 	end
-else
-	warn("GetUpgradesData RemoteFunction not found!")
 end
 
--- Buy upgrade
+-- Buy upgrade logic
 local BuyUpgradeRemote = EventsFolder:FindFirstChild("BuyUpgrade")
 if BuyUpgradeRemote then
 	BuyUpgradeRemote.OnServerInvoke = function(player, upgradeId)
-		-- Validate upgrade exists
 		local upgradeData = UpgradesData.Upgrades[upgradeId]
-		if not upgradeData then
-			warn("Invalid upgrade ID:", upgradeId)
-			return false
-		end
+		if not upgradeData then return false end
 
-		-- Get current upgrades
+		local session = PlayerSession.Get(player.Name)
+		if not session then return false end
+
 		local upgrades = GetPlayerUpgrades(player)
-
-		-- Get current level
 		local currentLevel = upgrades[upgradeId] or 0
 
-		-- Check if already at max level
-		if UpgradesData.IsMaxLevel(upgradeId, currentLevel) then
-			warn("Upgrade already at max level")
-			return false
-		end
+		if UpgradesData.IsMaxLevel(upgradeId, currentLevel) then return false end
 
-		-- Calculate cost
 		local cost = UpgradesData.GetUpgradeCost(upgradeId, currentLevel)
-
-		-- Get player's cash
 		local cashValue = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(player.Name)
-		if not cashValue then
-			warn("Player cash not found!")
-			return false
-		end
 
-		local currentCash = cashValue.Value
+		if not cashValue or cashValue.Value < cost then return false end
 
-		-- Check if player can afford it
-		if currentCash < cost then
-			warn("Not enough cash. Need:", cost, "Have:", currentCash)
-			return false
-		end
-
-		-- Deduct cash
-		cashValue.Value = cashValue.Value - cost
-
-		-- Increment upgrade level
+		-- Process Purchase
+		cashValue.Value -= cost
 		local newLevel = currentLevel + 1
 		upgrades[upgradeId] = newLevel
 
-		print(player.Name, "upgraded", upgradeData.Name, "to level", newLevel)
+		-- 
+		print(player.Name .. " upgraded " .. upgradeData.Name .. " to level " .. newLevel)
 
-		-- APPLY UPGRADE TO EXISTING ITEMS
+		-- Trigger Appliers
 		if upgradeId == "ConveyorSpeed" then
-			local conveyorsUpdated = ConveyorUpgradeApplier.ApplyToPlayerPlot(player, newLevel)
-			print("Updated", conveyorsUpdated, "conveyors for", player.Name, "- New speed: base + " .. newLevel)
-
+			ConveyorUpgradeApplier.ApplyToPlayerPlot(player, newLevel)
 		elseif upgradeId == "IronMineSpeed" then
-			local minersUpdated = MinerUpgradeApplier.ApplyToPlayerPlot(player, "Iron Mine")
-			print("Updated", minersUpdated, "Iron Mines for", player.Name, "- Speed level:", newLevel)
-
+			MinerUpgradeApplier.ApplyToPlayerPlot(player, "Iron Mine")
 		elseif upgradeId == "CopperMineSpeed" then
-			local minersUpdated = MinerUpgradeApplier.ApplyToPlayerPlot(player, "Copper Mine")
-			print("Updated", minersUpdated, "Copper Mines for", player.Name, "- Speed level:", newLevel)
-
+			MinerUpgradeApplier.ApplyToPlayerPlot(player, "Copper Mine")
 		elseif upgradeId == "GoldMineSpeed" then
-			local minersUpdated = MinerUpgradeApplier.ApplyToPlayerPlot(player, "Gold Mine")
-			print("Updated", minersUpdated, "Gold Mines for", player.Name, "- Speed level:", newLevel)
-
-			-- ADD THIS NEW SECTION:
+			MinerUpgradeApplier.ApplyToPlayerPlot(player, "Gold Mine")
 		elseif upgradeId == "MovementSpeed" then
 			-- Apply walkspeed upgrade immediately
 			if _G.ApplyWalkspeedUpgrade then
 				_G.ApplyWalkspeedUpgrade(player)
-				print("Applied movement speed upgrade to", player.Name, "- New speed:", 16 + newLevel)
+			else
+				-- Fallback if global isn't ready
+				local char = player.Character
+				if char and char:FindFirstChild("Humanoid") then
+					char.Humanoid.WalkSpeed = 16 + newLevel
+				end
 			end
 		end
 
 		return true
 	end
-else
-	warn("BuyUpgrade RemoteFunction not found!")
 end
 
--- Helper function to get upgrade multiplier (used by other systems)
+-- Helper function for other server scripts
 function GetUpgradeMultiplier(player, upgradeId)
 	local upgrades = GetPlayerUpgrades(player)
 	local level = upgrades[upgradeId] or 0
 	return UpgradesData.GetUpgradeMultiplier(upgradeId, level)
 end
 
--- Expose function globally for other scripts to use
 _G.GetUpgradeMultiplier = GetUpgradeMultiplier
 
 print("Upgrades server handler loaded successfully!")
