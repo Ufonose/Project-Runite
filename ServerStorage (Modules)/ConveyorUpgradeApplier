@@ -2,6 +2,10 @@
 -- Applies conveyor speed upgrades to all conveyor types equally
 
 local RepStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+
+-- MODULES
+local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
 
 local ConveyorUpgradeApplier = {}
 
@@ -16,34 +20,25 @@ local function isConveyorPart(part)
 		part.Name == "ConvSlopeMerge"
 end
 
--- Get the base conveyor speed by finding an ACTUAL conveyor part
+-- Get the base conveyor speed by finding an ACTUAL conveyor part in ReplicatedStorage
 local function getBaseConveyorSpeed()
-	-- Return cached value if we already found it
 	if BASE_CONVEYOR_SPEED then
 		return BASE_CONVEYOR_SPEED
 	end
 
-	print("Looking for base conveyor speed by checking actual conveyor parts...")
-
-	-- Look through ALL items to find one that CONTAINS a conveyor part
 	for _, item in pairs(RepStorage.Items:GetChildren()) do
-		-- Check if this item has any conveyor parts
 		for _, descendant in pairs(item:GetDescendants()) do
 			if descendant:IsA("BasePart") and isConveyorPart(descendant) then
-				-- Found a conveyor part! Check its ConvVelo
 				local convVelo = descendant:FindFirstChild("ConvVelo")
 				if convVelo and math.abs(convVelo.Value) > 0 then
 					BASE_CONVEYOR_SPEED = math.abs(convVelo.Value)
-					print("✓ Found base conveyor speed:", BASE_CONVEYOR_SPEED, "from", descendant.Name, "in item:", item.Name)
 					return BASE_CONVEYOR_SPEED
 				end
 			end
 		end
 	end
 
-	-- Fallback default
-	BASE_CONVEYOR_SPEED = 7
-	warn("⚠ Could not find base conveyor speed, using default:", BASE_CONVEYOR_SPEED)
+	BASE_CONVEYOR_SPEED = 7 -- Default if not found
 	return BASE_CONVEYOR_SPEED
 end
 
@@ -53,7 +48,6 @@ function ConveyorUpgradeApplier.ApplyToConveyorPart(conveyorPart, upgradeLevel)
 		return false
 	end
 
-	-- Check if this is a conveyor part by name
 	if not isConveyorPart(conveyorPart) then
 		return false
 	end
@@ -65,12 +59,7 @@ function ConveyorUpgradeApplier.ApplyToConveyorPart(conveyorPart, upgradeLevel)
 
 		-- Preserve direction (positive or negative)
 		local isReversed = convVelo.Value < 0
-
-		if isReversed then
-			convVelo.Value = -newSpeed
-		else
-			convVelo.Value = newSpeed
-		end
+		convVelo.Value = isReversed and -newSpeed or newSpeed
 
 		return true
 	end
@@ -80,29 +69,20 @@ end
 
 -- Apply upgrade to all conveyors on a player's plot
 function ConveyorUpgradeApplier.ApplyToPlayerPlot(player, upgradeLevel)
-	local plot = player:FindFirstChild("SetPlot")
-	if not plot or not plot.Value then
-		warn("Player plot not found for", player.Name)
-		return 0
-	end
+	local plotVal = player:FindFirstChild("SetPlot")
+	if not plotVal or not plotVal.Value then return 0 end
 
-	local placedItems = plot.Value:FindFirstChild("PlacedItems")
-	if not placedItems then
-		warn("PlacedItems folder not found")
-		return 0
+	local placedItems = plotVal.Value:FindFirstChild("PlacedItems")
+	if not placedItems then return 0 end
+
+	-- If upgradeLevel isn't provided, fetch it from the module
+	if not upgradeLevel then
+		upgradeLevel = ConveyorUpgradeApplier.GetPlayerUpgradeLevel(player)
 	end
 
 	local conveyorsUpdated = 0
-	local baseSpeed = getBaseConveyorSpeed()
 
-	print("=== APPLYING CONVEYOR UPGRADES TO EXISTING ITEMS ===")
-	print("Base Speed:", baseSpeed)
-	print("Upgrade Level:", upgradeLevel)
-	print("Final Speed:", baseSpeed + upgradeLevel)
-
-	-- Loop through all placed items
 	for _, item in pairs(placedItems:GetChildren()) do
-		-- Check all descendants for conveyor parts
 		for _, descendant in pairs(item:GetDescendants()) do
 			if descendant:IsA("BasePart") and isConveyorPart(descendant) then
 				if ConveyorUpgradeApplier.ApplyToConveyorPart(descendant, upgradeLevel) then
@@ -112,21 +92,15 @@ function ConveyorUpgradeApplier.ApplyToPlayerPlot(player, upgradeLevel)
 		end
 	end
 
-	print("Updated", conveyorsUpdated, "conveyors")
-	print("=== UPGRADE APPLICATION COMPLETE ===")
-
 	return conveyorsUpdated
 end
 
--- Get the current conveyor upgrade level for a player
+-- Get the current conveyor upgrade level from the MODULE
 function ConveyorUpgradeApplier.GetPlayerUpgradeLevel(player)
-	if _G["global_data"] and _G["global_data"][player.Name] then
-		local upgrades = _G["global_data"][player.Name]["Upgrades"]
-		if upgrades and upgrades["ConveyorSpeed"] then
-			return upgrades["ConveyorSpeed"]
-		end
+	local session = PlayerSession.Get(player.Name)
+	if session and session["Upgrades"] then
+		return session["Upgrades"]["ConveyorSpeed"] or 0
 	end
-
 	return 0
 end
 
