@@ -1,0 +1,148 @@
+-- ServerScriptService/MinerManager.lua
+local Plrs = game:GetService("Players")
+local RepStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
+
+local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
+
+-- Settings
+local SPREAD_WIDTH = 2
+
+-- ============================================================
+-- HELPERS
+-- ============================================================
+
+local function SelectRandomOre(itemInfo, plot)
+	local dropTable = itemInfo.DropTable
+	if not dropTable or #dropTable == 0 then
+		return itemInfo.OreModelName, itemInfo.DropWorth
+	end
+
+	local gemBoostMultiplier = 1
+	local plot_owner = Plrs:FindFirstChild(plot.Owner.Value)
+	if plot_owner and _G.GetUpgradeMultiplier then
+		gemBoostMultiplier = _G.GetUpgradeMultiplier(plot_owner, "GemDiscovery")
+	end
+
+	local adjustedTable = {}
+	local commonOreChance = 0
+	local totalGemBonus = 0
+
+	for _, dropData in ipairs(dropTable) do
+		local isGem = dropData.Name:find("Gem") ~= nil
+		if isGem then
+			local boostedChance = dropData.Chance * gemBoostMultiplier
+			table.insert(adjustedTable, {Name = dropData.Name, Worth = dropData.Worth, Chance = boostedChance, IsGem = true})
+			totalGemBonus = totalGemBonus + (boostedChance - dropData.Chance)
+		else
+			commonOreChance = commonOreChance + dropData.Chance
+			table.insert(adjustedTable, {Name = dropData.Name, Worth = dropData.Worth, Chance = dropData.Chance, IsGem = false})
+		end
+	end
+
+	for i, item in ipairs(adjustedTable) do
+		if not item.IsGem then
+			local reductionRatio = (commonOreChance - totalGemBonus) / commonOreChance
+			adjustedTable[i].Chance = item.Chance * reductionRatio
+		end
+	end
+
+	local roll = math.random() * 100
+	local accumulated = 0
+	for _, dropData in ipairs(adjustedTable) do
+		accumulated = accumulated + dropData.Chance
+		if roll <= accumulated then return dropData.Name, dropData.Worth end
+	end
+	return adjustedTable[1].Name, adjustedTable[1].Worth
+end
+
+local function GetWaitTime(itemInfo, minerModel)
+	local baseMin = itemInfo.DropSpeedMin
+	local baseMax = itemInfo.DropSpeedMax
+	local upgradeLevel = minerModel:GetAttribute("SpeedUpgradeLevel") or 0
+	local speedMultiplier = 1 + (upgradeLevel * 0.05)
+	return (baseMin / speedMultiplier) + math.random() * ((baseMax / speedMultiplier) - (baseMin / speedMultiplier))
+end
+
+-- ============================================================
+-- CORE SPAWNING LOGIC
+-- ============================================================
+
+local function DropSingleOre(minerModel, itemInfo, plot, plot_owner, selectedOreName, selectedWorth)
+	local dropPart = minerModel:FindFirstChild("Drop", true) -- Recursive find
+	if not dropPart then return end
+
+	local ORE, _ = ITEM_HANDLER.DROP_ORE(
+		plot, 
+		minerModel, 
+		dropPart, 
+		Vector3.new(itemInfo.DropSize, itemInfo.DropSize, itemInfo.DropSize), 
+		itemInfo.DropColor, 
+		itemInfo.DropMaterial, 
+		selectedWorth,
+		selectedOreName
+	)
+
+	if ORE then
+		local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
+		if ORE:IsA("Model") then
+			ORE:PivotTo(ORE:GetPivot() * CFrame.new(randomX, 0, 0))
+		else
+			ORE.CFrame = ORE.CFrame * CFrame.new(randomX, 0, 0)
+		end
+
+		ORE.Parent = plot:FindFirstChild("MiscInfo") and plot.MiscInfo:FindFirstChild("OresDropped") or workspace
+		CollectionService:AddTag(ORE, "MovingOre")
+		ORE:SetAttribute("LaneOffset", (math.random(-80, 80) / 100))
+
+		-- Physics & Network Ownership
+		local target = ORE:IsA("Model") and (ORE.PrimaryPart or ORE:FindFirstChildWhichIsA("BasePart")) or ORE
+		if target and target:IsA("BasePart") then
+			target.Anchored = false
+			pcall(function() target:SetNetworkOwner(plot_owner) end)
+		end
+		if ORE:IsA("Model") then
+			for _, p in pairs(ORE:GetDescendants()) do if p:IsA("BasePart") then p.Anchored = false end end
+		end
+	end
+end
+
+-- ============================================================
+-- THE MINER LOOP
+-- ============================================================
+
+local function startMiner(miner)
+	local itemInfo = require(miner:WaitForChild("ItemStats"))
+	-- Assuming Miner is inside plot like Plot.Items.Miner
+	local plot = miner.Parent.Parent 
+
+	task.spawn(function()
+		while miner.Parent do
+			local waitTime = GetWaitTime(itemInfo, miner)
+			task.wait(waitTime)
+
+			local plot_owner = Plrs:FindFirstChild(plot.Owner.Value)
+			if plot_owner then
+				-- Global Active Check
+				if not plot_owner.Settings.MinesActive.Value then continue end
+				-- Local Pause Check
+				if miner:GetAttribute("OreLimitPaused") then continue end
+
+				local doubleDropChance = _G.GetUpgradeMultiplier and _G.GetUpgradeMultiplier(plot_owner, "DoubleDropChance") or 0
+				local isDoubleDrop = (math.random() * 100) <= doubleDropChance
+				local name, worth = SelectRandomOre(itemInfo, plot)
+
+				DropSingleOre(miner, itemInfo, plot, plot_owner, name, worth)
+				if isDoubleDrop then
+					task.wait(0.05)
+					DropSingleOre(miner, itemInfo, plot, plot_owner, name, worth)
+				end
+			end
+		end
+	end)
+end
+
+CollectionService:GetInstanceAddedSignal("Machine_Miner"):Connect(startMiner)
+for _, m in pairs(CollectionService:GetTagged("Machine_Miner")) do
+	startMiner(m)
+end
