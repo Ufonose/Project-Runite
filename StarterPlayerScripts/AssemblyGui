@@ -192,8 +192,8 @@ local pendingSelection = nil
 -- Output options
 local outputOptions = {
 	{Name = "Gear", Icon = "⚙️", Color = Color3.fromRGB(31, 35, 126)},
-	{Name = "Coil", Icon = "🔄", Color = Color3.fromRGB(31, 35, 126)},
-	{Name = "Pipe", Icon = "🔧", Color = Color3.fromRGB(31, 35, 126)},
+	{Name = "Coil", Icon = "🌀", Color = Color3.fromRGB(31, 35, 126)},
+	{Name = "Pipe", Icon = "🔩", Color = Color3.fromRGB(31, 35, 126)},
 }
 
 -- Function to create option button
