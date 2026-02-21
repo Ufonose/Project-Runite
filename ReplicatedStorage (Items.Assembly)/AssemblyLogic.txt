@@ -121,7 +121,7 @@ local function createDisplayOnScreen(screen)
 	local titleLabel = Instance.new("TextLabel")
 	titleLabel.Size = UDim2.new(1, 0, 0.3, 0)
 	titleLabel.BackgroundTransparency = 1
-	titleLabel.Text = "PLATE PROCESSOR"
+	titleLabel.Text = "COMPONENT ASSEMBLER"
 	titleLabel.TextColor3 = Color3.fromRGB(207, 207, 207)
 	titleLabel.TextSize = 60
 	titleLabel.Font = Enum.Font.GothamBold
