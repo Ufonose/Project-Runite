@@ -23,8 +23,9 @@ function module.LOAD(MODULE_INFO)
 	local MainLib = MODULES["MainLib"]
 	local INPUT = MODULES["Input"]
 	local ModernItemSelection = MODULES["ModernItemSelection"]
-	local CASH_LIB = MODULES["CashLib"]  -- For number formatting
+	local CASH_LIB = MODULES["CashLib"]
 	local SoundManager = require(RepStorage.Modules.SoundManager)
+	local UpgradesData = require(RepStorage.Modules.UpgradesData)
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
 	local Mouse = Plr:GetMouse()
@@ -39,7 +40,63 @@ function module.LOAD(MODULE_INFO)
 	module.SELECTED_COUNT = 0
 	-- Objects
 	local CURRENT_HOVER = nil
-	local FIRST_SELECTED_ITEM = nil  -- Track first selected item for anchoring
+	local FIRST_SELECTED_ITEM = nil
+
+	-- ─── GemDiscovery level cache ───────────────────────────────────────────
+	local cachedGemLevel = 0
+	local lastGemLevelFetch = 0
+	local GEM_LEVEL_CACHE_TTL = 10  -- seconds before re-fetching
+
+	local function GET_GEM_DISCOVERY_LEVEL()
+		local now = tick()
+		if (now - lastGemLevelFetch) > GEM_LEVEL_CACHE_TTL then
+			local success, result = pcall(function()
+				return RepStorage.Events.GetPlayerUpgrades:InvokeServer()
+			end)
+			if success and result then
+				cachedGemLevel = result["GemDiscovery"] or 0
+			end
+			lastGemLevelFetch = now
+		end
+		return cachedGemLevel
+	end
+
+	-- Returns a boosted copy of the DropTable with gem chances multiplied
+	-- and ore chances reduced proportionally so the display still sums to ~100%
+	local function APPLY_GEM_BOOST(dropTable)
+		local gemMultiplier = UpgradesData.GetUpgradeMultiplier("GemDiscovery", GET_GEM_DISCOVERY_LEVEL())
+
+		local boosted = {}
+		local totalGemGain = 0
+
+		for _, drop in ipairs(dropTable) do
+			local isGem = drop.Name:find("Gem") ~= nil
+			local newChance = drop.Chance
+			if isGem and gemMultiplier > 1 then
+				newChance = drop.Chance * gemMultiplier
+				totalGemGain = totalGemGain + (newChance - drop.Chance)
+			end
+			table.insert(boosted, { Name = drop.Name, Chance = newChance, IsGem = isGem })
+		end
+
+		-- Subtract the gained gem % from ore entries proportionally
+		if totalGemGain > 0 then
+			local totalOreChance = 0
+			for _, drop in ipairs(boosted) do
+				if not drop.IsGem then totalOreChance += drop.Chance end
+			end
+			if totalOreChance > 0 then
+				for _, drop in ipairs(boosted) do
+					if not drop.IsGem then
+						drop.Chance = drop.Chance - totalGemGain * (drop.Chance / totalOreChance)
+					end
+				end
+			end
+		end
+
+		return boosted
+	end
+	-- ────────────────────────────────────────────────────────────────────────
 
 	-- Create modern UI
 	local modernUI = ModernItemSelection.CREATE_MODERN_SELECTION_UI(script.Parent.Parent)
@@ -63,15 +120,13 @@ function module.LOAD(MODULE_INFO)
 				local TIER_NAME, TIER_INFO = MainLib.GET_ITEM_TIER_INFO(ITEM_INFO.Name)
 				modernUI.ItemTier.Text = TIER_NAME
 				modernUI.ItemTier.TextColor3 = TIER_INFO["TIER_COLOR"]
-				FIRST_SELECTED_ITEM = ITEM_INFO  -- Store for anchoring
+				FIRST_SELECTED_ITEM = ITEM_INFO
 
-				-- Get item stats and set prices
 				if ITEM_INFO:FindFirstChild("ItemStats") then
 					local itemStats = require(ITEM_INFO.ItemStats)
 					local buyPrice = itemStats.Cost or 0
-					local sellPrice = math.floor(buyPrice * 0.3)  -- Sell price is 30% of buy price
+					local sellPrice = math.floor(buyPrice * 0.3)
 
-					-- Update price labels (includes button name in text)
 					if modernUI.BuyPrice then
 						modernUI.BuyPrice.Text = "Buy - $" .. CASH_LIB.SUFFIX_NUM(buyPrice)
 					end
@@ -85,7 +140,6 @@ function module.LOAD(MODULE_INFO)
 			modernUI.ItemTier.TextColor3 = Color3.fromRGB(140, 140, 140)
 			modernUI.ItemTier.Text = "Item Count: "..module.SELECTED_COUNT
 
-			-- For multi-select, calculate total value
 			local totalBuyPrice = 0
 			local totalSellPrice = 0
 			for I, ITEM_INFO in pairs(SELECTED_ITEMS) do
@@ -93,14 +147,13 @@ function module.LOAD(MODULE_INFO)
 					local itemStats = require(ITEM_INFO.ItemStats)
 					local itemBuyPrice = itemStats.Cost or 0
 					totalBuyPrice = totalBuyPrice + itemBuyPrice
-					totalSellPrice = totalSellPrice + math.floor(itemBuyPrice * 0.3)  -- 30% of buy price
+					totalSellPrice = totalSellPrice + math.floor(itemBuyPrice * 0.3)
 				end
 				if I == 1 then
 					FIRST_SELECTED_ITEM = ITEM_INFO
 				end
 			end
 
-			-- Update price labels (includes button name in text)
 			if modernUI.BuyPrice then
 				modernUI.BuyPrice.Text = "Buy - " .. CASH_LIB.SUFFIX_NUM(totalBuyPrice)
 			end
@@ -126,7 +179,6 @@ function module.LOAD(MODULE_INFO)
 			end
 			UPDATE_SELECTED_INFO()
 		end
-		-- IMPORTANT: Hide tooltip and clear hover reference when selecting
 		if ITEM_HOVER.ModernHover then
 			ITEM_HOVER.ModernHover.Hide()
 		end
@@ -153,12 +205,10 @@ function module.LOAD(MODULE_INFO)
 		local ITEM = ITEM or nil
 		local CURRENT_HOVER_BACKUP = CURRENT_HOVER
 		if CURRENT_HOVER ~= ITEM then
-			-- Hide modern hover UI
 			if ITEM_HOVER.ModernHover then
 				ITEM_HOVER.ModernHover.Hide()
 			end
 
-			-- Clear the item reference
 			if script.Parent.Parent.ItemHover:FindFirstChild("HoveredItemRef") then
 				script.Parent.Parent.ItemHover.HoveredItemRef.Value = nil
 			end
@@ -175,12 +225,10 @@ function module.LOAD(MODULE_INFO)
 	end
 
 	local function HOVER_ITEM(ITEM)
-		-- Clear hovering items
 		if CURRENT_HOVER ~= nil then
 			CLEAR_HOVER(ITEM)
 		end
 		if ITEM ~= nil and SELECTED_ITEMS[ITEM] ~= ITEM then
-			-- Set the item to be a item that is being hovered
 			if CURRENT_HOVER ~= ITEM then
 				CURRENT_HOVER = ITEM
 				if ITEM:FindFirstChild("Hitbox") then
@@ -188,19 +236,15 @@ function module.LOAD(MODULE_INFO)
 				end
 			end
 
-			-- Only show tooltip if we're not in selection mode
 			if not module.SELECTING_ITEMS and module.SELECTED_COUNT == 0 then
-				-- Use modern hover UI
 				if ITEM_HOVER.ModernHover then
 					local TIER_NAME, TIER_INFO = MainLib.GET_ITEM_TIER_INFO(ITEM.Name)
 					ITEM_HOVER.ModernHover.ItemTier.TextColor3 = TIER_INFO["TIER_COLOR"]
 					ITEM_HOVER.ModernHover.ItemTier.Text = TIER_NAME
 
-					-- Remove trailing numbers from the display name (e.g., "Gold Mine 1" → "Gold Mine")
 					local displayName = ITEM.Name:gsub("%s*%d+$", "")
 					ITEM_HOVER.ModernHover.ItemName.Text = displayName
 
-					-- Check if this is a hotspot miner with a drop table
 					local isHotspotMiner = ITEM:GetAttribute("HotspotMiner") == true
 					local showDropTable = false
 					local dropTableText = ""
@@ -213,31 +257,25 @@ function module.LOAD(MODULE_INFO)
 						if success and itemStats.DropTable and #itemStats.DropTable > 0 then
 							showDropTable = true
 
-							-- Define colors for different gems
 							local colorMap = {
-								["Diamond Gem"] = "#00FFFF",  -- Cyan
-								["Ruby Gem"] = "#e20000",      -- Red
-								["Emerald Gem"] = "#00FF00",   -- Green
-								["Gold Ore"] = "#FFD700",      -- Gold
-								["Iron Ore"] = "#a16f53",      
-								["Copper Ore"] = "#a34827",     
-								-- Add more ore/gem colors as needed
+								["Diamond Gem"] = "#00FFFF",
+								["Ruby Gem"]    = "#e20000",
+								["Emerald Gem"] = "#00FF00",
+								["Gold Ore"]    = "#FFD700",
+								["Iron Ore"]    = "#a16f53",
+								["Copper Ore"]  = "#a34827",
 							}
 
-							-- Build the drop table text with colored entries
-							for i, drop in ipairs(itemStats.DropTable) do
-								local dropName = drop.Name
-								local dropChance = drop.Chance
+							local displayTable = APPLY_GEM_BOOST(itemStats.DropTable)
 
-								-- Get color for this drop type (default to white if not in map)
-								local hexColor = colorMap[dropName] or "#FFFFFF"
+							for i, drop in ipairs(displayTable) do
+								local hexColor = colorMap[drop.Name] or "#FFFFFF"
 
-								-- Format: "Name - X.X%"
 								local line = string.format(
 									'<font color="%s">%s - %.1f%%</font>',
 									hexColor,
-									dropName,
-									dropChance
+									drop.Name,
+									drop.Chance
 								)
 
 								if i > 1 then
@@ -248,9 +286,8 @@ function module.LOAD(MODULE_INFO)
 						end
 					end
 
-					-- Show expanded or compact view based on whether we have drop data
 					if showDropTable then
-						ITEM_HOVER.ModernHover.ShowExpanded(dropTableText,true)
+						ITEM_HOVER.ModernHover.ShowExpanded(dropTableText, true)
 					else
 						ITEM_HOVER.ModernHover.ShowCompact(true)
 					end
@@ -258,7 +295,6 @@ function module.LOAD(MODULE_INFO)
 					ITEM_HOVER.ModernHover.Show()
 				end
 
-				-- Store reference to the actual item object
 				if not script.Parent.Parent.ItemHover:FindFirstChild("HoveredItemRef") then
 					local objValue = Instance.new("ObjectValue")
 					objValue.Name = "HoveredItemRef"
@@ -279,55 +315,29 @@ function module.LOAD(MODULE_INFO)
 		end
 	end
 
-	-- This is the ITEM_DETECT function section that needs to replace the existing one
-	-- Find the module.ITEM_DETECT() function in your ItemSelection script and replace it with this:
-
-	-- Add this at the top of the module (after the variables section):
-	-- Track which item is currently tapped for hover on mobile
 	local mobileHoveredItem = nil
-	local lastTapProcessed = false  -- Track if we already processed current tap
+	local lastTapProcessed = false
 
-	-- Helper function for modern raycast detection (works on both PC and mobile)
 	local function findItemAtPosition(screenPosition, isMobile)
 		if not screenPosition then return nil end
 
 		local adjustedPosition = screenPosition
 
 		if isMobile then
-			-- MOBILE FIX: Scale touch coordinates to match viewport
-			-- Touch coordinates are in device pixels, but viewport might be scaled
-			local camera = workspace.CurrentCamera
-			local viewportSize = camera.ViewportSize
-
-			-- Get the actual screen size (in device pixels)
-			local screenSize = Vector2.new(
-				screenPosition.X,
-				screenPosition.Y
-			)
-
-			-- The touch Y coordinate needs to be adjusted
-			-- Based on your debug: tap at Y=62 hits item that appears at Y=20-30
-			-- This is roughly a 40 pixel offset downward
-			-- Let's try adding an offset based on viewport height
-
-			local yOffset = 40  -- Start with this offset (similar to PC's +36)
-
+			local yOffset = 40
 			adjustedPosition = Vector2.new(
 				screenPosition.X,
 				screenPosition.Y + yOffset
 			)
 		end
 
-		-- Create ray from screen position
 		local ray = workspace.CurrentCamera:ViewportPointToRay(adjustedPosition.X, adjustedPosition.Y)
 
-		-- Setup raycast parameters - INCLUDE only placed items
 		local raycastParams = RaycastParams.new()
 		raycastParams.FilterDescendantsInstances = PLR_PLOT.PlacedItems:GetChildren()
 		raycastParams.FilterType = Enum.RaycastFilterType.Include
 		raycastParams.IgnoreWater = true
 
-		-- Perform modern raycast
 		local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, raycastParams)
 
 		if result and result.Instance and result.Instance.Parent:FindFirstChild("ItemStats") then
@@ -338,70 +348,57 @@ function module.LOAD(MODULE_INFO)
 	end
 
 	function module.ITEM_DETECT()
-		if PLACEMENT.PLACING_ITEMS then		-- Big no no for item selection :)
+		if PLACEMENT.PLACING_ITEMS then
 			CLEAR_HOVER()
 			mobileHoveredItem = nil
 			return
 		end
-		if #script.Parent.Parent.Values.OpenedMenus:GetChildren() > 0 then		-- No item selection if a menu is open (Prevents bugs with the hovering of items.)
+		if #script.Parent.Parent.Values.OpenedMenus:GetChildren() > 0 then
 			CLEAR_HOVER()
 			mobileHoveredItem = nil
 			return
 		end
 
-		-- Determine raycast point based on input method
 		local ITEM_CAST_POINT
-		local shouldProcessTap = false  -- Only process NEW taps
+		local shouldProcessTap = false
 		local ITEM_HOVERING = nil
 
 		if Mouse and InputService.MouseEnabled then
-			-- PC: Use mouse position with the existing offset
 			ITEM_CAST_POINT = Vector2.new(Mouse.X, Mouse.Y + 36)
 			ITEM_HOVERING = findItemAtPosition(ITEM_CAST_POINT, false)
 
 		elseif INPUT.IS_MOBILE then
-			-- MOBILE: Check if there's a NEW tap to process
 			if INPUT.TAP_ACTIVE and not lastTapProcessed then
-				-- NEW TAP! Process it only once
 				shouldProcessTap = true
 				lastTapProcessed = true
-
-				-- Use tap position with mobile adjustment
 				ITEM_HOVERING = findItemAtPosition(INPUT.TAP_POSITION, true)
 			elseif not INPUT.TAP_ACTIVE then
-				-- Tap ended - reset for next tap
 				lastTapProcessed = false
 			end
 
-			-- Keep showing hover for previously tapped item (unless it's selected)
 			if not shouldProcessTap and mobileHoveredItem and mobileHoveredItem.Parent then
 				if not mobileHoveredItem:GetAttribute("SELECTED") then
 					HOVER_ITEM(mobileHoveredItem)
 				end
 				return
 			elseif not shouldProcessTap then
-				-- Not tapping and no item to show - just return
 				return
 			end
 		else
-			-- Fallback for other input methods
 			local CAM_SIZE = workspace.CurrentCamera.ViewportSize
-			ITEM_CAST_POINT = Vector2.new(math.floor(CAM_SIZE.X/2),math.floor(CAM_SIZE.Y/3))
+			ITEM_CAST_POINT = Vector2.new(math.floor(CAM_SIZE.X/2), math.floor(CAM_SIZE.Y/3))
 			ITEM_HOVERING = findItemAtPosition(ITEM_CAST_POINT, false)
 		end
 
 		if PLR_PLOT ~= nil then
 			if ITEM_HOVERING and ITEM_HOVERING.Parent:FindFirstChild("ItemStats") then
-				-- NEW: Add line-of-sight check to the found item
 				local itemPosition = ITEM_HOVERING.Position
 				local cameraPosition = workspace.CurrentCamera.CFrame.Position
 				local directionToItem = (itemPosition - cameraPosition).Unit
 				local distanceToItem = (itemPosition - cameraPosition).Magnitude
 
-				-- Raycast from camera to item to check for obstructions
 				local raycastParams = RaycastParams.new()
 
-				-- Build filter list - exclude player, placed items, ores, and hotspot folders
 				local filterList = {Plr.Character, PLR_PLOT.PlacedItems}
 				if PLR_PLOT:FindFirstChild("MinerHotspots") then
 					table.insert(filterList, PLR_PLOT.MinerHotspots)
@@ -422,13 +419,10 @@ function module.LOAD(MODULE_INFO)
 
 				local obstructionCheck = workspace:Raycast(cameraPosition, directionToItem * distanceToItem, raycastParams)
 
-				-- If there's no obstruction (or only hit the item itself), show tooltip
 				if not obstructionCheck then
-					-- No obstruction - item is visible
 					local isHotspotMiner = ITEM_HOVERING.Parent:GetAttribute("HotspotMiner") == true
 					local isHotspotFurnace = ITEM_HOVERING.Parent:GetAttribute("HotspotFurnace") == true
 
-					-- ALLOW HOVERING (show tooltip) but prevent selection for hotspot items
 					if isHotspotMiner or isHotspotFurnace then
 						if INPUT.IS_MOBILE then
 							if shouldProcessTap then
@@ -439,7 +433,6 @@ function module.LOAD(MODULE_INFO)
 							HOVER_ITEM(ITEM_HOVERING.Parent)
 						end
 
-						-- If they try to click, clear any existing selections
 						if INPUT.MOUSE_DOWN and not INPUT.IS_MOBILE then
 							if module.SELECTING_ITEMS or module.SELECTED_COUNT > 0 then
 								module.UNSELECT_ITEMS()
@@ -450,25 +443,19 @@ function module.LOAD(MODULE_INFO)
 						return
 					end
 
-					-- Normal items - Different behavior for mobile vs PC
 					if INPUT.IS_MOBILE then
-						-- MOBILE BEHAVIOR: Only process when shouldProcessTap is true (new tap detected)
 						if shouldProcessTap then
-							-- Check if tapping the SAME item that's already showing hover
 							if mobileHoveredItem == ITEM_HOVERING.Parent then
-								-- SECOND TAP on same item: Show selection menu
 								module.UNSELECT_ITEMS()
 								CLEAR_HOVER()
 								module.SELECT_ITEM(ITEM_HOVERING.Parent)
 
-								-- Immediately finalize to show the selection menu
 								module.SELECTING_ITEMS = false
 								if module.SELECTED_COUNT > 0 then
 									UPDATE_SELECTED_INFO()
 									ModernItemSelection.SHOW_MENU(FIRST_SELECTED_ITEM)
 								end
 							else
-								-- FIRST TAP on new item: Show hover tooltip
 								if module.SELECTED_COUNT > 0 then
 									module.UNSELECT_ITEMS()
 								end
@@ -478,7 +465,6 @@ function module.LOAD(MODULE_INFO)
 							end
 						end
 					else
-						-- PC BEHAVIOR: Unchanged
 						HOVER_ITEM(ITEM_HOVERING.Parent)
 						if INPUT.MOUSE_DOWN then
 							if not module.SELECTING_ITEMS then
@@ -490,12 +476,10 @@ function module.LOAD(MODULE_INFO)
 						end
 					end
 				else
-					-- Obstruction detected
 					if INPUT.IS_MOBILE and shouldProcessTap then
 						CLEAR_HOVER(nil)
 						mobileHoveredItem = nil
 					elseif not INPUT.IS_MOBILE then
-						-- PC behavior
 						if not INPUT.MOUSE_DOWN then
 							FINALIZE_SELECTING()
 						elseif INPUT.MOUSE_DOWN and not module.SELECTING_ITEMS then
@@ -505,7 +489,6 @@ function module.LOAD(MODULE_INFO)
 					end
 				end
 			else
-				-- No item found at tap location
 				if INPUT.IS_MOBILE and shouldProcessTap then
 					CLEAR_HOVER(nil)
 					mobileHoveredItem = nil
@@ -514,7 +497,6 @@ function module.LOAD(MODULE_INFO)
 						module.UNSELECT_ITEMS()
 					end
 				elseif not INPUT.IS_MOBILE then
-					-- PC behavior
 					if not INPUT.MOUSE_DOWN then
 						FINALIZE_SELECTING()
 					elseif INPUT.MOUSE_DOWN and not module.SELECTING_ITEMS then
@@ -544,7 +526,6 @@ function module.LOAD(MODULE_INFO)
 		end
 	end
 
-
 	function module.SELL_ITEMS()
 		if DB then
 			DB = false
@@ -566,23 +547,17 @@ function module.LOAD(MODULE_INFO)
 		if DB then
 			DB = false
 
-			-- FIRST: Clone all selected items to preserve their properties/configurations
 			local MOVING = {}
 			local WITHDRAWING = {}
 
 			for I, ITEM in pairs(SELECTED_ITEMS) do
-				-- Clone the actual item (preserves all configurations, attributes, etc.)
 				MOVING[#MOVING+1] = ITEM:Clone()
-				-- Queue original for withdrawal
 				WITHDRAWING[#WITHDRAWING+1] = ITEM
 			end
 
-			-- Start placement with the clones BEFORE withdrawing
-			-- This way the clones appear immediately
 			local PLACING_STARTED = PLACEMENT.BEGIN_PLACING(MOVING, true)
 
 			if PLACING_STARTED then
-				-- NOW withdraw the originals (they disappear right after clones appear)
 				RepStorage.Events.WithdrawItems:InvokeServer(WITHDRAWING)
 
 				module.UNSELECT_ITEMS()
