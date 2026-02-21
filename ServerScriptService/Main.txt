@@ -237,7 +237,7 @@ function ItemGive(Plr, ITEM_ID, AMOUNT)
 	local idStr = tostring(ITEM_ID)
 	if session and session["Items"][idStr] then
 		session["Items"][idStr]["Amount"] += AMOUNT
-		RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = AMOUNT.." "..MAIN_LIB.ITEM_FROM_ID(ITEM_ID).Name.."(s) added to Inventory"})
+		RepStorage.Events.MessageClient:FireClient(Plr, "screen", {["message"] = AMOUNT.." "..MAIN_LIB.ITEM_FROM_ID(ITEM_ID).Name.."s added to your Inventory"})
 		RepStorage.Events.InventoryUpdate:FireClient(Plr)
 		return true
 	end
