@@ -527,7 +527,7 @@ function module.LOAD(MODULE_INFO)
 			local itemImage = Instance.new("ImageLabel")
 			itemImage.Size = UDim2.new(0.9355, 0, 0.6667, 0)  -- Square: 145/155 width, 145/210 height = square
 			itemImage.Position = UDim2.new(0.0323, 0, 0.0238, 0)  -- (5/155, 0, 5/210, 0)
-			itemImage.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+			itemImage.BackgroundColor3 = Color3.fromRGB(74, 85, 104)
 			itemImage.BorderSizePixel = 0
 			itemImage.Image = ITEM_INFO.ThumbnailId
 			itemImage.ZIndex = 9
