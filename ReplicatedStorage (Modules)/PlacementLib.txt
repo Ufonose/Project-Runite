@@ -318,10 +318,15 @@ local function obstacleCollision(obstacles)
 
 			for _, wall in pairs(cachedCaveWalls) do
 				if wall.Parent then
-					local buffer = -0.1
 
-					local itemMin = itemWorldPos - Vector3.new(extentsX0/2 + buffer, object.sy/2 + buffer, extentsZ0/2 + buffer)
-					local itemMax = itemWorldPos + Vector3.new(extentsX0/2 + buffer, object.sy/2 + buffer, extentsZ0/2 + buffer)
+					-- NEW: Project OBB onto world axes to get correct AABB
+					local shrink = 0.1
+					local halfWorldX = math.abs(currentXAxis.X) * extentsX0/2 + math.abs(currentZAxis.X) * extentsZ0/2 - shrink
+					local halfWorldY = object.sy/2 - shrink
+					local halfWorldZ = math.abs(currentXAxis.Z) * extentsX0/2 + math.abs(currentZAxis.Z) * extentsZ0/2 - shrink
+
+					local itemMin = itemWorldPos - Vector3.new(halfWorldX, halfWorldY, halfWorldZ)
+					local itemMax = itemWorldPos + Vector3.new(halfWorldX, halfWorldY, halfWorldZ)
 
 					local wallMin = wall.Position - wall.Size/2
 					local wallMax = wall.Position + wall.Size/2
