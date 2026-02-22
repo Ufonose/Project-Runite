@@ -555,7 +555,7 @@ function module.LOAD(MODULE_INFO)
 	local selectedIcon = Instance.new("ImageLabel")
 	selectedIcon.Size = UDim2.new(0.2885, 0, 0.8824, 0)
 	selectedIcon.Position = UDim2.new(0.0192, 0, 0.0588, 0)
-	selectedIcon.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+	selectedIcon.BackgroundColor3 = Color3.fromRGB(74, 85, 104)
 	selectedIcon.BorderSizePixel = 0
 	selectedIcon.ZIndex = 8
 	selectedIcon.Parent = selectedPanel
@@ -836,7 +836,8 @@ function module.LOAD(MODULE_INFO)
 			local itemImage = Instance.new("ImageLabel")
 			itemImage.Size = UDim2.new(0.9355, 0, 0.6667, 0)
 			itemImage.Position = UDim2.new(0.0323, 0, 0.0238, 0)
-			itemImage.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+			itemImage.BackgroundColor3 = Color3.fromRGB(74, 85, 104)
+			itemImage.BackgroundTransparency = isUnlocked and 0 or 0.5
 			itemImage.BorderSizePixel = 0
 			itemImage.Image = ITEM_INFO.ThumbnailId
 			itemImage.ImageTransparency = isUnlocked and 0 or 0.5
