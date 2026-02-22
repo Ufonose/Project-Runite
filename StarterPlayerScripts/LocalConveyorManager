@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 
--- Localization (High-performance shortcuts)
+-- Localization
 local Vector3_new = Vector3.new
 local CFrame_new = CFrame.new
 local CFrame_Angles = CFrame.Angles
@@ -18,11 +18,13 @@ local localPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 local RAY_CAST_DISTANCE = 4
-local DEFAULT_SPEED     = 12
+local DEFAULT_SPEED     = 7
 local EDGE_BUFFER       = 0.8
+-- PEER SUGGESTION: Static vector to avoid per-frame allocation
+local RAY_DIRECTION     = Vector3_new(0, -RAY_CAST_DISTANCE, 0)
 
 -- PERFORMANCE SETTINGS
-local DETAILED_DIST = 80 -- Past this distance, ores stop wobbling to save CPU
+local DETAILED_DIST = 80 
 
 -- LIFE-LIKE SETTINGS
 local VIBRATION_INTENSITY = 0.03
@@ -35,7 +37,6 @@ local oreData     = {}
 
 local function onOreAdded(ore)
 	trackedOres[ore] = true
-	-- Cache attributes once to avoid expensive GetAttribute calls in the loop
 	oreData[ore] = {
 		seed       = ore:GetAttribute("OreID") or 0,
 		laneOffset = ore:GetAttribute("LaneOffset") or 0,
@@ -51,32 +52,32 @@ end
 CollectionService:GetInstanceAddedSignal("MovingOre"):Connect(onOreAdded)
 CollectionService:GetInstanceRemovedSignal("MovingOre"):Connect(onOreRemoved)
 
--- Seed existing ores
 for _, ore in ipairs(CollectionService:GetTagged("MovingOre")) do
 	onOreAdded(ore)
 end
 
--- ── Raycast params ────────────────────────────────────────────────────────────
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
+-- ── MAIN LOOP ────────────────────────────────────────────────────────────────
 RunService.Heartbeat:Connect(function(dt)
 	local timeTime = os_clock()
 	local camPos   = Camera.CFrame.Position
 
 	for ore in pairs(trackedOres) do
+		local data        = oreData[ore] -- Quick access to cached data
 		local orePos      = ore.Position
 		local distFromCam = (orePos - camPos).Magnitude
 
-		-- 1. RAYCAST
-		local rayDirection = Vector3_new(0, -RAY_CAST_DISTANCE, 0)
-		local result = workspace:Raycast(orePos, rayDirection, rayParams)
+		-- 1. RAYCAST (Using static RAY_DIRECTION)
+		local result = workspace:Raycast(orePos, RAY_DIRECTION, rayParams)
 
+		-- Edge fallback for corners
 		if not result and ore.Anchored then
 			local moveDir = ore.AssemblyLinearVelocity.Magnitude > 0.1
 				and ore.AssemblyLinearVelocity.Unit
 				or ore.CFrame.LookVector
-			result = workspace:Raycast(orePos - (moveDir * EDGE_BUFFER), rayDirection, rayParams)
+			result = workspace:Raycast(orePos - (moveDir * EDGE_BUFFER), RAY_DIRECTION, rayParams)
 		end
 
 		if result and result.Instance and result.Instance.Name:find("Conv") then
@@ -95,22 +96,17 @@ RunService.Heartbeat:Connect(function(dt)
 			end
 
 			if ore.Anchored then
-				local data       = oreData[ore]
-				local seed       = data.seed
-				local laneOffset = data.laneOffset
-				local baseRotV3  = data.baseRotV3
-
 				local relPos     = part.CFrame:PointToObjectSpace(orePos)
-				local targetRelX = math_lerp(relPos.X, laneOffset, 0.2)
-				local baseRotCF  = CFrame_Angles(math_rad(baseRotV3.X), math_rad(baseRotV3.Y), math_rad(baseRotV3.Z))
+				local targetRelX = math_lerp(relPos.X, data.laneOffset, 0.2)
+				local baseRotCF  = CFrame_Angles(math_rad(data.baseRotV3.X), math_rad(data.baseRotV3.Y), math_rad(data.baseRotV3.Z))
 
 				local finalRotation, targetRelY
 
-				-- AUTOMATIC DISTANCE CULLING
 				if distFromCam > DETAILED_DIST then
 					targetRelY    = (part.Size.Y * 0.5) + (ore.Size.Y * 0.5)
 					finalRotation = baseRotCF
 				else
+					local seed    = data.seed
 					local jitterY = math_sin(timeTime * 25 + seed) * VIBRATION_INTENSITY
 					local wobbleX = math_sin(timeTime * 6  + seed) * math_rad(WOBBLE_STRENGTH)
 					local wobbleZ = math_cos(timeTime * 7  + seed) * math_rad(WOBBLE_STRENGTH)
@@ -126,6 +122,7 @@ RunService.Heartbeat:Connect(function(dt)
 				ore.AssemblyLinearVelocity = part.CFrame.LookVector * finalSpeed
 			end
 		else
+			-- Fall off logic
 			if ore.Anchored then
 				ore.Anchored = false
 				local exitVelocity = ore.AssemblyLinearVelocity
