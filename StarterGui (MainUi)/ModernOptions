@@ -530,7 +530,7 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 
 	-- 2. Plot Settings Section
 	local plotSection, plotContent = createSection("Plot Settings", "🏗️", 2)
-	local oreLimitSlider = createSlider(plotContent, "Ore Limit (Performance)", "OreLimit", 10, 1000, 500, 1)
+	local oreLimitSlider = createSlider(plotContent, "Ore Limit (Reduce if lagging)", "OreLimit", 10, 1000, 500, 1)
 	local minesToggle = createToggle(plotContent, "Enable All Miners", "MinesActive", 2)
 	local clearOresFrame, clearOresButton = createButtonToggle(plotContent, "Cleanup All Ores", "Clean", Color3.fromRGB(180, 80, 60), 3)
 	local withdrawFrame, withdrawButton = createButtonToggle(plotContent, "Withdraw All Items", "Withdraw", Color3.fromRGB(200, 60, 60), 4)
