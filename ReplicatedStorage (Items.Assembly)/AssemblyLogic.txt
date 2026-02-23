@@ -7,75 +7,92 @@ local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
 local ITEM_INFO = require(script.Parent.Parent.ItemStats)
 local PLOT = script.Parent.Parent.Parent.Parent
 
-local ASSEMBLY_INPUT = script.Parent:WaitForChild("AssemblyInput")
-local ASSEMBLY_OUTPUT = script.Parent:WaitForChild("AssemblyOutput")
-local DISPLAY_SCREEN = script.Parent:WaitForChild("DisplayScreen")
-local DISPLAY_SCREEN_2 = script.Parent:FindFirstChild("DisplayScreen2") 
+local MODEL = script.Parent
+local ASSEMBLY_INPUT = MODEL:WaitForChild("AssemblyInput")
+local ASSEMBLY_OUTPUT = MODEL:WaitForChild("AssemblyOutput")
+local DISPLAY_SCREEN = MODEL:WaitForChild("DisplayScreen")
+local DISPLAY_SCREEN_2 = MODEL:FindFirstChild("DisplayScreen2") 
+
+-- ── SOUND SETUP ──────────────────────────────────────────────────────────
+local CRUSH_SOUND = ASSEMBLY_INPUT:FindFirstChild("Crush")
+local SOUND_COOLDOWN = 0.5
+local lastSoundTime = 0
 
 -- Config setup
 if not script.Parent.Parent:FindFirstChild("AssemblyConfig") then
-	local config = Instance.new("StringValue")
-	config.Name = "AssemblyConfig"
-	config.Value = "Gear"
-	config.Parent = script.Parent.Parent
+	local config = Instance.new("StringValue", script.Parent.Parent)
+	config.Name = "AssemblyConfig"; config.Value = "Gear"
 end
 local ASSEMBLY_CONFIG = script.Parent.Parent.AssemblyConfig
 
-local SPREAD_WIDTH = 2.7
-local DETECT_INTERVAL = 0.1 
+local SPREAD_WIDTH, DETECT_INTERVAL = 2.7, 0.1 
 local processedItems = {}
 
+-- ── GUI LOGIC ─────────────────────────────────────────────────────────────
+local function createDisplayOnScreen(screen)
+	if not screen then return end
+	local displayGui = screen:FindFirstChild("DisplayGui") or Instance.new("SurfaceGui", screen)
+	displayGui.Name = "DisplayGui"; displayGui.Face = Enum.NormalId.Left; displayGui.AlwaysOnTop = false
+	displayGui:ClearAllChildren()
+
+	local mainFrame = Instance.new("Frame", displayGui)
+	mainFrame.Size = UDim2.new(1, 0, 1, 0); mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25); mainFrame.BorderSizePixel = 0
+
+	local title = Instance.new("TextLabel", mainFrame)
+	title.Size = UDim2.new(1, 0, 0.3, 0); title.BackgroundTransparency = 1; title.TextColor3 = Color3.fromRGB(207, 207, 207)
+	title.Text = "COMPONENT ASSEMBLER"; title.TextSize = 60; title.Font = Enum.Font.GothamBold
+
+	local outputLabel = Instance.new("TextLabel", mainFrame)
+	outputLabel.Size = UDim2.new(1, -20, 0.35, 0); outputLabel.Position = UDim2.new(0, 10, 0.35, 0)
+	outputLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 35); outputLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+	outputLabel.Text = "Making: " .. ASSEMBLY_CONFIG.Value; outputLabel.TextSize = 50; outputLabel.Font = Enum.Font.GothamBold
+	Instance.new("UICorner", outputLabel).CornerRadius = UDim.new(0, 12)
+end
+
+local function updateDisplay()
+	createDisplayOnScreen(DISPLAY_SCREEN)
+	if DISPLAY_SCREEN_2 then createDisplayOnScreen(DISPLAY_SCREEN_2) end
+end
+-- ── ASSEMBLY LOGIC ────────────────────────────────────────────────────────
 local function assembleItem(ITEM)
 	if not ITEM or processedItems[ITEM] then return false end
 
 	local itemModelTag = ITEM:FindFirstChild("OreModelName")
-	if not itemModelTag or not string.find(itemModelTag.Value, "Plate") then
-		return false -- Not a plate, let the loop know NOT to destroy it
-	end
+	if not itemModelTag or not string.find(itemModelTag.Value, "Plate") then return false end
 
-	-- It IS a plate, lock it
 	processedItems[ITEM] = true
-	local itemModelName = itemModelTag.Value
-	local metalType = string.gsub(itemModelName, " Plate", "")
-	local outputType = ASSEMBLY_CONFIG.Value
-	local outputModelName = metalType .. " " .. outputType
-
-	local oreFolder = RepStorage:FindFirstChild("OreModels")
-	local outputModel = oreFolder and oreFolder:FindFirstChild(outputModelName)
+	local metalType = string.gsub(itemModelTag.Value, " Plate", "")
+	local outputModelName = metalType .. " " .. ASSEMBLY_CONFIG.Value
+	local outputModel = RepStorage.OreModels:FindFirstChild(outputModelName)
 
 	if not outputModel then
-		warn("Output model '" .. outputModelName .. "' not found!")
-		processedItems[ITEM] = nil
-		return true -- It was a plate, but we failed, so destroy it
+		warn("Output model '" .. outputModelName .. "' not found!"); processedItems[ITEM] = nil
+		return true 
 	end
 
-	-- 1. UPGRADE VALUE
+	-- Trigger Sound on valid plate entry
+	if CRUSH_SOUND and os.clock() - lastSoundTime > SOUND_COOLDOWN then
+		lastSoundTime = os.clock()
+		CRUSH_SOUND:Stop()
+		CRUSH_SOUND.PlaybackSpeed = math.random(105, 125) / 100 -- Higher pitch for assembly clicks
+		CRUSH_SOUND:Play()
+	end
+
 	ITEM_HANDLER.UPGRADE_ORE(PLOT, script.Parent.Parent, ITEM, ITEM_INFO.Addition, ITEM_INFO.Multiplier, ITEM_INFO.ItemId, 30)
 
-	-- 2. CLONE & SETUP
 	local newItem = outputModel:Clone()
-	newItem.Name = ITEM.Name
-	CollectionService:AddTag(newItem, "MovingOre")
-	newItem:SetAttribute("OreID", math.random(1, 1000000))
-	newItem:SetAttribute("LaneOffset", (math.random(-40, 40) / 100))
-
-	local newItemTag = Instance.new("StringValue", newItem)
-	newItemTag.Name = "OreModelName"
-	newItemTag.Value = outputModelName
+	newItem.Name = ITEM.Name; CollectionService:AddTag(newItem, "MovingOre")
+	newItem:SetAttribute("OreID", math.random(1, 1000000)); newItem:SetAttribute("LaneOffset", (math.random(-40, 40) / 100))
+	Instance.new("StringValue", newItem).Name = "OreModelName"; newItem.OreModelName.Value = outputModelName
 
 	if ITEM:FindFirstChild("Cash") then
-		local cashValue = Instance.new("NumberValue", newItem)
-		cashValue.Name = "Cash"
-		cashValue.Value = ITEM.Cash.Value
+		local val = Instance.new("NumberValue", newItem); val.Name = "Cash"; val.Value = ITEM.Cash.Value
 	end
 
 	for _, child in pairs(ITEM:GetChildren()) do
-		if child:IsA("NumberValue") and child.Name ~= "Cash" then
-			child:Clone().Parent = newItem
-		end
+		if child:IsA("NumberValue") and child.Name ~= "Cash" then child:Clone().Parent = newItem end
 	end
 
-	-- 3. POSITION & PHYSICS
 	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
 	newItem:PivotTo(ASSEMBLY_OUTPUT.CFrame * CFrame.new(randomX, 0, 0))
 	newItem.Parent = ITEM.Parent
@@ -87,104 +104,36 @@ local function assembleItem(ITEM)
 		if plotOwner then p:SetNetworkOwner(plotOwner) end
 	end
 
-	-- 4. CLEANUP
 	ITEM:Destroy()
 	task.delay(1, function() processedItems[ITEM] = nil end)
 	return true
 end
 
--- Function to create display on a screen
-local function createDisplayOnScreen(screen)
-	if not screen then return end
-
-	local displayGui = screen:FindFirstChild("DisplayGui")
-	if not displayGui then
-		displayGui = Instance.new("SurfaceGui")
-		displayGui.Name = "DisplayGui"
-		displayGui.Face = Enum.NormalId.Left
-		displayGui.AlwaysOnTop = false
-		displayGui.Parent = screen
-	end
-
-	-- Clear existing content
-	displayGui:ClearAllChildren()
-
-	-- Main frame
-	local mainFrame = Instance.new("Frame")
-	mainFrame.Name = "MainFrame"
-	mainFrame.Size = UDim2.new(1, 0, 1, 0)
-	mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-	mainFrame.BorderSizePixel = 0
-	mainFrame.Parent = displayGui
-
-	-- Title
-	local titleLabel = Instance.new("TextLabel")
-	titleLabel.Size = UDim2.new(1, 0, 0.3, 0)
-	titleLabel.BackgroundTransparency = 1
-	titleLabel.Text = "COMPONENT ASSEMBLER"
-	titleLabel.TextColor3 = Color3.fromRGB(207, 207, 207)
-	titleLabel.TextSize = 60
-	titleLabel.Font = Enum.Font.GothamBold
-	titleLabel.Parent = mainFrame
-
-	-- Current output display
-	local outputLabel = Instance.new("TextLabel")
-	outputLabel.Size = UDim2.new(1, -20, 0.35, 0)
-	outputLabel.Position = UDim2.new(0, 10, 0.35, 0)
-	outputLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-	outputLabel.BorderSizePixel = 0
-	outputLabel.Text = "Making: " .. ASSEMBLY_CONFIG.Value
-	outputLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-	outputLabel.TextSize = 50
-	outputLabel.Font = Enum.Font.GothamBold
-	outputLabel.Parent = mainFrame
-
-	local outputCorner = Instance.new("UICorner")
-	outputCorner.CornerRadius = UDim.new(0, 12)
-	outputCorner.Parent = outputLabel
-
-end
-
--- Function to update display screen
-local function updateDisplay()
-	-- Update main screen
-	createDisplayOnScreen(DISPLAY_SCREEN)
-
-	-- Update second screen if it exists
-	if DISPLAY_SCREEN_2 then
-		createDisplayOnScreen(DISPLAY_SCREEN_2)
-	end
-end
-
--- Update display when config changes
+-- ── DETECTION & INITIALIZATION ───────────────────────────────────────────
 ASSEMBLY_CONFIG.Changed:Connect(updateDisplay)
-
--- Initial display update
 updateDisplay()
 
--- ============================================================
--- THE DETECTION LOOP
--- ============================================================
 task.spawn(function()
 	local overlapParams = OverlapParams.new()
 	overlapParams.FilterType = Enum.RaycastFilterType.Exclude
-	overlapParams.FilterDescendantsInstances = {script.Parent}
+	overlapParams.FilterDescendantsInstances = {MODEL}
 
 	while true do
 		task.wait(DETECT_INTERVAL)
-		local partsInInput = workspace:GetPartBoundsInBox(ASSEMBLY_INPUT.CFrame, ASSEMBLY_INPUT.Size, overlapParams)
+		local parts = workspace:GetPartBoundsInBox(ASSEMBLY_INPUT.CFrame, ASSEMBLY_INPUT.Size, overlapParams)
 
-		for _, hit in pairs(partsInInput) do
+		for _, hit in pairs(parts) do
 			local ITEM = nil
+
+			-- Check if the part itself is the ore
 			if hit:FindFirstChild("Cash") then
 				ITEM = hit
+				-- Otherwise check the parent (checking hit.Parent existence first)
 			elseif hit.Parent and hit.Parent:FindFirstChild("Cash") then
 				ITEM = hit.Parent
 			end
 
 			if ITEM and not processedItems[ITEM] then
-				-- If assembleItem returns false, it means it wasn't a plate. 
-				-- We do nothing, allowing it to slide through.
 				assembleItem(ITEM)
 			end
 		end
