@@ -1,4 +1,4 @@
--- ServerScriptService/Items/OreCrusher.lua (or wherever your machine scripts are)
+-- ServerScriptService/Items/OreCrusher.lua
 
 local Players = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
@@ -8,14 +8,20 @@ local ITEM_HANDLER = require(RepStorage.Modules.ItemHandler)
 local ITEM_INFO = require(script.Parent.Parent.ItemStats)
 local PLOT = script.Parent.Parent.Parent.Parent
 
-local CRUSH_INPUT = script.Parent:WaitForChild("CrushInput")
-local CRUSH_OUTPUT = script.Parent:WaitForChild("CrushOutput")
+-- ── SOUND & PARTS SETUP ──────────────────────────────────────────────────
+local MODEL = script.Parent 
+local CRUSH_INPUT = MODEL:WaitForChild("CrushInput")
+local CRUSH_OUTPUT = MODEL:WaitForChild("CrushOutput")
+
+local CRUSH_SOUND = CRUSH_INPUT:FindFirstChild("Crush")
+local HUM_SOUND = CRUSH_INPUT:FindFirstChild("Hum")
 
 -- Settings
 local SPREAD_WIDTH = 2.7 
-local DETECT_INTERVAL = 0.1 -- How often to check for ores (10 times a second)
+local DETECT_INTERVAL = 0.1 
+local SOUND_COOLDOWN = 1.0 -- Increased to 1s to prevent the "start stutter"
+local lastSoundTime = 0
 
--- Track recently crushed ores to prevent duplicates
 local crushedOres = {}
 
 local ACCEPTED_RAW_ORES = {
@@ -23,6 +29,8 @@ local ACCEPTED_RAW_ORES = {
 	"Gold Ore",
 	"Copper Ore",
 }
+
+-- ── FUNCTIONS ──────────────────────────────────────────────────────────────
 
 local function isAcceptedOre(oreModelName)
 	for _, acceptedName in ipairs(ACCEPTED_RAW_ORES) do
@@ -44,7 +52,6 @@ local function crushOre(ORE)
 
 	local originalModelName = oreModelTag.Value
 
-	-- Skip if not raw or already crushed
 	if not isAcceptedOre(originalModelName) or string.find(originalModelName, "_Crushed") then
 		ORE:Destroy()
 		return
@@ -65,18 +72,15 @@ local function crushOre(ORE)
 	local newOre = refinedModel:Clone()
 	newOre.Name = ORE.Name
 
-	-- Add Tags & Attributes so the LocalConveyorManager takes control
 	CollectionService:AddTag(newOre, "MovingOre")
 	newOre:SetAttribute("OreID", math.random(1, 1000))
 	newOre:SetAttribute("LaneOffset", (math.random(-80, 80) / 100))
 
-	-- StringValue tag for the next machine
 	local newOreModelTag = Instance.new("StringValue")
 	newOreModelTag.Name = "OreModelName"
 	newOreModelTag.Value = refinedModelName
 	newOreModelTag.Parent = newOre
 
-	-- Copy Cash and upgrade values
 	if ORE:FindFirstChild("Cash") then
 		local cashValue = Instance.new("NumberValue")
 		cashValue.Name = "Cash"
@@ -103,7 +107,6 @@ local function crushOre(ORE)
 
 	newOre.Parent = ORE.Parent
 
-	-- Network Ownership
 	local plotOwner = Players:FindFirstChild(PLOT.Owner.Value)
 	if plotOwner then
 		local targetPart = newOre:IsA("Model") and newOre.PrimaryPart or newOre
@@ -121,17 +124,16 @@ local function crushOre(ORE)
 	end)
 end
 
--- ============================================================
--- THE DETECTION LOOP (Replaces .Touched)
--- ============================================================
+-- ── DETECTION LOOP ────────────────────────────────────────────────────────
+
 task.spawn(function()
 	local overlapParams = OverlapParams.new()
 	overlapParams.FilterType = Enum.RaycastFilterType.Include
 
+	print(MODEL.Name .. " Logic Loaded with Input-Triggered Audio")
+
 	while true do
 		task.wait(DETECT_INTERVAL)
-
-		-- Update filter to only look for currently existing ores
 		overlapParams.FilterDescendantsInstances = CollectionService:GetTagged("MovingOre")
 
 		local partsInInput = workspace:GetPartBoundsInBox(CRUSH_INPUT.CFrame, CRUSH_INPUT.Size, overlapParams)
@@ -139,7 +141,6 @@ task.spawn(function()
 		for _, hit in pairs(partsInInput) do
 			local ORE = nil
 
-			-- Identify if hit is part of an ore model or the part itself
 			if hit:FindFirstChild("Cash") then
 				ORE = hit
 			elseif hit.Parent and hit.Parent:FindFirstChild("Cash") then
@@ -147,21 +148,34 @@ task.spawn(function()
 			end
 
 			if ORE and not crushedOres[ORE] then
-				-- Apply Upgrades
+
+				-- ============================================================
+				-- AUDIO TRIGGERED ON INPUT TOUCH
+				-- ============================================================
+				if CRUSH_SOUND then
+					local currentTime = os.clock()
+					if currentTime - lastSoundTime > SOUND_COOLDOWN then
+						lastSoundTime = currentTime
+
+						-- Force stop and restart to prevent "ghosting" or stuttering
+						CRUSH_SOUND:Stop() 
+						CRUSH_SOUND.PlaybackSpeed = math.random(75, 105) / 100 
+						CRUSH_SOUND:Play()
+					end
+				end
+				-- ============================================================
+
 				ITEM_HANDLER.UPGRADE_ORE(
 					PLOT, 
-					script.Parent.Parent, 
+					MODEL, 
 					ORE, 
 					ITEM_INFO.Addition, 
 					ITEM_INFO.Multiplier, 
 					ITEM_INFO.ItemId, 
 					30
 				)
-				-- Process the crush
 				crushOre(ORE)
 			end
 		end
 	end
 end)
-
-print("Ore Crusher Logic Loaded (Active Scanning Mode)")
