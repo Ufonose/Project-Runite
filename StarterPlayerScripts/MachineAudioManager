@@ -1,0 +1,88 @@
+-- StarterPlayerScripts/MachineAudioManager.lua
+local CollectionService = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+
+-- ── SETTINGS ──────────────────────────────────────────────────────────────
+local MAX_HEARING_DIST = 50 
+local CHECK_INTERVAL = 0.1  
+local FADE_SPEED = 2.5      
+
+local lastCheck = 0
+local closestBySoundName = {} 
+local originalVolumes = {} -- This stores the "Max Volume" you set in Studio
+
+local hummingMachines = CollectionService:GetTagged("HummingMachine")
+
+-- Function to register a machine's sounds
+local function registerMachine(machine)
+	for _, child in ipairs(machine:GetChildren()) do
+		if child:IsA("Sound") and string.match(child.Name, "^Hum") then
+			-- Memorize the volume you set in the Properties window as the "Max"
+			originalVolumes[child] = child.Volume
+			-- Set it to 0 initially so it can fade in
+			child.Volume = 0
+		end
+	end
+end
+
+-- Initial Registration
+for _, machine in ipairs(hummingMachines) do
+	registerMachine(machine)
+end
+
+-- Watch for new machines
+CollectionService:GetInstanceAddedSignal("HummingMachine"):Connect(function(inst)
+	if not table.find(hummingMachines, inst) then
+		table.insert(hummingMachines, inst)
+		registerMachine(inst)
+	end
+end)
+
+-- ── MAIN LOOP ─────────────────────────────────────────────────────────────
+RunService.Heartbeat:Connect(function(dt)
+	local now = os.clock()
+	local camPos = Camera.CFrame.Position
+
+	-- 1. PROXIMITY CHECK
+	if now - lastCheck > CHECK_INTERVAL then
+		lastCheck = now
+		closestBySoundName = {} 
+		local distances = {} 
+
+		for _, machine in ipairs(hummingMachines) do
+			if machine and machine.Parent then
+				for _, child in ipairs(machine:GetChildren()) do
+					if child:IsA("Sound") and string.match(child.Name, "^Hum") then
+						local sName = child.Name
+						local dist = (machine.Position - camPos).Magnitude
+
+						if dist < (distances[sName] or MAX_HEARING_DIST) then
+							distances[sName] = dist
+							closestBySoundName[sName] = machine
+						end
+					end
+				end
+			end
+		end
+	end
+
+	-- 2. VOLUME MANAGEMENT
+	for _, machine in ipairs(hummingMachines) do
+		for _, hum in ipairs(machine:GetChildren()) do
+			if hum:IsA("Sound") and string.match(hum.Name, "^Hum") then
+
+				if not hum.IsPlaying then hum:Play() end 
+
+				-- Use the "Original" volume we saved earlier
+				local maxVol = originalVolumes[hum] or 0.5
+
+				local isClosest = (closestBySoundName[hum.Name] == machine)
+				local targetVolume = isClosest and maxVol or 0
+
+				-- Smoothly fade
+				hum.Volume = hum.Volume + (targetVolume - hum.Volume) * (dt * FADE_SPEED)
+			end
+		end
+	end
+end)
