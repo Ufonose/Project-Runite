@@ -10,7 +10,7 @@ local FurnaceHotspotHandler = {}
 -- There's only ONE furnace hotspot - automatically unlocked for everyone
 FurnaceHotspotHandler.HotspotConfig = {
 	Id = 1,
-	FurnaceName = "Standard Furnace",
+	FurnaceName = "Deposit Hopper",
 	Description = "Your central collection point - all items must go here!",
 }
 
