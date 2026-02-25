@@ -9,26 +9,61 @@ local SPLITTER = script.Parent
 local SPLIT_DETECTOR = SPLITTER:WaitForChild("SortDetector")
 
 -- Settings
-local DETECT_INTERVAL = 0.05 
+local DETECT_INTERVAL  = 0.05
 local DETECTION_HEIGHT = 4
-local DETECTION_OFFSET = -1 
+local DETECTION_OFFSET = -1
 
--- The global toggle (flips every time a NEW ore is assigned)
+-- Flips every time a new ore enters so items alternate left/right evenly
 local nextDirectionLeft = true
 
--- Calculate split velocity
-local function getSplitVelocity(goLeft)
-	local baseCFrame = SPLIT_DETECTOR.CFrame
-	local speed = ITEM_INFO.SortSpeed or 12 -- Slightly faster to ensure clearing
-	local angleDeg = ITEM_INFO.SortAngle or 45
+-- Ores that have already been processed this pass
+local oresInZone = {}
 
-	local angle = math.rad(goLeft and angleDeg or -angleDeg)
-	return (baseCFrame * CFrame.Angles(0, angle, 0)).LookVector * speed
+-- ============================================================
+-- TELEPORT LOGIC
+-- ============================================================
+
+local function teleportItem(ITEM, targetPart)
+	local plotOwnerName = PLOT:FindFirstChild("Owner") and PLOT.Owner.Value
+	local plotOwner = plotOwnerName and plotOwnerName ~= "" and Players:FindFirstChild(plotOwnerName)
+
+	local clone = ITEM:Clone()
+
+	local spawnCFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
+	if clone:IsA("Model") then
+		clone:PivotTo(spawnCFrame)
+	else
+		clone.CFrame = spawnCFrame
+	end
+
+	-- Parent first so network ownership can be assigned
+	clone.Parent = ITEM.Parent
+
+	local clonePart = (clone:IsA("Model") and clone.PrimaryPart) or clone
+	if clonePart and clonePart:IsA("BasePart") then
+		clonePart.Anchored = false
+		clonePart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+		clonePart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+		if plotOwner then
+			pcall(function() clonePart:SetNetworkOwner(plotOwner) end)
+		end
+	end
+
+	-- Tag after parenting so CollectionService signals fire with part in world
+	CollectionService:AddTag(clone, "MovingOre")
+
+	-- Mark clone as already processed so it isn't teleported again if it
+	-- spawns inside the detector zone
+	oresInZone[clone] = true
+
+	CollectionService:RemoveTag(ITEM, "MovingOre")
+	ITEM:Destroy()
 end
 
 -- ============================================================
 -- THE DETECTION & SPLIT LOOP
 -- ============================================================
+
 task.spawn(function()
 	local overlapParams = OverlapParams.new()
 	overlapParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -37,52 +72,46 @@ task.spawn(function()
 	while true do
 		task.wait(DETECT_INTERVAL)
 
-		local detectionSize = Vector3.new(SPLIT_DETECTOR.Size.X, DETECTION_HEIGHT, SPLIT_DETECTOR.Size.Z)
-		local detectionCFrame = SPLIT_DETECTOR.CFrame * CFrame.new(0, (DETECTION_HEIGHT/2) + DETECTION_OFFSET, 0)
+		local detectionSize   = Vector3.new(SPLIT_DETECTOR.Size.X, DETECTION_HEIGHT, SPLIT_DETECTOR.Size.Z)
+		local detectionCFrame = SPLIT_DETECTOR.CFrame * CFrame.new(0, (DETECTION_HEIGHT / 2) + DETECTION_OFFSET, 0)
+		local partsInRegion   = workspace:GetPartBoundsInBox(detectionCFrame, detectionSize, overlapParams)
 
-		local partsInRegion = workspace:GetPartBoundsInBox(detectionCFrame, detectionSize, overlapParams)
+		local currentOresInZone = {}
 
 		for _, hit in pairs(partsInRegion) do
 			local ITEM = nil
-
 			if hit:FindFirstChild("Cash") then
 				ITEM = hit
 			elseif hit.Parent and hit.Parent:FindFirstChild("Cash") then
 				ITEM = hit.Parent
 			end
 
-			if ITEM then
-				-- 1. ASSIGN DIRECTION (If it doesn't have one yet)
-				local assignedDir = ITEM:GetAttribute("SplitDir")
+			if ITEM and not currentOresInZone[ITEM] then
+				currentOresInZone[ITEM] = true
 
-				if assignedDir == nil then
-					-- This is a brand new ore! 
-					-- Assign the current global direction and then flip the global toggle
-					assignedDir = nextDirectionLeft and "Left" or "Right"
-					ITEM:SetAttribute("SplitDir", assignedDir)
+				if not oresInZone[ITEM] then
+					oresInZone[ITEM] = true
 
+					-- Alternate direction for even splitting
+					local goLeft = nextDirectionLeft
 					nextDirectionLeft = not nextDirectionLeft
-					-- print("New Ore Assigned to: " .. assignedDir)
-				end
 
-				-- 2. APPLY PHYSICS BASED ON ASSIGNED DIRECTION
-				local isLeft = (assignedDir == "Left")
-				local velocity = getSplitVelocity(isLeft)
-
-				local targetPart = (ITEM:IsA("Model") and ITEM.PrimaryPart) or ITEM
-				if targetPart and targetPart:IsA("BasePart") then
-					targetPart.AssemblyLinearVelocity = velocity
-
-					-- 3. NETWORK OWNERSHIP
-					local plotOwnerName = PLOT:FindFirstChild("Owner") and PLOT.Owner.Value
-					if plotOwnerName and plotOwnerName ~= "" then
-						local plotOwner = Players:FindFirstChild(plotOwnerName)
-						if plotOwner and targetPart:GetNetworkOwner() ~= plotOwner then
-							pcall(function() targetPart:SetNetworkOwner(plotOwner) end)
-						end
+					local spawnPartName = goLeft and "LeftSort" or "RightSort"
+					local spawnPart = SPLITTER:FindFirstChild(spawnPartName)
+					if spawnPart then
+						teleportItem(ITEM, spawnPart)
 					end
 				end
 			end
 		end
+
+		-- Clear ores that have left the zone
+		for ore in pairs(oresInZone) do
+			if not currentOresInZone[ore] then
+				oresInZone[ore] = nil
+			end
+		end
 	end
 end)
+
+print("Splitter logic loaded!")
