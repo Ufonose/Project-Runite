@@ -18,9 +18,13 @@ end
 local SORT_CONFIG = SORTER.SortConfig
 
 -- Settings
-local DETECT_INTERVAL = 0.05 -- Faster check for smoother movement
+local DETECT_INTERVAL  = 0.05
 local DETECTION_HEIGHT = 4
-local DETECTION_OFFSET = -1 
+local DETECTION_OFFSET = -1
+
+-- Ores that have already been kicked this pass through the SortDetector.
+-- Cleared once they leave the zone so they can be kicked again on re-entry.
+local oresInZone = {}
 
 -- Get sort direction for an ore type
 local function getSortDirection(oreModelName)
@@ -31,42 +35,80 @@ local function getSortDirection(oreModelName)
 	return "Straight"
 end
 
--- Calculate sort velocity
-local function getSortVelocity(direction)
-	local baseCFrame = SORT_DETECTOR.CFrame
-	local speed = ITEM_INFO.SortSpeed or 10
-	local angleDeg = ITEM_INFO.SortAngle or 45
 
-	if direction == "Left" then
-		local angle = math.rad(angleDeg)
-		return (baseCFrame * CFrame.Angles(0, angle, 0)).LookVector * speed
-	elseif direction == "Right" then
-		local angle = math.rad(-angleDeg)
-		return (baseCFrame * CFrame.Angles(0, angle, 0)).LookVector * speed
-	else -- "Straight"
-		return baseCFrame.LookVector * speed
+-- Teleport an item to a target part's position and unanchor it
+-- so it falls naturally onto the conveyor below
+local function teleportItem(ITEM, targetPart)
+	local plotOwnerName = PLOT:FindFirstChild("Owner") and PLOT.Owner.Value
+	local plotOwner = plotOwnerName and plotOwnerName ~= "" and Players:FindFirstChild(plotOwnerName)
+
+	local clone = ITEM:Clone()
+
+	local spawnCFrame = targetPart.CFrame * CFrame.new(0, 2, 0)
+	if clone:IsA("Model") then
+		clone:PivotTo(spawnCFrame)
+	else
+		clone.CFrame = spawnCFrame
 	end
+
+	-- Parent FIRST so network ownership can be set
+	clone.Parent = ITEM.Parent
+
+	local clonePart = (clone:IsA("Model") and clone.PrimaryPart) or clone
+	if clonePart and clonePart:IsA("BasePart") then
+		clonePart.Anchored = false
+		clonePart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+		clonePart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+		if plotOwner then
+			pcall(function() clonePart:SetNetworkOwner(plotOwner) end)
+		end
+	end
+
+	-- Tag AFTER parenting so CollectionService signals fire correctly
+	CollectionService:AddTag(clone, "MovingOre")
+
+	-- Immediately mark the clone as already processed so the sorter
+	-- doesn't detect it again if it spawns inside the SortDetector zone
+	oresInZone[clone] = true
+
+	-- Destroy the original
+	CollectionService:RemoveTag(ITEM, "MovingOre")
+	ITEM:Destroy()
+
+	return clone
 end
 
--- Display current configuration on SurfaceGui screen with two columns
-local function updateDisplay()
-	-- Find the screen part and its SurfaceGui
-	local screen = SORTER:FindFirstChild("Screen")
-	if not screen then 
-		warn("No Screen part found in sorter!")
-		return 
+-- Scan a region and return deduplicated items inside it
+local function getItemsInRegion(regionCFrame, regionSize, overlapParams)
+	local parts = workspace:GetPartBoundsInBox(regionCFrame, regionSize, overlapParams)
+	local seen, items = {}, {}
+
+	for _, hit in pairs(parts) do
+		local item = nil
+		if hit:FindFirstChild("Cash") then
+			item = hit
+		elseif hit.Parent and hit.Parent:FindFirstChild("Cash") then
+			item = hit.Parent
+		end
+		if item and not seen[item] then
+			seen[item] = true
+			table.insert(items, item)
+		end
 	end
+
+	return items
+end
+
+-- ── Display ──────────────────────────────────────────────────────────────────
+local function updateDisplay()
+	local screen = SORTER:FindFirstChild("Screen")
+	if not screen then warn("No Screen part found in sorter!") return end
 
 	local displayGui = screen:FindFirstChild("DisplayGui")
-	if not displayGui then 
-		warn("No DisplayGui found on Screen!")
-		return 
-	end
+	if not displayGui then warn("No DisplayGui found on Screen!") return end
 
-	-- Clear existing content
 	displayGui:ClearAllChildren()
 
-	-- Main container
 	local mainFrame = Instance.new("Frame")
 	mainFrame.Name = "MainFrame"
 	mainFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -74,7 +116,6 @@ local function updateDisplay()
 	mainFrame.BorderSizePixel = 0
 	mainFrame.Parent = displayGui
 
-	-- Title bar (smaller)
 	local titleBar = Instance.new("Frame")
 	titleBar.Size = UDim2.new(1, 0, 0, 22)
 	titleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
@@ -90,7 +131,6 @@ local function updateDisplay()
 	titleLabel.Font = Enum.Font.GothamBold
 	titleLabel.Parent = titleBar
 
-	-- Left column header
 	local leftHeader = Instance.new("Frame")
 	leftHeader.Size = UDim2.new(0.48, 0, 0, 18)
 	leftHeader.Position = UDim2.new(0, 5, 0, 24)
@@ -107,7 +147,6 @@ local function updateDisplay()
 	leftHeaderText.Font = Enum.Font.GothamBold
 	leftHeaderText.Parent = leftHeader
 
-	-- Right column header
 	local rightHeader = Instance.new("Frame")
 	rightHeader.Size = UDim2.new(0.48, 0, 0, 18)
 	rightHeader.Position = UDim2.new(0.52, 0, 0, 24)
@@ -124,7 +163,6 @@ local function updateDisplay()
 	rightHeaderText.Font = Enum.Font.GothamBold
 	rightHeaderText.Parent = rightHeader
 
-	-- Center divider line
 	local divider = Instance.new("Frame")
 	divider.Size = UDim2.new(0, 1, 1, -10)
 	divider.Position = UDim2.new(0.5, -1, 0, 24)
@@ -132,7 +170,6 @@ local function updateDisplay()
 	divider.BorderSizePixel = 0
 	divider.Parent = mainFrame
 
-	-- Left scroll frame
 	local leftScroll = Instance.new("ScrollingFrame")
 	leftScroll.Size = UDim2.new(0.48, -5, 1, -48)
 	leftScroll.Position = UDim2.new(0, 5, 0, 44)
@@ -147,7 +184,6 @@ local function updateDisplay()
 	leftLayout.SortOrder = Enum.SortOrder.Name
 	leftLayout.Parent = leftScroll
 
-	-- Right scroll frame
 	local rightScroll = Instance.new("ScrollingFrame")
 	rightScroll.Size = UDim2.new(0.48, -5, 1, -48)
 	rightScroll.Position = UDim2.new(0.52, 5, 0, 44)
@@ -162,112 +198,68 @@ local function updateDisplay()
 	rightLayout.SortOrder = Enum.SortOrder.Name
 	rightLayout.Parent = rightScroll
 
-	-- Collect configs
-	local leftItems = {}
-	local rightItems = {}
+	local function populateScroll(scroll, items, textColor)
+		if #items == 0 then
+			local emptyLabel = Instance.new("TextLabel")
+			emptyLabel.Size = UDim2.new(1, 0, 0, 15)
+			emptyLabel.BackgroundTransparency = 1
+			emptyLabel.Text = "(None)"
+			emptyLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
+			emptyLabel.TextSize = 7
+			emptyLabel.Font = Enum.Font.Code
+			emptyLabel.Parent = scroll
+		else
+			for _, oreName in ipairs(items) do
+				local oreLabel = Instance.new("TextLabel")
+				oreLabel.Size = UDim2.new(1, -10, 0, 15)
+				oreLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+				oreLabel.BorderSizePixel = 0
+				oreLabel.Text = "  " .. oreName
+				oreLabel.TextColor3 = textColor
+				oreLabel.TextSize = 7
+				oreLabel.Font = Enum.Font.Code
+				oreLabel.TextXAlignment = Enum.TextXAlignment.Left
+				oreLabel.Parent = scroll
+				local corner = Instance.new("UICorner")
+				corner.CornerRadius = UDim.new(0, 3)
+				corner.Parent = oreLabel
+			end
+		end
+	end
 
+	local leftItems, rightItems = {}, {}
 	for _, config in pairs(SORT_CONFIG:GetChildren()) do
 		if config:IsA("StringValue") then
 			local oreName = config.Name:gsub("OreModel", ""):gsub("_", " ")
-
 			if config.Value == "Left" then
 				table.insert(leftItems, oreName)
 			elseif config.Value == "Right" then
 				table.insert(rightItems, oreName)
 			end
-			-- Straight items are ignored
 		end
 	end
 
-	-- Sort alphabetically
 	table.sort(leftItems)
 	table.sort(rightItems)
 
-	-- Create left items
-	if #leftItems == 0 then
-		local emptyLabel = Instance.new("TextLabel")
-		emptyLabel.Size = UDim2.new(1, 0, 0, 15)
-		emptyLabel.BackgroundTransparency = 1
-		emptyLabel.Text = "(None)"
-		emptyLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
-		emptyLabel.TextSize = 7
-		emptyLabel.Font = Enum.Font.Code
-		emptyLabel.Parent = leftScroll
-	else
-		for _, oreName in ipairs(leftItems) do
-			local oreLabel = Instance.new("TextLabel")
-			oreLabel.Size = UDim2.new(1, -10, 0, 15)
-			oreLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-			oreLabel.BorderSizePixel = 0
-			oreLabel.Text = "  " .. oreName
-			oreLabel.TextColor3 = Color3.fromRGB(255, 200, 200)
-			oreLabel.TextSize = 7
-			oreLabel.Font = Enum.Font.Code
-			oreLabel.TextXAlignment = Enum.TextXAlignment.Left
-			oreLabel.Parent = leftScroll
+	populateScroll(leftScroll,  leftItems,  Color3.fromRGB(255, 200, 200))
+	populateScroll(rightScroll, rightItems, Color3.fromRGB(200, 200, 255))
 
-			local corner = Instance.new("UICorner")
-			corner.CornerRadius = UDim.new(0, 3)
-			corner.Parent = oreLabel
-		end
-	end
-
-	-- Create right items
-	if #rightItems == 0 then
-		local emptyLabel = Instance.new("TextLabel")
-		emptyLabel.Size = UDim2.new(1, 0, 0, 15)
-		emptyLabel.BackgroundTransparency = 1
-		emptyLabel.Text = "(None)"
-		emptyLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
-		emptyLabel.TextSize = 7
-		emptyLabel.Font = Enum.Font.Code
-		emptyLabel.Parent = rightScroll
-	else
-		for _, oreName in ipairs(rightItems) do
-			local oreLabel = Instance.new("TextLabel")
-			oreLabel.Size = UDim2.new(1, -10, 0, 15)
-			oreLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-			oreLabel.BorderSizePixel = 0
-			oreLabel.Text = "  " .. oreName
-			oreLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
-			oreLabel.TextSize = 7
-			oreLabel.Font = Enum.Font.Code
-			oreLabel.TextXAlignment = Enum.TextXAlignment.Left
-			oreLabel.Parent = rightScroll
-
-			local corner = Instance.new("UICorner")
-			corner.CornerRadius = UDim.new(0, 3)
-			corner.Parent = oreLabel
-		end
-	end
-
-	-- Update canvas sizes
-	leftScroll.CanvasSize = UDim2.new(0, 0, 0, leftLayout.AbsoluteContentSize.Y + 10)
+	leftScroll.CanvasSize  = UDim2.new(0, 0, 0, leftLayout.AbsoluteContentSize.Y  + 10)
 	rightScroll.CanvasSize = UDim2.new(0, 0, 0, rightLayout.AbsoluteContentSize.Y + 10)
-
-	-- Update display--print("=== SCREEN UPDATE (TWO COLUMN) ===")
-	--print("Left items:", #leftItems, "| Right items:", #rightItems)
 end
 
--- FIX: Connect the Changed event to newly added configs
 local function connectConfigChanged(config)
 	if config:IsA("StringValue") then
-		config.Changed:Connect(function()
-			--print("Config changed:", config.Name, "->", config.Value)
-			updateDisplay()
-		end)
+		config.Changed:Connect(updateDisplay)
 	end
 end
 
--- Update display when config changes
 SORT_CONFIG.ChildAdded:Connect(function(child)
-	connectConfigChanged(child)  -- FIX: Connect Changed event to new configs
+	connectConfigChanged(child)
 	updateDisplay()
 end)
-
 SORT_CONFIG.ChildRemoved:Connect(updateDisplay)
-
--- Connect to existing configs
 for _, config in pairs(SORT_CONFIG:GetChildren()) do
 	connectConfigChanged(config)
 end
@@ -283,65 +275,44 @@ task.spawn(function()
 	while true do
 		task.wait(DETECT_INTERVAL)
 
-		-- 1. DEFINE DETECTION BOX
-		local detectionSize = Vector3.new(SORT_DETECTOR.Size.X, DETECTION_HEIGHT, SORT_DETECTOR.Size.Z)
-		local detectionCFrame = SORT_DETECTOR.CFrame * CFrame.new(0, (DETECTION_HEIGHT/2) + DETECTION_OFFSET, 0)
+		local sortSize   = Vector3.new(SORT_DETECTOR.Size.X, DETECTION_HEIGHT, SORT_DETECTOR.Size.Z)
+		local sortCFrame = SORT_DETECTOR.CFrame * CFrame.new(0, (DETECTION_HEIGHT / 2) + DETECTION_OFFSET, 0)
+		local sortItems  = getItemsInRegion(sortCFrame, sortSize, overlapParams)
 
-		-- 2. SCAN FOR ITEMS
-		local partsInRegion = workspace:GetPartBoundsInBox(detectionCFrame, detectionSize, overlapParams)
+		local currentOresInZone = {}
 
-		-- Use a set to prevent processing the same model multiple times in one tick
-		local processedThisTick = {}
+		for _, ITEM in ipairs(sortItems) do
+			currentOresInZone[ITEM] = true
 
-		for _, hit in pairs(partsInRegion) do
-			local ITEM = nil
-			local modelName = ""
+			if not oresInZone[ITEM] then
+				oresInZone[ITEM] = true
 
-			-- Identify the item and its model name
-			if hit:FindFirstChild("Cash") then
-				ITEM = hit
-			elseif hit.Parent and hit.Parent:FindFirstChild("Cash") then
-				ITEM = hit.Parent
-			end
-
-			if ITEM and not processedThisTick[ITEM] then
-				processedThisTick[ITEM] = true
-
-				-- Get the tag name (OreModelName is our standard now)
-				local nameTag = ITEM:FindFirstChild("OreModelName") or ITEM:FindFirstChild("IngotType")
-				modelName = nameTag and nameTag.Value or ITEM.Name
-
-				-- 3. APPLY DIRECTIONAL VELOCITY
+				local nameTag   = ITEM:FindFirstChild("OreModelName") or ITEM:FindFirstChild("IngotType")
+				local modelName = nameTag and nameTag.Value or ITEM.Name
 				local direction = getSortDirection(modelName)
-				local velocity = getSortVelocity(direction)
 
-				-- Apply physics to the PrimaryPart or the BasePart itself
-				local targetPart = (ITEM:IsA("Model") and ITEM.PrimaryPart) or ITEM
-				if targetPart and targetPart:IsA("BasePart") then
-					targetPart.AssemblyLinearVelocity = velocity
+				-- Find the spawn part for this direction
+				local spawnPartName = direction == "Left" and "LeftSort"
+					or direction == "Right" and "RightSort"
+					or "ForwardSort"
 
-					-- 4. ENSURE NETWORK OWNERSHIP
-					-- This is vital so the player's client handles the velocity smoothly
-					local plotOwnerName = PLOT:FindFirstChild("Owner") and PLOT.Owner.Value
-					if plotOwnerName ~= "" then
-						local plotOwner = Players:FindFirstChild(plotOwnerName)
-						if plotOwner then
-							local success, _ = targetPart:CanSetNetworkOwnership()
-							if success then
-								-- Only set if it's not already owned (prevents overhead)
-								if targetPart:GetNetworkOwner() ~= plotOwner then
-									targetPart:SetNetworkOwner(plotOwner)
-								end
-							end
-						end
-					end
+				local spawnPart = SORTER:FindFirstChild(spawnPartName)
+				if spawnPart then
+					teleportItem(ITEM, spawnPart)
 				end
+				-- If no spawn part found, item just continues through untouched
+			end
+		end
+
+		-- Clear ores that have left the sort zone
+		for ore in pairs(oresInZone) do
+			if not currentOresInZone[ore] then
+				oresInZone[ore] = nil
 			end
 		end
 	end
 end)
 
--- Initial GUI update call
-updateDisplay() 
+updateDisplay()
 
-print("Sorter logic loaded with Scanning Mode!")
+print("Sorter logic loaded!")
