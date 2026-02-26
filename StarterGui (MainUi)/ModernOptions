@@ -539,6 +539,7 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	local soundSection, soundContent = createSection("Sound Settings", "🔊", 3)
 	local uiSoundsToggle = createToggle(soundContent, "UI & Placement Sounds", "UISounds", 1)
 	local notificationSoundsToggle = createToggle(soundContent, "Notification Sounds", "NotificationSounds", 2)
+	local machineSoundsToggle = createToggle(soundContent, "Machine Ambience Sounds", "MachineSounds", 3)
 
 	-- 4. Deluxe Section (Placeholder)
 	local deluxeSection, deluxeContent = createSection("Deluxe", "💎", 4)
