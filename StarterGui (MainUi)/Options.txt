@@ -15,6 +15,7 @@ function module.LOAD(MODULE_INFO)
 	local SoundManager = require(RepStorage.Modules.SoundManager)
 	-- Plr Info
 	local Plr = Plrs.LocalPlayer
+	Plr:WaitForChild("Settings", 10) -- Added after removing the RightUi script
 	local PlayerGui = Plr:WaitForChild("PlayerGui")
 
 	-- Hide old Options GUI elements (keep the script but hide the frames)
@@ -93,12 +94,12 @@ function module.LOAD(MODULE_INFO)
 		if script.Parent.MenuObject.Value then
 			-- Opening settings
 			modernUI.Container.Visible = true
-			print("Settings opened")
+			--print("Settings opened")
 		else
 			-- Closing settings
 			modernUI.Container.Visible = false
 			modernUI.ConfirmationPopup.Visible = false  -- Also hide popup
-			print("Settings closed")
+			--print("Settings closed")
 		end
 	end)
 
@@ -107,7 +108,7 @@ function module.LOAD(MODULE_INFO)
 		Main.CLOSE_MENU(script.Parent)
 	end)
 
-	print("Modern Options GUI loaded successfully!")
+	--print("Modern Options GUI loaded successfully!")
 end
 
 return module
