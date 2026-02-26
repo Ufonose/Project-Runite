@@ -15,7 +15,7 @@ local DISPLAY_SCREEN = script.Parent:WaitForChild("DisplayScreen")
 local CRUSH_SOUND = SMELT_INPUT:FindFirstChild("Crush")
 
 -- Settings
-local SPREAD_WIDTH = 2.7
+local SPREAD_WIDTH = 1.5
 local DETECT_INTERVAL = 0.1 
 local REQUIRED_ORES = 5
 local SMELT_DELAY = 1
