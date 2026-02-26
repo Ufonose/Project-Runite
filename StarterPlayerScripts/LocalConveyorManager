@@ -2,6 +2,7 @@
 local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Localization
 local Vector3_new = Vector3.new
@@ -20,16 +21,23 @@ local Camera = workspace.CurrentCamera
 local RAY_CAST_DISTANCE = 4
 local DEFAULT_SPEED     = 7
 local EDGE_BUFFER       = 0.8
--- PEER SUGGESTION: Static vector to avoid per-frame allocation
 local RAY_DIRECTION     = Vector3_new(0, -RAY_CAST_DISTANCE, 0)
 
 -- PERFORMANCE SETTINGS
-local DETAILED_DIST = 80 
+local DETAILED_DIST = 80
 
 -- LIFE-LIKE SETTINGS
 local VIBRATION_INTENSITY = 0.03
 local ROTATION_SPEED      = 0.5
 local WOBBLE_STRENGTH     = 5
+
+-- STUCK DETECTION SETTINGS
+local STUCK_THRESHOLD  = 10   -- seconds without movement before deleting
+local STUCK_CHECK_RATE = 3    -- how often (seconds) to sample position
+local STUCK_EPSILON    = 0.5  -- studs; less than this counts as not moved
+
+-- Remote to ask the server to destroy the ore
+local StuckOreEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("DestroyStuckOre")
 
 -- ── Ore cache ────────────────────────────────────────────────────────────────
 local trackedOres = {}
@@ -38,9 +46,13 @@ local oreData     = {}
 local function onOreAdded(ore)
 	trackedOres[ore] = true
 	oreData[ore] = {
-		seed       = ore:GetAttribute("OreID") or 0,
-		laneOffset = ore:GetAttribute("LaneOffset") or 0,
-		baseRotV3  = ore:GetAttribute("BaseRotation") or Vector3_new(0, 0, 0),
+		seed        = ore:GetAttribute("OreID") or 0,
+		laneOffset  = ore:GetAttribute("LaneOffset") or 0,
+		baseRotV3   = ore:GetAttribute("BaseRotation") or Vector3_new(0, 0, 0),
+		-- Stuck detection
+		lastPos     = ore.Position,
+		stuckTimer  = 0,
+		lastCheck   = os_clock(),
 	}
 end
 
@@ -65,7 +77,9 @@ RunService.Heartbeat:Connect(function(dt)
 	local camPos   = Camera.CFrame.Position
 
 	for ore in pairs(trackedOres) do
-		local data        = oreData[ore] -- Quick access to cached data
+		if not ore or not ore.Parent then trackedOres[ore] = nil oreData[ore] = nil continue end
+
+		local data        = oreData[ore]
 		local orePos      = ore.Position
 		local distFromCam = (orePos - camPos).Magnitude
 
@@ -132,5 +146,27 @@ RunService.Heartbeat:Connect(function(dt)
 				ore.AssemblyLinearVelocity = exitVelocity * 1.2
 			end
 		end
+
+		-- ── STUCK DETECTION ──────────────────────────────────────────────────
+		if timeTime - data.lastCheck >= STUCK_CHECK_RATE then
+			local distMoved = (ore.Position - data.lastPos).Magnitude
+
+			if distMoved < STUCK_EPSILON then
+				data.stuckTimer = data.stuckTimer + STUCK_CHECK_RATE
+				if data.stuckTimer >= STUCK_THRESHOLD then
+					-- Remove from tracking immediately to prevent duplicate fires
+					trackedOres[ore] = nil
+					oreData[ore]     = nil
+					StuckOreEvent:FireServer(ore)
+					continue -- skip the rest of this iteration
+				end
+			else
+				data.stuckTimer = 0
+			end
+
+			data.lastPos   = ore.Position
+			data.lastCheck = timeTime
+		end
+		-- ─────────────────────────────────────────────────────────────────────
 	end
 end)
