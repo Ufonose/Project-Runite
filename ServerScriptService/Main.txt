@@ -14,7 +14,7 @@ local MINIMUM_ITEM_QUANTITIES = {
 	["Corner Conveyor"] = 2,
 }
 
-warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] loading...")
+--warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] loading...")
 
 function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
 	if not (Plr and PLACED_ITEMS and ITEMS) then return false end
@@ -259,4 +259,4 @@ RepStorage.Events.SellItem.OnServerInvoke = SELL_ITEM
 RepStorage.Events.BuyItem.OnServerInvoke = BUY_ITEM
 ServerStorage.Events.ItemGive.OnInvoke = ItemGive
 
-warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] fully loaded!")
+--warn("Zonix_Official's Sandbox Tycoon Kit 2.0 Main [SERVER] fully loaded!")
