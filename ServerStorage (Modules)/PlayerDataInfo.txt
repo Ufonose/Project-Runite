@@ -19,6 +19,10 @@ PLAYER_DATA.SETTINGS_VALUES = {
 		["VALUE_TYPE"] = "BoolValue",
 		["DEFAULT"] = true,
 	},
+	["MachineSounds"] = {        -- NEW
+		["VALUE_TYPE"] = "BoolValue",
+		["DEFAULT"] = true,
+	},
 	["OreLimit"] = {
 		["VALUE_TYPE"] = "NumberValue",
 		["DEFAULT"] = 250,  -- Default ore limit
