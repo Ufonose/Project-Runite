@@ -17,6 +17,10 @@ end
 
 local function getSpeed(data)
 	local baseSpeed = data.baseSpeed
+	-- NoFlip parts always use their fixed baseSpeed regardless of ConveyorReversed
+	if data.noFlip then
+		return baseSpeed
+	end
 	if data.rootItem and data.rootItem:GetAttribute("ConveyorReversed") == true then
 		return -baseSpeed
 	end
@@ -24,7 +28,8 @@ local function getSpeed(data)
 end
 
 local function registerConveyor(conveyorPart)
-	if conveyorPart.Name == "ConvMerge" or conveyorPart.Name == "SideStuckMerge" then
+	local isNoFlip = conveyorPart.Name == "ConvMerge" or conveyorPart.Name == "SideStuckMerge"
+	if isNoFlip then
 		conveyorPart:SetAttribute("NoFlip", true)
 	end
 
@@ -39,7 +44,8 @@ local function registerConveyor(conveyorPart)
 	table.insert(conveyorParts, {
 		part = conveyorPart,
 		baseSpeed = baseSpeed,
-		rootItem = getRootItem(conveyorPart), -- Cached once, never walked again
+		rootItem = getRootItem(conveyorPart),
+		noFlip = isNoFlip, -- NEW: store the flag here
 	})
 end
 
