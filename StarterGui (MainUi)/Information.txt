@@ -9,16 +9,7 @@ function module.LOAD(MODULE_INFO)
 	local Plrs = SERVICES["Players"]
 	local TweenService = SERVICES["TweenService"] or game:GetService("TweenService")
 	-- Modules - Try to get SoundManager from MODULES or require it directly
-	local SoundManager = MODULES["SoundManager"]
-	if not SoundManager then
-		-- If not in MODULES, try to require it directly from ReplicatedStorage
-		local soundManagerModule = RepStorage:FindFirstChild("Modules") and RepStorage.Modules:FindFirstChild("SoundManager")
-		if soundManagerModule then
-			SoundManager = require(soundManagerModule)
-		else
-			warn("SoundManager module not found in ReplicatedStorage!")
-		end
-	end
+	local SoundManager = MODULES["SoundManager"] or require(RepStorage.Modules.SoundManager)
 	-- Functions
 	local random = Random.new()
 	local Plr = Plrs.LocalPlayer
@@ -377,7 +368,7 @@ function module.LOAD(MODULE_INFO)
 	-- Connect to server events
 	RepStorage.Events.MessageClient.OnClientEvent:Connect(module.message_render)
 
-	print("Modern Information script loaded!")
+	--print("Modern Information script loaded!")
 end
 
 return module
