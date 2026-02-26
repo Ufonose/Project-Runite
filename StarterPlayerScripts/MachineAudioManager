@@ -1,37 +1,44 @@
 -- StarterPlayerScripts/MachineAudioManager.lua
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 local Camera = workspace.CurrentCamera
 
 -- ── SETTINGS ──────────────────────────────────────────────────────────────
-local MAX_HEARING_DIST = 50 
-local CHECK_INTERVAL = 0.1  
-local FADE_SPEED = 2.5      
+local MAX_HEARING_DIST = 50
+local CHECK_INTERVAL   = 0.1
+local FADE_SPEED       = 2.5
 
+local Plr = Players.LocalPlayer
+
+-- ── HELPER: read the MachineSounds setting ─────────────────────────────────
+local function machineSoundsEnabled()
+	local settings = Plr:FindFirstChild("Settings")
+	if not settings then return true end
+	local s = settings:FindFirstChild("MachineSounds")
+	return s == nil or s.Value  -- defaults to true if setting doesn't exist yet
+end
+
+-- ── HUM SOUNDS (proximity-based, client-managed) ───────────────────────────
 local lastCheck = 0
-local closestBySoundName = {} 
-local originalVolumes = {} -- This stores the "Max Volume" you set in Studio
+local closestBySoundName = {}
+local originalVolumes = {}
 
 local hummingMachines = CollectionService:GetTagged("HummingMachine")
 
--- Function to register a machine's sounds
 local function registerMachine(machine)
 	for _, child in ipairs(machine:GetChildren()) do
 		if child:IsA("Sound") and string.match(child.Name, "^Hum") then
-			-- Memorize the volume you set in the Properties window as the "Max"
 			originalVolumes[child] = child.Volume
-			-- Set it to 0 initially so it can fade in
 			child.Volume = 0
 		end
 	end
 end
 
--- Initial Registration
 for _, machine in ipairs(hummingMachines) do
 	registerMachine(machine)
 end
 
--- Watch for new machines
 CollectionService:GetInstanceAddedSignal("HummingMachine"):Connect(function(inst)
 	if not table.find(hummingMachines, inst) then
 		table.insert(hummingMachines, inst)
@@ -39,16 +46,58 @@ CollectionService:GetInstanceAddedSignal("HummingMachine"):Connect(function(inst
 	end
 end)
 
--- ── MAIN LOOP ─────────────────────────────────────────────────────────────
+-- ── NON-HUM SOUNDS (server-played or ambient, muted client-side) ────────────
+-- Sound names that should be silenced when MachineSounds is off
+local MUTED_SOUND_NAMES = {
+	["Crush"] = true,    -- machine input sounds
+	["Drop"] = true,     -- miner ore drop sounds
+	["Waterfall"] = true -- ambient waterfall loop
+}
+
+local function applyMachineSoundSetting()
+	local enabled = machineSoundsEnabled()
+	for _, desc in ipairs(workspace:GetDescendants()) do
+		if desc:IsA("Sound") and MUTED_SOUND_NAMES[desc.Name] then
+			if enabled then
+				desc.Volume = desc:GetAttribute("OriginalVolume") or desc.Volume
+			else
+				if not desc:GetAttribute("OriginalVolume") then
+					desc:SetAttribute("OriginalVolume", desc.Volume)
+				end
+				desc.Volume = 0
+			end
+		end
+	end
+end
+
+-- React to setting changes in real time
+local settings = Plr:WaitForChild("Settings")
+local machineSetting = settings:WaitForChild("MachineSounds", 10)
+if machineSetting then
+	machineSetting:GetPropertyChangedSignal("Value"):Connect(applyMachineSoundSetting)
+end
+
+-- Catch any of these sounds being added later (new machines placed, etc.)
+workspace.DescendantAdded:Connect(function(desc)
+	if desc:IsA("Sound") and MUTED_SOUND_NAMES[desc.Name] then
+		task.defer(applyMachineSoundSetting)
+	end
+end)
+
+-- Apply once on startup (short delay to let plot/machines load)
+task.delay(1, applyMachineSoundSetting)
+
+-- ── MAIN LOOP (hum proximity + volume) ────────────────────────────────────
 RunService.Heartbeat:Connect(function(dt)
 	local now = os.clock()
 	local camPos = Camera.CFrame.Position
+	local humEnabled = machineSoundsEnabled()
 
 	-- 1. PROXIMITY CHECK
 	if now - lastCheck > CHECK_INTERVAL then
 		lastCheck = now
-		closestBySoundName = {} 
-		local distances = {} 
+		closestBySoundName = {}
+		local distances = {}
 
 		for _, machine in ipairs(hummingMachines) do
 			if machine and machine.Parent then
@@ -72,15 +121,14 @@ RunService.Heartbeat:Connect(function(dt)
 		for _, hum in ipairs(machine:GetChildren()) do
 			if hum:IsA("Sound") and string.match(hum.Name, "^Hum") then
 
-				if not hum.IsPlaying then hum:Play() end 
+				if not hum.IsPlaying then hum:Play() end
 
-				-- Use the "Original" volume we saved earlier
 				local maxVol = originalVolumes[hum] or 0.5
-
 				local isClosest = (closestBySoundName[hum.Name] == machine)
-				local targetVolume = isClosest and maxVol or 0
 
-				-- Smoothly fade
+				-- If the setting is off, target is always 0 regardless of proximity
+				local targetVolume = (humEnabled and isClosest) and maxVol or 0
+
 				hum.Volume = hum.Volume + (targetVolume - hum.Volume) * (dt * FADE_SPEED)
 			end
 		end
