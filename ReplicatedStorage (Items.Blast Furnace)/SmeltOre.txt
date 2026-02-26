@@ -217,7 +217,12 @@ task.spawn(function()
 		local partsInInput = workspace:GetPartBoundsInBox(SMELT_INPUT.CFrame, SMELT_INPUT.Size, overlapParams)
 
 		for _, hit in pairs(partsInInput) do
-			local ORE = hit:FindFirstChild("Cash") and hit or (hit.Parent and hit.Parent:FindFirstChild("Cash") and hit.Parent)
+			local ORE
+			if hit:FindFirstChild("Cash") then
+				ORE = hit
+			elseif hit.Parent and hit.Parent:FindFirstChild("Cash") then
+				ORE = hit.Parent
+			end
 
 			if ORE and not processedOres[ORE] then
 				processedOres[ORE] = true
@@ -230,4 +235,4 @@ task.spawn(function()
 end)
 
 updateDisplay()
-print("Blast Furnace Scanning Logic Loaded with Audio Trigger!")
+--print("Blast Furnace Scanning Logic Loaded with Audio Trigger!")
