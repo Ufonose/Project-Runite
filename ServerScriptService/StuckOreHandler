@@ -1,0 +1,21 @@
+-- ServerScriptService/StuckOreHandler
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local StuckOreEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("DestroyStuckOre")
+
+StuckOreEvent.OnServerEvent:Connect(function(player, ore)
+	if not ore or not ore.Parent then return end
+
+	-- Walk up the hierarchy to find a plot with an Owner StringValue
+	local ancestor = ore.Parent
+	while ancestor and ancestor ~= workspace do
+		local ownerValue = ancestor:FindFirstChild("Owner")
+		if ownerValue and ownerValue:IsA("StringValue") then
+			if ownerValue.Value == player.Name then
+				ore:Destroy()
+			end
+			return -- Found a plot either way, stop searching
+		end
+		ancestor = ancestor.Parent
+	end
+end)
