@@ -112,55 +112,6 @@ end
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 
--- Detect screen size and adjust GUI size for mobile
-local function updateMainFrameSize()
-	local viewport = workspace.CurrentCamera.ViewportSize
-	local screenWidth = viewport.X
-
-	-- Update scale factor for cards
-	updateScaleFactor()
-
-	-- Update scrollbar thickness based on scale factor (only if it exists)
-	if treeContainer then
-		treeContainer.ScrollBarThickness = math.max(6, 10 * SCALE_FACTOR)
-	end
-
-	-- Update corner radii based on scale factor (only if they exist)
-	if blurCorner then blurCorner.CornerRadius = UDim.new(0, math.max(8, 15 * SCALE_FACTOR)) end
-	if mainCorner then mainCorner.CornerRadius = UDim.new(0, math.max(8, 15 * SCALE_FACTOR)) end
-	if titleCorner then titleCorner.CornerRadius = UDim.new(0, math.max(8, 15 * SCALE_FACTOR)) end
-	if ageTabsCorner then ageTabsCorner.CornerRadius = UDim.new(0, math.max(6, 12 * SCALE_FACTOR)) end
-	if treeCorner then treeCorner.CornerRadius = UDim.new(0, math.max(6, 12 * SCALE_FACTOR)) end
-
-	-- Update stroke thickness based on scale factor (only if they exist)
-	if mainStroke then mainStroke.Thickness = math.max(1, 2 * SCALE_FACTOR) end
-	if ageTabsStroke then ageTabsStroke.Thickness = math.max(0.5, 1 * SCALE_FACTOR) end
-	if treeStroke then treeStroke.Thickness = math.max(0.5, 1 * SCALE_FACTOR) end
-
-	-- If screen width is less than 800 pixels (mobile/tablet), make GUI bigger
-	if screenWidth < 800 then
-		mainFrame.Size = UDim2.new(0.95, 0, 0.95, 0)  -- Mobile size (95% of screen)
-	else
-		mainFrame.Size = UDim2.new(0.85, 0, 0.85, 0)  -- Desktop size (85% of screen)
-	end
-
-	-- Refresh view if it's visible to apply new scaling
-	if mainFrame.Visible and researchData then
-		if currentView == "objectives" then
-			refreshTree()
-		else
-			displayStatistics()
-		end
-	end
-end
-
--- Update on initial load
-updateScaleFactor()  -- Initialize scale factor first
-updateMainFrameSize()
-
--- Update when screen size changes (device rotation, window resize)
-workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateMainFrameSize)
-
 mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
@@ -410,6 +361,55 @@ treeStroke.Thickness = 1
 treeStroke.Transparency = 0.6
 treeStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 treeStroke.Parent = treeContainer
+
+-- Detect screen size and adjust GUI size for mobile
+local function updateMainFrameSize()
+	local viewport = workspace.CurrentCamera.ViewportSize
+	local screenWidth = viewport.X
+
+	-- Update scale factor for cards
+	updateScaleFactor()
+
+	-- Update scrollbar thickness based on scale factor (only if it exists)
+	if treeContainer then
+		treeContainer.ScrollBarThickness = math.max(6, 10 * SCALE_FACTOR)
+	end
+
+	-- Update corner radii based on scale factor (only if they exist)
+	if blurCorner then blurCorner.CornerRadius = UDim.new(0, math.max(8, 15 * SCALE_FACTOR)) end
+	if mainCorner then mainCorner.CornerRadius = UDim.new(0, math.max(8, 15 * SCALE_FACTOR)) end
+	if titleCorner then titleCorner.CornerRadius = UDim.new(0, math.max(8, 15 * SCALE_FACTOR)) end
+	if ageTabsCorner then ageTabsCorner.CornerRadius = UDim.new(0, math.max(6, 12 * SCALE_FACTOR)) end
+	if treeCorner then treeCorner.CornerRadius = UDim.new(0, math.max(6, 12 * SCALE_FACTOR)) end
+
+	-- Update stroke thickness based on scale factor (only if they exist)
+	if mainStroke then mainStroke.Thickness = math.max(1, 2 * SCALE_FACTOR) end
+	if ageTabsStroke then ageTabsStroke.Thickness = math.max(0.5, 1 * SCALE_FACTOR) end
+	if treeStroke then treeStroke.Thickness = math.max(0.5, 1 * SCALE_FACTOR) end
+
+	-- If screen width is less than 800 pixels (mobile/tablet), make GUI bigger
+	if screenWidth < 800 then
+		mainFrame.Size = UDim2.new(0.95, 0, 0.95, 0)  -- Mobile size (95% of screen)
+	else
+		mainFrame.Size = UDim2.new(0.85, 0, 0.85, 0)  -- Desktop size (85% of screen)
+	end
+
+	-- Refresh view if it's visible to apply new scaling
+	if mainFrame.Visible and researchData then
+		if currentView == "objectives" then
+			refreshTree()
+		else
+			displayStatistics()
+		end
+	end
+end
+
+-- Update on initial load
+updateScaleFactor()  -- Initialize scale factor first
+updateMainFrameSize()
+
+-- Update when screen size changes (device rotation, window resize)
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateMainFrameSize)
 
 -- Connection lines frame (behind cards)
 local connectionsFrame = Instance.new("Frame")
@@ -1541,7 +1541,7 @@ menuObject.Parent = researchGui
 
 -- Handle menu visibility
 menuObject.Changed:Connect(function()
-	print("ResearchGui MenuObject changed to:", menuObject.Value)
+	--print("ResearchGui MenuObject changed to:", menuObject.Value)
 	mainFrame.Visible = menuObject.Value
 	if mainFrame.Visible then
 		SoundManager.MenuOpen()
