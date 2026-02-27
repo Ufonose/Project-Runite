@@ -5,6 +5,7 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	local RepStorage = game:GetService("ReplicatedStorage")
 	local Plr = Plrs.LocalPlayer
 	local Camera = workspace.CurrentCamera
+	local SoundManager = require(RepStorage.Modules.SoundManager)
 
 	-- Main container - converted to scale (550x650 base reference)
 	local container = Instance.new("Frame")
@@ -289,6 +290,7 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 
 			-- Handle clicks
 			toggleButton.MouseButton1Click:Connect(function()
+				SoundManager.ButtonClick()
 				RepStorage.Events.UpdateToggle:InvokeServer(settingName)
 			end)
 		end
