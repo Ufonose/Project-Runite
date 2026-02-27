@@ -12,10 +12,10 @@ local WIND_SOUND_IDS    = {
 	"rbxassetid://111260528570502",
 }
 
-local AMBIENCE_VOLUME   = 1
-local WIND_VOLUME       = 0.35
-local WIND_MIN_WAIT     = 10  -- 2 minutes
-local WIND_MAX_WAIT     = 15 -- 4 minutes
+local AMBIENCE_VOLUME   = 3
+local WIND_VOLUME       = 0.7
+local WIND_MIN_WAIT     = 40  -- 2 minutes
+local WIND_MAX_WAIT     = 70 -- 4 minutes
 local FADE_TIME         = 1.5  -- seconds to fade in/out when toggling
 
 -- ── SOUND SETUP ───────────────────────────────────────────────────────────
@@ -82,7 +82,29 @@ task.spawn(function()
 	end
 end)
 
--- ── SETTING LISTENER ─────────────────────────────────────────────────────
+local function applyAmbienceSetting()
+	local enabled = ambienceEnabled()
+	for _, desc in ipairs(workspace:GetDescendants()) do
+		if desc:IsA("Sound") and desc.Name == "Waterfall" then
+			if enabled then
+				local original = desc:GetAttribute("OriginalVolume") or desc.Volume
+				fadeVolume(desc, original, FADE_TIME)
+			else
+				if not desc:GetAttribute("OriginalVolume") then
+					desc:SetAttribute("OriginalVolume", desc.Volume)
+				end
+				fadeVolume(desc, 0, FADE_TIME)
+			end
+		end
+	end
+end
+
+-- Catch Waterfall sounds added later
+workspace.DescendantAdded:Connect(function(desc)
+	if desc:IsA("Sound") and desc.Name == "Waterfall" then
+		task.defer(applyAmbienceSetting)
+	end
+end)
 local settings = Plr:WaitForChild("Settings")
 local ambienceSetting = settings:WaitForChild("AmbienceMusic", 10)
 
@@ -90,21 +112,24 @@ if ambienceSetting then
 	ambienceSetting:GetPropertyChangedSignal("Value"):Connect(function()
 		if ambienceSetting.Value then
 			startAmbience()
+			applyAmbienceSetting()
 		else
 			stopAmbience()
-			-- Stop wind mid-play if setting turned off
+			applyAmbienceSetting()
+			-- Fade out and stop wind if currently playing
 			if windSound.IsPlaying then
-				fadeVolume(windSound, 0, 0.5)
-				task.delay(0.5, function() windSound:Stop() end)
+				fadeVolume(windSound, 0, FADE_TIME)
+				task.delay(FADE_TIME, function() windSound:Stop() end)
 			end
 		end
 	end)
 end
 
--- ── START ─────────────────────────────────────────────────────────────────
+-- ── SETTING LISTENER ─────────────────────────────────────────────────────
 -- Short delay to let player data/settings load in
 task.delay(2, function()
 	if ambienceEnabled() then
 		startAmbience()
 	end
+	applyAmbienceSetting()
 end)
