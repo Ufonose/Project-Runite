@@ -60,6 +60,11 @@ function module.LOAD(MODULE_INFO)
 	aspectRatio.AspectRatio = 0.6222
 	aspectRatio.DominantAxis = Enum.DominantAxis.Height  -- Scale based on height
 	aspectRatio.Parent = invFrame
+	
+	-- Max scale
+	local sizeConstraint = Instance.new("UISizeConstraint")
+	sizeConstraint.MaxSize = Vector2.new(900, 1050) -- 548 x 880 keeps your 0.6222 aspect ratio
+	sizeConstraint.Parent = invFrame
 
 	-- Blur/Glass effect background
 	local blur = Instance.new("Frame")
