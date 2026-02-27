@@ -51,7 +51,6 @@ end)
 local MUTED_SOUND_NAMES = {
 	["Crush"] = true,    -- machine input sounds
 	["Drop"] = true,     -- miner ore drop sounds
-	["Waterfall"] = true -- ambient waterfall loop
 }
 
 local function applyMachineSoundSetting()
