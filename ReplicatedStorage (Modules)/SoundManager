@@ -41,15 +41,11 @@ local VOLUMES = {
 
 -- Sound categories for settings check
 local SOUND_CATEGORIES = {
-	-- UI & Placement Sounds (controlled by UISounds setting)
 	UISounds = {
 		"MenuOpen", "MenuClose", "ButtonClick", "ButtonHover",
-		"PlaceItem", "RotateItem", "CancelPlace"
-	},
-	-- Notification Sounds (controlled by NotificationSounds setting)
-	NotificationSounds = {
+		"PlaceItem", "RotateItem", "CancelPlace",
 		"Success", "Error", "Purchase"
-	}
+	},
 }
 
 -- Pre-created sound instances (created once, reused many times)
@@ -67,7 +63,7 @@ local function initializeSounds()
 		soundInstances[soundName] = sound
 	end
 
-	print("SoundManager: All sounds pre-loaded!")
+--	print("SoundManager: All sounds pre-loaded!")
 end
 
 -- Initialize sounds immediately
@@ -86,14 +82,6 @@ local function shouldPlaySound(soundName)
 		local uiSoundsSetting = settings:FindFirstChild("UISounds")
 		if uiSoundsSetting then
 			return uiSoundsSetting.Value  -- Return the setting value (true = play, false = mute)
-		end
-	end
-
-	-- Check if this sound is a Notification sound
-	if table.find(SOUND_CATEGORIES.NotificationSounds, soundName) then
-		local notificationSoundsSetting = settings:FindFirstChild("NotificationSounds")
-		if notificationSoundsSetting then
-			return notificationSoundsSetting.Value  -- Return the setting value
 		end
 	end
 
