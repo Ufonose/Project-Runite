@@ -15,11 +15,11 @@ PLAYER_DATA.SETTINGS_VALUES = {
 		["VALUE_TYPE"] = "BoolValue",
 		["DEFAULT"] = true,
 	},
-	["NotificationSounds"] = {
-		["VALUE_TYPE"] = "BoolValue",
-		["DEFAULT"] = true,
-	},
 	["MachineSounds"] = {        -- NEW
+		["VALUE_TYPE"] = "BoolValue",
+		["DEFAULT"] = true,		
+	},
+	["AmbienceMusic"] = {
 		["VALUE_TYPE"] = "BoolValue",
 		["DEFAULT"] = true,
 	},
