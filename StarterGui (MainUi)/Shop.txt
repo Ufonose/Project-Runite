@@ -60,6 +60,11 @@ function module.LOAD(MODULE_INFO)
 	aspectRatio.AspectRatio = 0.78  -- Wider to accommodate sidebar without shrinking items
 	aspectRatio.DominantAxis = Enum.DominantAxis.Height
 	aspectRatio.Parent = shopFrame
+	
+	-- Max scale
+	local sizeConstraint = Instance.new("UISizeConstraint")
+	sizeConstraint.MaxSize = Vector2.new(900, 1060) -- Max width, max height in pixels
+	sizeConstraint.Parent = shopFrame
 
 	-- Blur/Glass effect background
 	local blur = Instance.new("Frame")
