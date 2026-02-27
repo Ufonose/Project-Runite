@@ -37,6 +37,11 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 
 	-- Update when screen size changes
 	Camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateContainerSize)
+	
+	-- Max Scale
+	local sizeConstraint = Instance.new("UISizeConstraint")
+	sizeConstraint.MaxSize = Vector2.new(650, 750) -- matches the base reference size in the comments
+	sizeConstraint.Parent = container
 
 	-- Blur/Glass effect background
 	local blur = Instance.new("Frame")
