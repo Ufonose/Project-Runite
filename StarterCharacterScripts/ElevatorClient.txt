@@ -1,0 +1,40 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+
+-- Wait for plot to be assigned first
+local setPlot = player:WaitForChild("SetPlot")
+local plotName = setPlot.Value and setPlot.Value.Name
+
+-- Cave elevator prompt (go to surface)
+local caveElevators = workspace:WaitForChild("CaveElevators")
+local cavePlot = caveElevators:WaitForChild(plotName)
+local cavePrompt = cavePlot:WaitForChild("ProximityPrompt")
+
+cavePrompt.Triggered:Connect(function()
+	ReplicatedStorage.Events.TeleportToSurface:FireServer()
+end)
+
+-- Surface elevator prompts (return to cave)
+local surfaceElevators = workspace:WaitForChild("SurfaceElevators")
+
+-- Surface elevator prompts (return to cave)
+local surfaceElevators = workspace:WaitForChild("SurfaceElevators")
+
+local function connectSurfacePrompt(surfacePart)
+	local prompt = surfacePart:WaitForChild("ProximityPrompt", 5)
+	if prompt then
+		prompt.Triggered:Connect(function()
+			ReplicatedStorage.Events.TeleportToCave:FireServer(surfacePart.Name)
+		end)
+	end
+end
+
+-- Handle parts already in the folder
+for _, surfacePart in pairs(surfaceElevators:GetChildren()) do
+	connectSurfacePrompt(surfacePart)
+end
+
+-- Handle parts that replicate in after the script runs
+surfaceElevators.ChildAdded:Connect(connectSurfacePrompt)
