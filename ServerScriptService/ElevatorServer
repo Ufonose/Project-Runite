@@ -1,0 +1,35 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local surfaceEvent = ReplicatedStorage.Events.TeleportToSurface
+local caveEvent = ReplicatedStorage.Events.TeleportToCave
+
+local surfaceElevators = workspace.SurfaceElevators
+local caveElevators = workspace.CaveElevators
+
+-- Cave --> Surface
+surfaceEvent.OnServerEvent:Connect(function(player)
+	local setPlot = player:FindFirstChild("SetPlot")
+	if not setPlot or not setPlot.Value then return end
+
+	local plotName = setPlot.Value.Name
+	local surfaceSpot = surfaceElevators:FindFirstChild(plotName)
+
+	if surfaceSpot and player.Character then
+		local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			hrp.CFrame = surfaceSpot.CFrame + Vector3.new(0, 4, 0)
+		end
+	end
+end)
+
+-- Surface --> Cave
+caveEvent.OnServerEvent:Connect(function(player, targetPlotName)
+	local caveSpot = caveElevators:FindFirstChild(targetPlotName)
+
+	if caveSpot and player.Character then
+		local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			hrp.CFrame = caveSpot.CFrame + Vector3.new(0, 4, 0)
+		end
+	end
+end)
