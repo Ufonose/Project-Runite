@@ -1,0 +1,128 @@
+local Players = game:GetService("Players")
+local surfaceElevators = workspace:WaitForChild("Nameplates")
+
+local function createNameplate(part)
+	-- Remove existing gui if any
+	local existing = part:FindFirstChild("OwnerGui")
+	if existing then existing:Destroy() end
+
+	-- SurfaceGui setup
+	local gui = Instance.new("SurfaceGui")
+	gui.Name = "OwnerGui"
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 50
+	gui.Parent = part
+
+	-- Background frame
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(1, 0, 1, 0)
+	frame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	frame.BackgroundTransparency = 0.3
+	frame.Parent = gui
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.1, 0)
+	corner.Parent = frame
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(80, 80, 100)
+	stroke.Thickness = 2
+	stroke.Parent = frame
+
+	-- Profile picture
+	local image = Instance.new("ImageLabel")
+	image.Name = "Avatar"
+	image.Size = UDim2.new(0.4, 0, 0.7, 0)
+	image.Position = UDim2.new(0.05, 0, 0.15, 0)
+	image.BackgroundTransparency = 1
+	image.Image = "" -- filled in later
+	image.Parent = frame
+
+	local imageCorner = Instance.new("UICorner")
+	imageCorner.CornerRadius = UDim.new(0.15, 0)
+	imageCorner.Parent = image
+
+	-- Player name
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Name = "PlayerName"
+	nameLabel.Size = UDim2.new(0.5, 0, 0.5, 0)
+	nameLabel.Position = UDim2.new(0.47, 0, 0.1, 0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = "Empty"
+	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	nameLabel.TextScaled = true
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.Parent = frame
+
+	-- "Mine" label below name
+	local mineLabel = Instance.new("TextLabel")
+	mineLabel.Name = "MineLabel"
+	mineLabel.Size = UDim2.new(0.5, 0, 0.3, 0)
+	mineLabel.Position = UDim2.new(0.47, 0, 0.6, 0)
+	mineLabel.BackgroundTransparency = 1
+	mineLabel.Text = "Mine"
+	mineLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+	mineLabel.TextScaled = true
+	mineLabel.Font = Enum.Font.Gotham
+	mineLabel.Parent = frame
+
+	return gui
+end
+
+local function updateNameplate(part, player)
+	local gui = part:FindFirstChild("OwnerGui") or createNameplate(part)
+	local frame = gui:FindFirstChild("Frame") or gui:FindFirstChildOfClass("Frame")
+	if not frame then return end
+
+	local nameLabel = frame:FindFirstChild("PlayerName")
+	local avatar = frame:FindFirstChild("Avatar")
+
+	if nameLabel then
+		nameLabel.Text = player and player.Name .. "'s" or "Empty"
+	end
+
+	if avatar then
+		if player then
+			local success, imgUrl = pcall(function()
+				return Players:GetUserThumbnailAsync(
+					player.UserId,
+					Enum.ThumbnailType.HeadShot,
+					Enum.ThumbnailSize.Size420x420
+				)
+			end)
+			avatar.Image = success and imgUrl or ""
+		else
+			avatar.Image = ""
+		end
+	end
+end
+
+-- Initialize all nameplates as empty
+for _, part in pairs(surfaceElevators:GetChildren()) do
+	createNameplate(part)
+end
+
+-- When a player joins, update their plot's nameplate
+Players.PlayerAdded:Connect(function(player)
+	local setPlot = player:WaitForChild("SetPlot", 30)
+	if not setPlot or not setPlot.Value then return end
+
+	local plotName = setPlot.Value.Name
+	local surfacePart = surfaceElevators:FindFirstChild(plotName)
+	if surfacePart then
+		updateNameplate(surfacePart, player)
+	end
+end)
+
+-- When a player leaves, reset their nameplate to empty
+Players.PlayerRemoving:Connect(function(player)
+	local setPlot = player:FindFirstChild("SetPlot")
+	if not setPlot or not setPlot.Value then return end
+
+	local plotName = setPlot.Value.Name
+	local surfacePart = surfaceElevators:FindFirstChild(plotName)
+	if surfacePart then
+		updateNameplate(surfacePart, nil)
+	end
+end)
