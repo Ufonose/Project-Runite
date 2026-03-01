@@ -14,6 +14,8 @@ local SoundManager = require(ReplicatedStorage.Modules.SoundManager)
 local RemoteEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("CaveBarrierEvent", 10)
 if not RemoteEvent then return end
 
+local SpeedrunReset = ReplicatedStorage:WaitForChild("Events"):WaitForChild("SpeedrunReset")
+
 -- ============================================================================
 -- VARIABLES
 -- ============================================================================
@@ -292,4 +294,18 @@ task.spawn(function()
 	if plot then
 		setupBarrierGUIs()
 	end
+end)
+
+SpeedrunReset.OnClientEvent:Connect(function()
+	barrierGUIs = {}
+	task.wait(0.5)
+	setupBarrierGUIs()
+end)
+
+-- ✅ ADD THIS: Start Run also rebuilds barriers
+local SpeedrunStarted = ReplicatedStorage:WaitForChild("Events"):WaitForChild("SpeedrunStarted")
+SpeedrunStarted.OnClientEvent:Connect(function()
+	barrierGUIs = {}
+	task.wait(0.5)
+	setupBarrierGUIs()
 end)
