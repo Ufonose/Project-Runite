@@ -3,6 +3,7 @@ local RepStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local SoundManager = require(RepStorage.Modules.SoundManager)
+local SpeedrunReset = RepStorage:WaitForChild("Events"):WaitForChild("SpeedrunReset")
 
 local dataLoaded = player:WaitForChild("DataLoaded", 30)
 if not dataLoaded then
@@ -286,3 +287,27 @@ for _, hotspot in pairs(hotspotFolder:GetChildren()) do
 		end
 	end)
 end
+
+SpeedrunReset.OnClientEvent:Connect(function()
+	task.wait(0.5)
+	local newHotspotFolder = player.SetPlot.Value:FindFirstChild("MinerHotspots")
+	if not newHotspotFolder then return end
+	for _, hotspot in pairs(newHotspotFolder:GetChildren()) do
+		task.spawn(function()
+			pcall(function() setupHotspot(hotspot) end)
+		end)
+	end
+end)
+
+-- ✅ ADD THIS: Start Run also rebuilds hotspot UIs
+local SpeedrunStarted = RepStorage:WaitForChild("Events"):WaitForChild("SpeedrunStarted")
+SpeedrunStarted.OnClientEvent:Connect(function()
+	task.wait(0.5)
+	local newHotspotFolder = player.SetPlot.Value:FindFirstChild("MinerHotspots")
+	if not newHotspotFolder then return end
+	for _, hotspot in pairs(newHotspotFolder:GetChildren()) do
+		task.spawn(function()
+			pcall(function() setupHotspot(hotspot) end)
+		end)
+	end
+end)
