@@ -23,7 +23,8 @@ function module.LOAD(MODULE_INFO)
 
 	-- Map button names to actual GUI names (for special cases)
 	local buttonToGuiMap = {
-		["Research"] = "ResearchGui",  -- Button is "Research", GUI is "ResearchGui"
+		["Research"] = "ResearchGui", 
+		["Speedrun"] = "SpeedrunGui",-- Button is "Research", GUI is "ResearchGui"
 	}
 
 	for I, BUTTON in pairs(script.Parent.PlotButtons:GetChildren()) do
