@@ -6,25 +6,35 @@ local TweenService = game:GetService("TweenService")
 local Plr = Players.LocalPlayer
 
 -- ── CONFIG ────────────────────────────────────────────────────────────────
-local AMBIENCE_SOUND_ID = "rbxassetid://91805326647310"  -- 30sec loop
+local CAVE_SOUND_ID     = "rbxassetid://91805326647310"  -- 30sec loop
+local SURFACE_SOUND_ID  = "rbxassetid://9112738537" -- 🔁 replace this
+
 local WIND_SOUND_IDS    = {
 	"rbxassetid://118165096482111",
 	"rbxassetid://111260528570502",
 }
 
-local AMBIENCE_VOLUME   = 3
+local CAVE_VOLUME       = 3
+local SURFACE_VOLUME    = 3 -- adjust to taste
 local WIND_VOLUME       = 0.7
-local WIND_MIN_WAIT     = 40  -- 2 minutes
-local WIND_MAX_WAIT     = 70 -- 4 minutes
-local FADE_TIME         = 1.5  -- seconds to fade in/out when toggling
+local WIND_MIN_WAIT     = 40
+local WIND_MAX_WAIT     = 70
+local FADE_TIME         = 1.5
 
 -- ── SOUND SETUP ───────────────────────────────────────────────────────────
-local ambienceSound = Instance.new("Sound")
-ambienceSound.Name = "AmbienceLoop"
-ambienceSound.SoundId = AMBIENCE_SOUND_ID
-ambienceSound.Volume = 0
-ambienceSound.Looped = true
-ambienceSound.Parent = SoundService
+local caveSound = Instance.new("Sound")
+caveSound.Name = "AmbienceLoop"
+caveSound.SoundId = CAVE_SOUND_ID
+caveSound.Volume = 0
+caveSound.Looped = true
+caveSound.Parent = SoundService
+
+local surfaceSound = Instance.new("Sound")
+surfaceSound.Name = "SurfaceAmbienceLoop"
+surfaceSound.SoundId = SURFACE_SOUND_ID
+surfaceSound.Volume = 0
+surfaceSound.Looped = true
+surfaceSound.Parent = SoundService
 
 local windSound = Instance.new("Sound")
 windSound.Name = "WindGust"
@@ -46,22 +56,38 @@ local function fadeVolume(sound, targetVol, duration)
 	}):Play()
 end
 
--- ── AMBIENCE LOOP ─────────────────────────────────────────────────────────
-local function startAmbience()
-	if not ambienceSound.IsPlaying then
-		ambienceSound:Play()
+-- ── LOCATION SWITCH ───────────────────────────────────────────────────────
+local function switchToSurface()
+	if not ambienceEnabled() then return end
+	fadeVolume(caveSound, 0, FADE_TIME)
+	task.delay(FADE_TIME, function()
+		caveSound:Stop()
+	end)
+	if not surfaceSound.IsPlaying then
+		surfaceSound:Play()
 	end
-	fadeVolume(ambienceSound, AMBIENCE_VOLUME, FADE_TIME)
+	fadeVolume(surfaceSound, SURFACE_VOLUME, FADE_TIME)
 end
 
-local function stopAmbience()
-	fadeVolume(ambienceSound, 0, FADE_TIME)
+local function switchToCave()
+	if not ambienceEnabled() then return end
+	fadeVolume(surfaceSound, 0, FADE_TIME)
 	task.delay(FADE_TIME, function()
-		if not ambienceEnabled() then
-			ambienceSound:Stop()
-		end
+		surfaceSound:Stop()
 	end)
+	-- Stop wind if it's still playing
+	if windSound.IsPlaying then
+		fadeVolume(windSound, 0, FADE_TIME)
+		task.delay(FADE_TIME, function() windSound:Stop() end)
+	end
+	if not caveSound.IsPlaying then
+		caveSound:Play()
+	end
+	fadeVolume(caveSound, CAVE_VOLUME, FADE_TIME)
 end
+
+-- ── LOCATION VALUE ────────────────────────────────────────────────────────
+local locationValue = Plr:WaitForChild("PlayerLocation", 30)
 
 -- ── WIND LOOP ─────────────────────────────────────────────────────────────
 local windRunning = true
@@ -71,10 +97,10 @@ task.spawn(function()
 		local waitTime = WIND_MIN_WAIT + math.random() * (WIND_MAX_WAIT - WIND_MIN_WAIT)
 		task.wait(waitTime)
 
-		if ambienceEnabled() then
-			-- Pick a random wind sound each time
+		local onSurface = locationValue and locationValue.Value == "Surface"
+		if ambienceEnabled() and onSurface then
 			windSound.SoundId = WIND_SOUND_IDS[math.random(1, #WIND_SOUND_IDS)]
-			windSound.PlaybackSpeed = math.random(90, 110) / 100  -- slight pitch variation
+			windSound.PlaybackSpeed = math.random(90, 110) / 100
 			windSound.Volume = 0
 			windSound:Play()
 			fadeVolume(windSound, WIND_VOLUME, 1)
@@ -82,6 +108,7 @@ task.spawn(function()
 	end
 end)
 
+-- ── WATERFALL HELPER ──────────────────────────────────────────────────────
 local function applyAmbienceSetting()
 	local enabled = ambienceEnabled()
 	for _, desc in ipairs(workspace:GetDescendants()) do
@@ -99,24 +126,37 @@ local function applyAmbienceSetting()
 	end
 end
 
--- Catch Waterfall sounds added later
 workspace.DescendantAdded:Connect(function(desc)
 	if desc:IsA("Sound") and desc.Name == "Waterfall" then
 		task.defer(applyAmbienceSetting)
 	end
 end)
+
+-- ── LOCATION LISTENER ─────────────────────────────────────────────────────
+if locationValue then
+	locationValue:GetPropertyChangedSignal("Value"):Connect(function()
+		if locationValue.Value == "Surface" then
+			switchToSurface()
+		else
+			switchToCave()
+		end
+	end)
+end
+
+-- ── SETTING LISTENER ──────────────────────────────────────────────────────
 local settings = Plr:WaitForChild("Settings")
 local ambienceSetting = settings:WaitForChild("AmbienceMusic", 10)
 
 if ambienceSetting then
 	ambienceSetting:GetPropertyChangedSignal("Value"):Connect(function()
 		if ambienceSetting.Value then
-			startAmbience()
+			local loc = locationValue and locationValue.Value or "Cave"
+			if loc == "Surface" then switchToSurface() else switchToCave() end
 			applyAmbienceSetting()
 		else
-			stopAmbience()
+			fadeVolume(caveSound, 0, FADE_TIME)
+			fadeVolume(surfaceSound, 0, FADE_TIME)
 			applyAmbienceSetting()
-			-- Fade out and stop wind if currently playing
 			if windSound.IsPlaying then
 				fadeVolume(windSound, 0, FADE_TIME)
 				task.delay(FADE_TIME, function() windSound:Stop() end)
@@ -125,11 +165,10 @@ if ambienceSetting then
 	end)
 end
 
--- ── SETTING LISTENER ─────────────────────────────────────────────────────
--- Short delay to let player data/settings load in
+-- ── INITIAL START ─────────────────────────────────────────────────────────
 task.delay(2, function()
 	if ambienceEnabled() then
-		startAmbience()
+		switchToCave() -- players always start in the cave
 	end
 	applyAmbienceSetting()
 end)
