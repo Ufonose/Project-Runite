@@ -1,0 +1,315 @@
+-- ServerScriptService/LeaderboardServer
+local Players = game:GetService("Players")
+local DataStoreService = game:GetService("DataStoreService")
+
+local leaderboardPart = workspace:WaitForChild("Leaderboards"):WaitForChild("Leaderboard") -- adjust path
+
+local DS_FETCH_INTERVAL  = 120
+local LIVE_UPDATE_INTERVAL = 5
+local MAX_ENTRIES = 100
+local ROW_HEIGHT  = 36
+local ROW_PADDING = 5
+
+local EarnedStore = DataStoreService:GetOrderedDataStore("TotalEarned_v1")
+local cachedData  = {}
+
+-- ── SUFFIX ────────────────────────────────────────────────────────────────
+local function suffixNum(n)
+	if n >= 1e12 then return string.format("$%.1fT", n / 1e12)
+	elseif n >= 1e9  then return string.format("$%.1fB", n / 1e9)
+	elseif n >= 1e6  then return string.format("$%.1fM", n / 1e6)
+	elseif n >= 1e3  then return string.format("$%.1fK", n / 1e3)
+	else return "$" .. math.floor(n) end
+end
+
+-- ── SAVE TO ORDERED DS ────────────────────────────────────────────────────
+local saveCooldowns = {} -- tracks last save time per player
+
+local function saveToOrderedStore(player)
+	local te = player:FindFirstChild("TotalEarned")
+	if not te or te.Value <= 0 then return end
+
+	local now = os.time()
+	if saveCooldowns[player.UserId] and now - saveCooldowns[player.UserId] < 60 then return end
+	saveCooldowns[player.UserId] = now
+
+	pcall(function()
+		EarnedStore:SetAsync(tostring(player.UserId), math.floor(te.Value))
+	end)
+end
+
+local function hookPlayer(player)
+	local te = player:WaitForChild("TotalEarned", 30)
+	if not te then return end
+	te.Changed:Connect(function() saveToOrderedStore(player) end)
+end
+
+Players.PlayerAdded:Connect(hookPlayer)
+for _, p in pairs(Players:GetPlayers()) do task.spawn(hookPlayer, p) end
+
+-- ── BUILD GUI ─────────────────────────────────────────────────────────────
+local function buildGui(part)
+	local existing = part:FindFirstChild("LeaderboardGui")
+	if existing then existing:Destroy() end
+
+	local gui = Instance.new("SurfaceGui")
+	gui.Name = "LeaderboardGui"
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 40
+	gui.ResetOnSpawn = false
+	gui.LightInfluence = 0
+	gui.Parent = part
+
+	-- Background
+	local bg = Instance.new("Frame")
+	bg.Name = "Background"
+	bg.Size = UDim2.new(1, 0, 1, 0)
+	bg.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
+	bg.BackgroundTransparency = 0
+	bg.BorderSizePixel = 0
+	bg.Parent = gui
+	Instance.new("UICorner", bg).CornerRadius = UDim.new(0.03, 0)
+
+	local bgPadding = Instance.new("UIPadding")
+	bgPadding.PaddingTop    = UDim.new(0.01, 0)
+	bgPadding.PaddingBottom = UDim.new(0.01, 0)
+	bgPadding.PaddingLeft   = UDim.new(0.02, 0)
+	bgPadding.PaddingRight  = UDim.new(0.02, 0)
+	bgPadding.Parent = bg
+
+	-- Title
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(0.92, 0, 0.1, 0)
+	title.Position = UDim2.new(0.04, 0, 0.012, 0)
+	title.BackgroundTransparency = 1
+	title.Text = "Wealthiest Miners"
+	title.TextColor3 = Color3.fromRGB(255, 255, 255)
+	title.TextScaled = true
+	title.Font = Enum.Font.GothamBold
+	title.TextXAlignment = Enum.TextXAlignment.Center
+	title.Parent = bg
+
+	-- ScrollingFrame
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Name = "EntryList"
+	scroll.Size = UDim2.new(0.92, 0, 0.865, 0)
+	scroll.Position = UDim2.new(0.04, 0, 0.132, 0)
+	scroll.BackgroundTransparency = 1
+	scroll.BorderSizePixel = 0
+	scroll.ScrollBarThickness = 3
+	scroll.ScrollBarImageColor3 = Color3.fromRGB(150, 150, 150)
+	scroll.ScrollBarImageTransparency = 0.3
+
+	local scrollStroke = Instance.new("UIStroke")
+	scrollStroke.Color = Color3.fromRGB(255, 255, 255)
+	scrollStroke.Thickness = 1
+	scrollStroke.Transparency = 0.7
+	scrollStroke.Parent = scroll
+	scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	scroll.ElasticBehavior = Enum.ElasticBehavior.Never
+	scroll.Parent = bg
+
+	local list = Instance.new("UIListLayout")
+	list.Padding = UDim.new(0, ROW_PADDING)
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Parent = scroll
+
+	local scrollPadding = Instance.new("UIPadding")
+	scrollPadding.PaddingLeft   = UDim.new(0, 3)
+	scrollPadding.PaddingRight  = UDim.new(0, 3)
+	scrollPadding.PaddingTop    = UDim.new(0, 3)
+	scrollPadding.PaddingBottom = UDim.new(0, 3)
+	scrollPadding.Parent = scroll
+
+	return gui
+end
+
+-- ── ROW ───────────────────────────────────────────────────────────────────
+local TOP3_BG   = {Color3.fromRGB(45,38,10), Color3.fromRGB(35,35,40), Color3.fromRGB(42,28,10)}
+local TOP3_TEXT = {Color3.fromRGB(255,215,0), Color3.fromRGB(200,200,210), Color3.fromRGB(210,130,60)}
+
+local function createRow(parent, rank, name, amount, isOnline, userId)
+	local isTop3 = rank <= 3
+
+	local row = Instance.new("Frame")
+	row.Name = "Row" .. rank
+	row.Size = UDim2.new(1, 0, 0, ROW_HEIGHT)
+	row.BackgroundColor3 = isTop3 and TOP3_BG[rank] or Color3.fromRGB(22, 22, 30)
+	row.BackgroundTransparency = 0
+	row.BorderSizePixel = 0
+	row.LayoutOrder = rank
+	row.Parent = parent
+	Instance.new("UICorner", row).CornerRadius = UDim.new(0.25, 0)
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = isTop3 and TOP3_TEXT[rank] or Color3.fromRGB(45, 45, 65)
+	stroke.Thickness = 1.5
+	stroke.Transparency = isTop3 and 0.4 or 0.2
+	stroke.Parent = row
+
+	-- Rank number
+	local rankLabel = Instance.new("TextLabel")
+	rankLabel.Size = UDim2.new(0.13, 0, 1, 0)
+	rankLabel.Position = UDim2.new(0.01, 0, 0, 0)
+	rankLabel.BackgroundTransparency = 1
+	rankLabel.Text = rank .. "."
+	rankLabel.TextColor3 = isTop3 and TOP3_TEXT[rank] or Color3.fromRGB(60, 60, 80)
+	rankLabel.TextScaled = true
+	rankLabel.Font = Enum.Font.GothamBold
+	rankLabel.Parent = row
+
+	-- Avatar
+	local avatar = Instance.new("ImageLabel")
+	avatar.Size = UDim2.new(0, ROW_HEIGHT - 8, 0, ROW_HEIGHT - 8)
+	avatar.Position = UDim2.new(0.155, 0, 0.5, -(ROW_HEIGHT - 8) / 2)
+	avatar.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+	avatar.BorderSizePixel = 0
+	avatar.Image = ""
+	avatar.Parent = row
+	Instance.new("UICorner", avatar).CornerRadius = UDim.new(0.3, 0)
+
+	local avatarStroke = Instance.new("UIStroke")
+	avatarStroke.Color = Color3.fromRGB(255, 255, 255)
+	avatarStroke.Thickness = 1
+	avatarStroke.Transparency = 0.6
+	avatarStroke.Parent = avatar
+
+	if userId then
+		task.spawn(function()
+			local ok, img = pcall(function()
+				return Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+			end)
+			if ok then avatar.Image = img end
+		end)
+	end
+
+	-- Online dot (bottom right of avatar)
+	if isOnline then
+		local dot = Instance.new("Frame")
+		dot.Size = UDim2.new(0, 8, 0, 8)
+		dot.Position = UDim2.new(0.155, ROW_HEIGHT - 14, 0.5, (ROW_HEIGHT - 8) / 2 - 4)
+		dot.BackgroundColor3 = Color3.fromRGB(80, 255, 120)
+		dot.BorderSizePixel = 0
+		dot.ZIndex = 2
+		dot.Parent = row
+		Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+
+		-- White border around dot so it pops against the avatar
+		local dotStroke = Instance.new("UIStroke")
+		dotStroke.Color = Color3.fromRGB(12, 12, 18)
+		dotStroke.Thickness = 1.5
+		dotStroke.Parent = dot
+	end
+
+	-- Player name
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(0.42, 0, 1, 0)
+	nameLabel.Position = UDim2.new(0.32, 0, 0, 0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = name
+	nameLabel.TextColor3 = isTop3 and TOP3_TEXT[rank] or Color3.fromRGB(200, 200, 215)
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.TextScaled = true
+	nameLabel.Font = isTop3 and Enum.Font.GothamBold or Enum.Font.Gotham
+	nameLabel.Parent = row
+
+	-- Cash
+	local cashLabel = Instance.new("TextLabel")
+	cashLabel.Size = UDim2.new(0.30, 0, 1, 0)
+	cashLabel.Position = UDim2.new(0.685, 0, 0, 0)
+	cashLabel.BackgroundTransparency = 1
+	cashLabel.Text = amount > 0 and suffixNum(amount) or "—"
+	cashLabel.TextColor3 = Color3.fromRGB(85, 220, 120)
+	cashLabel.TextXAlignment = Enum.TextXAlignment.Right
+	cashLabel.TextScaled = true
+	cashLabel.Font = Enum.Font.GothamBold
+	cashLabel.Parent = row
+end
+
+-- ── FETCH DS ──────────────────────────────────────────────────────────────
+local function fetchFromDataStore()
+	local results = {}
+	local ok, pages = pcall(function()
+		return EarnedStore:GetSortedAsync(false, MAX_ENTRIES)
+	end)
+	if not ok then warn("DS fetch failed:", pages) return results end
+
+	while true do
+		for _, entry in pairs(pages:GetCurrentPage()) do
+			local uid = tonumber(entry.key)
+			local name = "[Unknown]"
+			local nameOk, res = pcall(function()
+				return Players:GetNameFromUserIdAsync(uid)
+			end)
+			if nameOk then name = res end
+			results[uid] = {name = name, amount = entry.value, userId = uid}
+		end
+		if pages.IsFinished then break end
+		pages:AdvanceToNextPageAsync()
+	end
+
+	return results
+end
+
+-- ── MERGE DATA ────────────────────────────────────────────────────────────
+local function getMergedData()
+	local merged = {}
+
+	for uid, entry in pairs(cachedData) do
+		merged[uid] = {name = entry.name, amount = entry.amount, online = false, userId = uid}
+	end
+
+	for _, player in pairs(Players:GetPlayers()) do
+		local te = player:FindFirstChild("TotalEarned")
+		if te then
+			merged[player.UserId] = {
+				name = player.Name,
+				amount = te.Value,
+				online = true,
+				userId = player.UserId,
+			}
+		end
+	end
+
+	local arr = {}
+	for _, v in pairs(merged) do table.insert(arr, v) end
+	table.sort(arr, function(a, b) return a.amount > b.amount end)
+	return arr
+end
+
+-- ── POPULATE ──────────────────────────────────────────────────────────────
+local function populateGui(gui, data)
+	local scroll = gui.Background:FindFirstChild("EntryList")
+	if not scroll then return end
+
+	for _, c in pairs(scroll:GetChildren()) do
+		if c:IsA("Frame") then c:Destroy() end
+	end
+
+	if #data == 0 then
+		createRow(scroll, 1, "No data yet — start mining!", 0, false, nil)
+		scroll.CanvasSize = UDim2.new(0, 0, 0, ROW_HEIGHT)
+		return
+	end
+
+	for i, entry in ipairs(data) do
+		createRow(scroll, i, entry.name, entry.amount, entry.online, entry.userId)
+	end
+
+	scroll.CanvasSize = UDim2.new(0, 0, 0, #data * (ROW_HEIGHT + ROW_PADDING))
+end
+
+-- ── MAIN ──────────────────────────────────────────────────────────────────
+local gui = buildGui(leaderboardPart)
+local lastDsFetch = 0
+
+while true do
+	local now = os.time()
+	if now - lastDsFetch >= DS_FETCH_INTERVAL then
+		cachedData = fetchFromDataStore()
+		lastDsFetch = now
+	end
+	pcall(populateGui, gui, getMergedData())
+	task.wait(LIVE_UPDATE_INTERVAL)
+end
