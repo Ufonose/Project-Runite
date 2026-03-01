@@ -1,0 +1,139 @@
+-- ServerScriptService/TopPlayerRig
+local Players = game:GetService("Players")
+local DataStoreService = game:GetService("DataStoreService")
+local ServerStorage = game:GetService("ServerStorage")
+
+local CHECK_INTERVAL = 30
+local EarnedStore = DataStoreService:GetOrderedDataStore("TotalEarned_v1")
+local spawnPoint = workspace:WaitForChild("Leaderboards"):WaitForChild("RigSpawnPoint")
+local rigTemplate = ServerStorage:WaitForChild("TopPlayerRig")
+local danceAnim = rigTemplate:WaitForChild("DanceAnimation")
+
+local currentRig = nil
+local currentTopUserId = nil
+
+-- ── SUFFIX ────────────────────────────────────────────────────────────────
+local function suffixNum(n)
+	if n >= 1e12 then return string.format("$%.1fT", n / 1e12)
+	elseif n >= 1e9  then return string.format("$%.1fB", n / 1e9)
+	elseif n >= 1e6  then return string.format("$%.1fM", n / 1e6)
+	elseif n >= 1e3  then return string.format("$%.1fK", n / 1e3)
+	else return "$" .. math.floor(n) end
+end
+
+-- ── NAMETAG ───────────────────────────────────────────────────────────────
+local function createNametag(rig, name)
+	local head = rig:FindFirstChild("Head")
+	if not head then return end
+
+	local existing = head:FindFirstChild("TrophyGui")
+	if existing then existing:Destroy() end
+
+	local humanoid = rig:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.DisplayName = name
+	end
+
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "TrophyGui"
+	gui.Size = UDim2.new(1.5, 0, 1.6, 0)
+	gui.StudsOffset = Vector3.new(0, 4, 0)
+	gui.AlwaysOnTop = false
+	gui.LightInfluence = 0
+	gui.Parent = head
+
+	local trophy = Instance.new("ImageLabel")
+	trophy.Size = UDim2.new(1, 0, 1, 0)
+	trophy.BackgroundTransparency = 1
+	trophy.Image = "rbxassetid://9722127533"
+	trophy.ScaleType = Enum.ScaleType.Fit
+	trophy.Parent = gui
+end
+
+-- ── SPAWN RIG ─────────────────────────────────────────────────────────────
+local function spawnRig(userId)
+	if currentRig then
+		currentRig:Destroy()
+		currentRig = nil
+	end
+
+	local rig = rigTemplate:Clone()
+	rig.Name = "TopPlayerRig_Active"
+	rig.Parent = workspace
+
+	local hrp = rig:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		hrp.CFrame = spawnPoint.CFrame + Vector3.new(0, spawnPoint.Size.Y / 2 + 3, 0)
+		hrp.Anchored = true
+	end
+
+	-- Disable collision so players can't push it
+	for _, part in pairs(rig:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CanCollide = false
+		end
+	end
+
+	task.spawn(function()
+		local humanoid = rig:FindFirstChildOfClass("Humanoid")
+		if not humanoid then return end
+
+		-- Apply avatar appearance
+		local ok, desc = pcall(function()
+			return Players:GetHumanoidDescriptionFromUserIdAsync(userId)
+		end)
+		if ok and desc then
+			pcall(function()
+				humanoid:ApplyDescriptionResetAsync(desc)
+			end)
+		end
+
+		-- Get name and create nametag
+		local nameOk, name = pcall(function()
+			return Players:GetNameFromUserIdAsync(userId)
+		end)
+		createNametag(rig, nameOk and name or "Unknown")
+	end)
+
+	-- Play dance animation
+	task.spawn(function()
+		local humanoid = rig:FindFirstChildOfClass("Humanoid")
+		if not humanoid then return end
+		local animator = humanoid:WaitForChild("Animator", 5)
+		if not animator then return end
+
+		local anim = Instance.new("Animation")
+		anim.AnimationId = danceAnim.AnimationId
+		local track = animator:LoadAnimation(anim)
+		track.Looped = true
+		track:Play()
+	end)
+
+	currentRig = rig
+	currentTopUserId = userId
+end
+
+-- ── FETCH TOP PLAYER ──────────────────────────────────────────────────────
+local function fetchTopPlayer()
+	local ok, pages = pcall(function()
+		return EarnedStore:GetSortedAsync(false, 1)
+	end)
+	if not ok or not pages then return nil end
+
+	local data = pages:GetCurrentPage()
+	if #data == 0 then return nil end
+
+	return tonumber(data[1].key)
+end
+
+-- ── MAIN LOOP ─────────────────────────────────────────────────────────────
+while true do
+	local topUserId = fetchTopPlayer()
+
+	if topUserId and topUserId ~= currentTopUserId then
+		print("New #1 player, updating rig for userId:", topUserId)
+		spawnRig(topUserId)
+	end
+
+	task.wait(CHECK_INTERVAL)
+end
