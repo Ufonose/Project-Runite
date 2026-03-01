@@ -3,6 +3,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 
+-- Track player location (Cave / Surface)
+local locationValue = Instance.new("StringValue")
+locationValue.Name = "PlayerLocation"
+locationValue.Value = "Cave"
+locationValue.Parent = player
+
 -- Wait for plot to be assigned first
 local setPlot = player:WaitForChild("SetPlot")
 local plotName = setPlot.Value and setPlot.Value.Name
@@ -13,6 +19,7 @@ local cavePlot = caveElevators:WaitForChild(plotName)
 local cavePrompt = cavePlot:WaitForChild("ProximityPrompt")
 
 cavePrompt.Triggered:Connect(function()
+	locationValue.Value = "Surface"
 	ReplicatedStorage.Events.TeleportToSurface:FireServer()
 end)
 
@@ -26,6 +33,7 @@ local function connectSurfacePrompt(surfacePart)
 	local prompt = surfacePart:WaitForChild("ProximityPrompt", 5)
 	if prompt then
 		prompt.Triggered:Connect(function()
+			locationValue.Value = "Cave"
 			ReplicatedStorage.Events.TeleportToCave:FireServer(surfacePart.Name)
 		end)
 	end
