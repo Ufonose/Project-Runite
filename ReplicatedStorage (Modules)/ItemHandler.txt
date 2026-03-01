@@ -15,9 +15,9 @@ local success = pcall(function()
 	PhysicsService:CollisionGroupSetCollidable("Ores", "Ores", false)
 end)
 
-if success then
+--[[if success then
 	print("✓ Ore collision group created successfully!")
-end
+end--]]
 
 function module.GET_REAL_TIER(ITEM_INFO)
 	return ITEM_INFO.TierId  -- Just use what you set!
@@ -133,8 +133,13 @@ function module.PROCESS_ORE(PLOT, FURNACE, SMELT_PART, ORE_ADD, ORE_MULTI, ORE)
 
 		-- Round to avoid floating point issues
 		CASH_VAL = math.floor(CASH_VAL)
-
 		OWNER_CASH.Value += CASH_VAL
+		
+		local totalEarned = PLOT_OWNER:FindFirstChild("TotalEarned")
+		if totalEarned then
+			totalEarned.Value += CASH_VAL
+		end
+		
 		RepStorage.Events.MessageClient:FireClient(PLOT_OWNER, "visual", {["visual_part"] = SMELT_PART, ["message"] = "+$"..CASH_VAL, ["message_color"] = Color3.fromRGB(85, 255, 127)})
 		return true
 	end
