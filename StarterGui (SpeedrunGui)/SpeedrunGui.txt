@@ -1,0 +1,943 @@
+-- StarterGui/SpeedrunGui (LocalScript inside a ScreenGui named "SpeedrunGui")
+-- Matches your existing glass-morphism style and MenuObject system
+
+local Players = game:GetService("Players")
+local RepStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local Plr = Players.LocalPlayer
+local PlayerGui = Plr:WaitForChild("PlayerGui")
+local SoundManager = require(RepStorage.Modules.SoundManager)
+
+-- Wait for data to load
+Plr:WaitForChild("DataLoaded", 30)
+
+local Events = RepStorage:WaitForChild("Events")
+local StartSpeedrun         = Events:WaitForChild("StartSpeedrun")
+local ResetSpeedrun         = Events:WaitForChild("ResetSpeedrun")
+local GetSpeedrunData       = Events:WaitForChild("GetSpeedrunData")
+local GetSpeedrunLeaderboard = Events:WaitForChild("GetSpeedrunLeaderboard")
+local SpeedrunStarted       = Events:WaitForChild("SpeedrunStarted")
+local SpeedrunAgeSplit      = Events:WaitForChild("SpeedrunAgeSplit")
+local SpeedrunCompleted     = Events:WaitForChild("SpeedrunCompleted")
+local SpeedrunReset         = Events:WaitForChild("SpeedrunReset")
+
+local speedrunGui = script.Parent  -- The ScreenGui
+
+-- ============================================================
+-- STATE
+-- ============================================================
+local currentView = "main"  -- "main" or "leaderboard"
+local currentLeaderboardAge = 1
+local runData = nil         -- cached from server
+local timerConnection = nil
+
+-- ============================================================
+-- HELPERS
+-- ============================================================
+local function formatTime(seconds)
+	seconds = math.floor(seconds)
+	local h = math.floor(seconds / 3600)
+	local m = math.floor((seconds % 3600) / 60)
+	local s = seconds % 60
+	if h > 0 then
+		return string.format("%d:%02d:%02d", h, m, s)
+	else
+		return string.format("%d:%02d", m, s)
+	end
+end
+
+local AGE_NAMES = {"First Age", "Second Age", "Third Age", "Fourth Age"}
+local AGE_COLORS = {
+	Color3.fromRGB(120, 100, 80),
+	Color3.fromRGB(100, 120, 140),
+	Color3.fromRGB(140, 100, 140),
+	Color3.fromRGB(143, 143, 0),
+}
+
+-- ============================================================
+-- BUILD THE GUI
+-- ============================================================
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+mainFrame.Size = UDim2.new(0.55, 0, 0.75, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false
+mainFrame.ZIndex = 5
+mainFrame.Parent = speedrunGui
+
+-- Responsive sizing
+local function updateSize()
+	local vp = workspace.CurrentCamera.ViewportSize
+	if vp.X < 900 then
+		mainFrame.Size = UDim2.new(0.95, 0, 0.88, 0)
+	else
+		mainFrame.Size = UDim2.new(0.55, 0, 0.75, 0)
+	end
+end
+updateSize()
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateSize)
+
+-- Aspect ratio
+local aspect = Instance.new("UIAspectRatioConstraint")
+aspect.AspectRatio = 1.4
+aspect.DominantAxis = Enum.DominantAxis.Height
+aspect.Parent = mainFrame
+
+-- Glass background
+local blur = Instance.new("Frame")
+blur.Size = UDim2.new(1, 0, 1, 0)
+blur.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+blur.BackgroundTransparency = 0.3
+blur.BorderSizePixel = 0
+blur.ZIndex = 6
+blur.Parent = mainFrame
+
+local blurCorner = Instance.new("UICorner")
+blurCorner.CornerRadius = UDim.new(0, 15)
+blurCorner.Parent = blur
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 15)
+mainCorner.Parent = mainFrame
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(60, 60, 80)
+mainStroke.Thickness = 2
+mainStroke.Transparency = 0.5
+mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+mainStroke.Parent = mainFrame
+
+-- ── Title bar ─────────────────────────────────────────────────
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0.09, 0)
+titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+titleBar.BackgroundTransparency = 0.2
+titleBar.BorderSizePixel = 0
+titleBar.ZIndex = 7
+titleBar.Parent = mainFrame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 15)
+titleCorner.Parent = titleBar
+
+local titleGrad = Instance.new("UIGradient")
+titleGrad.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(45, 45, 50)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 40)),
+}
+titleGrad.Rotation = 90
+titleGrad.Parent = titleBar
+
+local titleIcon = Instance.new("TextLabel")
+titleIcon.Size = UDim2.new(0.06, 0, 1, 0)
+titleIcon.Position = UDim2.new(0.01, 0, 0, 0)
+titleIcon.BackgroundTransparency = 1
+titleIcon.Text = "🏁"
+titleIcon.TextScaled = true
+titleIcon.ZIndex = 8
+titleIcon.Parent = titleBar
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(0.65, 0, 1, 0)
+titleText.Position = UDim2.new(0.08, 0, 0, 0)
+titleText.BackgroundTransparency = 1
+titleText.Text = "Speedrun"
+titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleText.Font = Enum.Font.GothamBold
+titleText.TextScaled = true
+titleText.TextXAlignment = Enum.TextXAlignment.Left
+titleText.ZIndex = 8
+titleText.Parent = titleBar
+
+local titleTextConstraint = Instance.new("UITextSizeConstraint")
+titleTextConstraint.MaxTextSize = 26
+titleTextConstraint.Parent = titleText
+
+-- Close button
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0.04, 0, 0.65, 0)
+closeButton.Position = UDim2.new(0.95, 0, 0.175, 0)
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.Font = Enum.Font.GothamBold
+closeButton.TextScaled = true
+closeButton.ZIndex = 8
+closeButton.Parent = titleBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0.2, 0)
+closeCorner.Parent = closeButton
+
+local closeTextConstraint = Instance.new("UITextSizeConstraint")
+closeTextConstraint.MaxTextSize = 20
+closeTextConstraint.Parent = closeButton
+
+closeButton.MouseEnter:Connect(function() closeButton.BackgroundColor3 = Color3.fromRGB(220, 70, 70) end)
+closeButton.MouseLeave:Connect(function() closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50) end)
+
+-- ── Tab buttons row (Main / Leaderboard) ──────────────────────
+local tabBar = Instance.new("Frame")
+tabBar.Size = UDim2.new(1, 0, 0.065, 0)
+tabBar.Position = UDim2.new(0, 0, 0.09, 0)
+tabBar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+tabBar.BackgroundTransparency = 0
+tabBar.BorderSizePixel = 0
+tabBar.ZIndex = 7
+tabBar.Parent = mainFrame
+
+local tabLayout = Instance.new("UIListLayout")
+tabLayout.FillDirection = Enum.FillDirection.Horizontal
+tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+tabLayout.Parent = tabBar
+
+local function makeTabButton(name, label, order)
+	local btn = Instance.new("TextButton")
+	btn.Name = name
+	btn.Size = UDim2.new(0.5, 0, 1, 0)
+	btn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+	btn.BackgroundTransparency = 0
+	btn.Text = label
+	btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+	btn.Font = Enum.Font.GothamBold
+	btn.TextScaled = true
+	btn.BorderSizePixel = 0
+	btn.LayoutOrder = order
+	btn.ZIndex = 8
+	btn.Parent = tabBar
+	local c = Instance.new("UITextSizeConstraint")
+	c.MaxTextSize = 16
+	c.Parent = btn
+	return btn
+end
+
+local mainTabBtn = makeTabButton("MainTab", "⏱ Run", 1)
+local lbTabBtn   = makeTabButton("LeaderboardTab", "🏆 Leaderboard", 2)
+
+-- Content area (below tabs)
+local content = Instance.new("Frame")
+content.Name = "Content"
+content.Size = UDim2.new(1, 0, 0.845, 0)
+content.Position = UDim2.new(0, 0, 0.155, 0)
+content.BackgroundTransparency = 1
+content.ZIndex = 6
+content.Parent = mainFrame
+
+-- ============================================================
+-- LOCKED PANEL (shown when speedrun not yet unlocked)
+-- ============================================================
+local lockedPanel = Instance.new("Frame")
+lockedPanel.Name = "LockedPanel"
+lockedPanel.Size = UDim2.new(1, 0, 1, 0)
+lockedPanel.BackgroundTransparency = 1
+lockedPanel.ZIndex = 7
+lockedPanel.Visible = true
+lockedPanel.Parent = content
+
+local lockIcon = Instance.new("TextLabel")
+lockIcon.Size = UDim2.new(0.3, 0, 0.25, 0)
+lockIcon.Position = UDim2.new(0.35, 0, 0.1, 0)
+lockIcon.BackgroundTransparency = 1
+lockIcon.Text = "🔒"
+lockIcon.TextScaled = true
+lockIcon.ZIndex = 8
+lockIcon.Parent = lockedPanel
+
+local lockTitle = Instance.new("TextLabel")
+lockTitle.Size = UDim2.new(0.8, 0, 0.12, 0)
+lockTitle.Position = UDim2.new(0.1, 0, 0.36, 0)
+lockTitle.BackgroundTransparency = 1
+lockTitle.Text = "Speedrun Mode Locked"
+lockTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+lockTitle.Font = Enum.Font.GothamBold
+lockTitle.TextScaled = true
+lockTitle.ZIndex = 8
+lockTitle.Parent = lockedPanel
+
+local lockDesc = Instance.new("TextLabel")
+lockDesc.Size = UDim2.new(0.75, 0, 0.2, 0)
+lockDesc.Position = UDim2.new(0.125, 0, 0.5, 0)
+lockDesc.BackgroundTransparency = 1
+lockDesc.Text = "Complete every research objective across all ages to unlock Speedrun mode!"
+lockDesc.TextColor3 = Color3.fromRGB(160, 160, 180)
+lockDesc.Font = Enum.Font.Gotham
+lockDesc.TextScaled = true
+lockDesc.TextWrapped = true
+lockDesc.ZIndex = 8
+lockDesc.Parent = lockedPanel
+
+local lockConstraint = Instance.new("UITextSizeConstraint")
+lockConstraint.MaxTextSize = 16
+lockConstraint.Parent = lockDesc
+
+-- ============================================================
+-- MAIN RUN PANEL
+-- ============================================================
+local runPanel = Instance.new("Frame")
+runPanel.Name = "RunPanel"
+runPanel.Size = UDim2.new(1, 0, 1, 0)
+runPanel.BackgroundTransparency = 1
+runPanel.ZIndex = 7
+runPanel.Visible = false
+runPanel.Parent = content
+
+-- ── Timer display ─────────────────────────────────────────────
+local timerFrame = Instance.new("Frame")
+timerFrame.Size = UDim2.new(0.9, 0, 0.18, 0)
+timerFrame.Position = UDim2.new(0.05, 0, 0.02, 0)
+timerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+timerFrame.BackgroundTransparency = 0.1
+timerFrame.BorderSizePixel = 0
+timerFrame.ZIndex = 8
+timerFrame.Parent = runPanel
+
+local timerCorner = Instance.new("UICorner")
+timerCorner.CornerRadius = UDim.new(0, 12)
+timerCorner.Parent = timerFrame
+
+local timerStroke = Instance.new("UIStroke")
+timerStroke.Color = Color3.fromRGB(80, 200, 120)
+timerStroke.Thickness = 2
+timerStroke.Transparency = 0.4
+timerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+timerStroke.Parent = timerFrame
+
+local timerLabel = Instance.new("TextLabel")
+timerLabel.Name = "TimerLabel"
+timerLabel.Size = UDim2.new(0.7, 0, 1, 0)
+timerLabel.Position = UDim2.new(0.15, 0, 0, 0)
+timerLabel.BackgroundTransparency = 1
+timerLabel.Text = "0:00"
+timerLabel.TextColor3 = Color3.fromRGB(80, 220, 120)
+timerLabel.Font = Enum.Font.GothamBold
+timerLabel.TextScaled = true
+timerLabel.ZIndex = 9
+timerLabel.Parent = timerFrame
+
+local timerLabelConstraint = Instance.new("UITextSizeConstraint")
+timerLabelConstraint.MaxTextSize = 40
+timerLabelConstraint.Parent = timerLabel
+
+local timerStatus = Instance.new("TextLabel")
+timerStatus.Name = "TimerStatus"
+timerStatus.Size = UDim2.new(0.9, 0, 0.35, 0)
+timerStatus.Position = UDim2.new(0.05, 0, 0.62, 0)
+timerStatus.BackgroundTransparency = 1
+timerStatus.Text = "Press Start to begin a run"
+timerStatus.TextColor3 = Color3.fromRGB(140, 140, 160)
+timerStatus.Font = Enum.Font.Gotham
+timerStatus.TextScaled = true
+timerStatus.ZIndex = 9
+timerStatus.Parent = timerFrame
+
+local timerStatusConstraint = Instance.new("UITextSizeConstraint")
+timerStatusConstraint.MaxTextSize = 13
+timerStatusConstraint.Parent = timerStatus
+
+-- ── Age splits ────────────────────────────────────────────────
+local splitsFrame = Instance.new("Frame")
+splitsFrame.Name = "SplitsFrame"
+splitsFrame.Size = UDim2.new(0.9, 0, 0.46, 0)
+splitsFrame.Position = UDim2.new(0.05, 0, 0.22, 0)
+splitsFrame.BackgroundTransparency = 1
+splitsFrame.ZIndex = 8
+splitsFrame.Parent = runPanel
+
+local splitsLayout = Instance.new("UIListLayout")
+splitsLayout.Padding = UDim.new(0, 4)
+splitsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+splitsLayout.Parent = splitsFrame
+
+-- Split row references (built once, updated in place)
+local splitRows = {}
+
+for i = 1, 4 do
+	local row = Instance.new("Frame")
+	row.Name = "Age" .. i
+	row.Size = UDim2.new(1, 0, 0.22, 0)
+	row.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+	row.BackgroundTransparency = 0.2
+	row.BorderSizePixel = 0
+	row.LayoutOrder = i
+	row.ZIndex = 9
+	row.Parent = splitsFrame
+
+	local rowCorner = Instance.new("UICorner")
+	rowCorner.CornerRadius = UDim.new(0, 8)
+	rowCorner.Parent = row
+
+	local rowStroke = Instance.new("UIStroke")
+	rowStroke.Color = AGE_COLORS[i]
+	rowStroke.Thickness = 1
+	rowStroke.Transparency = 0.6
+	rowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	rowStroke.Parent = row
+
+	-- Age name
+	local ageName = Instance.new("TextLabel")
+	ageName.Size = UDim2.new(0.35, 0, 1, 0)
+	ageName.Position = UDim2.new(0.02, 0, 0, 0)
+	ageName.BackgroundTransparency = 1
+	ageName.Text = AGE_NAMES[i]
+	ageName.TextColor3 = AGE_COLORS[i]
+	ageName.Font = Enum.Font.GothamBold
+	ageName.TextScaled = true
+	ageName.TextXAlignment = Enum.TextXAlignment.Left
+	ageName.ZIndex = 10
+	ageName.Parent = row
+	local ageNameC = Instance.new("UITextSizeConstraint")
+	ageNameC.MaxTextSize = 14
+	ageNameC.Parent = ageName
+
+	-- Current split time
+	local splitTime = Instance.new("TextLabel")
+	splitTime.Name = "SplitTime"
+	splitTime.Size = UDim2.new(0.3, 0, 1, 0)
+	splitTime.Position = UDim2.new(0.37, 0, 0, 0)
+	splitTime.BackgroundTransparency = 1
+	splitTime.Text = "--:--"
+	splitTime.TextColor3 = Color3.fromRGB(200, 200, 200)
+	splitTime.Font = Enum.Font.GothamBold
+	splitTime.TextScaled = true
+	splitTime.ZIndex = 10
+	splitTime.Parent = row
+	local splitTimeC = Instance.new("UITextSizeConstraint")
+	splitTimeC.MaxTextSize = 14
+	splitTimeC.Parent = splitTime
+
+	-- Personal best
+	local pbLabel = Instance.new("TextLabel")
+	pbLabel.Name = "PBLabel"
+	pbLabel.Size = UDim2.new(0.3, 0, 1, 0)
+	pbLabel.Position = UDim2.new(0.68, 0, 0, 0)
+	pbLabel.BackgroundTransparency = 1
+	pbLabel.Text = "PB: --"
+	pbLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+	pbLabel.Font = Enum.Font.Gotham
+	pbLabel.TextScaled = true
+	pbLabel.TextXAlignment = Enum.TextXAlignment.Right
+	pbLabel.ZIndex = 10
+	pbLabel.Parent = row
+	local pbLabelC = Instance.new("UITextSizeConstraint")
+	pbLabelC.MaxTextSize = 12
+	pbLabelC.Parent = pbLabel
+
+	splitRows[i] = {row = row, splitTime = splitTime, pbLabel = pbLabel, stroke = rowStroke}
+end
+
+-- ── Action buttons ────────────────────────────────────────────
+local btnFrame = Instance.new("Frame")
+btnFrame.Size = UDim2.new(0.9, 0, 0.14, 0)
+btnFrame.Position = UDim2.new(0.05, 0, 0.7, 0)
+btnFrame.BackgroundTransparency = 1
+btnFrame.ZIndex = 8
+btnFrame.Parent = runPanel
+
+local btnLayout = Instance.new("UIListLayout")
+btnLayout.FillDirection = Enum.FillDirection.Horizontal
+btnLayout.Padding = UDim.new(0.04, 0)
+btnLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+btnLayout.SortOrder = Enum.SortOrder.LayoutOrder
+btnLayout.Parent = btnFrame
+
+local function makeActionButton(name, label, color, order)
+	local btn = Instance.new("TextButton")
+	btn.Name = name
+	btn.Size = UDim2.new(0.44, 0, 1, 0)
+	btn.BackgroundColor3 = color
+	btn.Text = label
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Font = Enum.Font.GothamBold
+	btn.TextScaled = true
+	btn.BorderSizePixel = 0
+	btn.LayoutOrder = order
+	btn.ZIndex = 9
+	btn.Parent = btnFrame
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 10)
+	c.Parent = btn
+	local tc = Instance.new("UITextSizeConstraint")
+	tc.MaxTextSize = 16
+	tc.Parent = btn
+	local s = Instance.new("UIStroke")
+	s.Color = Color3.fromRGB(0, 0, 0)
+	s.Thickness = 1
+	s.Transparency = 0.7
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	s.Parent = btn
+	return btn
+end
+
+local startBtn = makeActionButton("StartBtn", "▶  Start Run", Color3.fromRGB(50, 140, 70), 1)
+local resetBtn = makeActionButton("ResetBtn", "↺  Reset",     Color3.fromRGB(140, 60, 50), 2)
+
+-- PB total display
+local totalPBFrame = Instance.new("Frame")
+totalPBFrame.Size = UDim2.new(0.9, 0, 0.1, 0)
+totalPBFrame.Position = UDim2.new(0.05, 0, 0.87, 0)
+totalPBFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+totalPBFrame.BackgroundTransparency = 0.3
+totalPBFrame.BorderSizePixel = 0
+totalPBFrame.ZIndex = 8
+totalPBFrame.Parent = runPanel
+
+local totalPBCorner = Instance.new("UICorner")
+totalPBCorner.CornerRadius = UDim.new(0, 8)
+totalPBCorner.Parent = totalPBFrame
+
+local totalPBLabel = Instance.new("TextLabel")
+totalPBLabel.Name = "TotalPBLabel"
+totalPBLabel.Size = UDim2.new(1, 0, 1, 0)
+totalPBLabel.BackgroundTransparency = 1
+totalPBLabel.Text = "🏅 Best Total: --  |  Runs: 0"
+totalPBLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+totalPBLabel.Font = Enum.Font.GothamBold
+totalPBLabel.TextScaled = true
+totalPBLabel.ZIndex = 9
+totalPBLabel.Parent = totalPBFrame
+
+local totalPBLabelConstraint = Instance.new("UITextSizeConstraint")
+totalPBLabelConstraint.MaxTextSize = 14
+totalPBLabelConstraint.Parent = totalPBLabel
+
+-- ============================================================
+-- LEADERBOARD PANEL
+-- ============================================================
+local lbPanel = Instance.new("Frame")
+lbPanel.Name = "LeaderboardPanel"
+lbPanel.Size = UDim2.new(1, 0, 1, 0)
+lbPanel.BackgroundTransparency = 1
+lbPanel.ZIndex = 7
+lbPanel.Visible = false
+lbPanel.Parent = content
+
+-- Age filter tabs
+local lbTabRow = Instance.new("Frame")
+lbTabRow.Size = UDim2.new(0.9, 0, 0.1, 0)
+lbTabRow.Position = UDim2.new(0.05, 0, 0.01, 0)
+lbTabRow.BackgroundTransparency = 1
+lbTabRow.ZIndex = 8
+lbTabRow.Parent = lbPanel
+
+local lbTabRowLayout = Instance.new("UIListLayout")
+lbTabRowLayout.FillDirection = Enum.FillDirection.Horizontal
+lbTabRowLayout.Padding = UDim.new(0.015, 0)
+lbTabRowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+lbTabRowLayout.Parent = lbTabRow
+
+local lbAgeTabs = {}
+local LB_TAB_LABELS = {"Age 1", "Age 2", "Age 3", "Age 4", "Total"}
+local LB_TAB_KEYS   = {1, 2, 3, 4, "Total"}
+
+for idx, label in ipairs(LB_TAB_LABELS) do
+	local tab = Instance.new("TextButton")
+	tab.Size = UDim2.new(0.17, 0, 1, 0)
+	tab.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+	tab.Text = label
+	tab.TextColor3 = Color3.fromRGB(180, 180, 200)
+	tab.Font = Enum.Font.GothamBold
+	tab.TextScaled = true
+	tab.BorderSizePixel = 0
+	tab.LayoutOrder = idx
+	tab.ZIndex = 9
+	tab.Parent = lbTabRow
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 6)
+	c.Parent = tab
+	local tc = Instance.new("UITextSizeConstraint")
+	tc.MaxTextSize = 12
+	tc.Parent = tab
+	lbAgeTabs[idx] = tab
+end
+
+-- Leaderboard scroll list
+local lbScroll = Instance.new("ScrollingFrame")
+lbScroll.Name = "LBScroll"
+lbScroll.Size = UDim2.new(0.9, 0, 0.82, 0)
+lbScroll.Position = UDim2.new(0.05, 0, 0.13, 0)
+lbScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+lbScroll.BackgroundTransparency = 0.3
+lbScroll.BorderSizePixel = 0
+lbScroll.ScrollBarThickness = 4
+lbScroll.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 100)
+lbScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+lbScroll.ZIndex = 8
+lbScroll.Parent = lbPanel
+
+local lbScrollCorner = Instance.new("UICorner")
+lbScrollCorner.CornerRadius = UDim.new(0, 10)
+lbScrollCorner.Parent = lbScroll
+
+local lbListLayout = Instance.new("UIListLayout")
+lbListLayout.Padding = UDim.new(0, 4)
+lbListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+lbListLayout.Parent = lbScroll
+
+local lbPadding = Instance.new("UIPadding")
+lbPadding.PaddingLeft = UDim.new(0.02, 0)
+lbPadding.PaddingRight = UDim.new(0.02, 0)
+lbPadding.PaddingTop = UDim.new(0, 4)
+lbPadding.Parent = lbScroll
+
+-- ============================================================
+-- UPDATE FUNCTIONS
+-- ============================================================
+local function updateSplitRows(data)
+	if not data then return end
+	for i = 1, 4 do
+		local row = splitRows[i]
+		local split = data.AgeSplits and data.AgeSplits[i]
+		local pb    = data.BestAgeSplits and data.BestAgeSplits[i]
+
+		if split then
+			row.splitTime.Text = formatTime(split)
+			row.splitTime.TextColor3 = Color3.fromRGB(80, 220, 120)
+			row.stroke.Transparency = 0.1
+		else
+			row.splitTime.Text = "--:--"
+			row.splitTime.TextColor3 = Color3.fromRGB(160, 160, 180)
+			row.stroke.Transparency = 0.6
+		end
+
+		if pb then
+			row.pbLabel.Text = "PB: " .. formatTime(pb)
+		else
+			row.pbLabel.Text = "PB: --"
+		end
+	end
+
+	-- Total PB row
+	local bestTotal = data.BestTotalTime or 0
+	local totalRuns = data.TotalRuns or 0
+	local bestStr = bestTotal > 0 and formatTime(bestTotal) or "--"
+	totalPBLabel.Text = "🏅 Best Total: " .. bestStr .. "  |  Runs: " .. totalRuns
+end
+
+local function refreshRunData()
+	local ok, data = pcall(function()
+		return GetSpeedrunData:InvokeServer()
+	end)
+	if ok and data then
+		runData = data
+		updateSplitRows(data)
+
+		-- Update status text
+		if data.IsActive then
+			timerStatus.Text = "Run in progress — keep going!"
+			timerStroke.Color = Color3.fromRGB(80, 200, 120)
+			startBtn.Text = "▶  Running..."
+			startBtn.BackgroundColor3 = Color3.fromRGB(40, 80, 50)
+		else
+			timerStatus.Text = "Press Start to begin a new run"
+			timerStroke.Color = Color3.fromRGB(80, 200, 120)
+			startBtn.Text = "▶  Start Run"
+			startBtn.BackgroundColor3 = Color3.fromRGB(50, 140, 70)
+			timerLabel.Text = "0:00"
+		end
+	end
+	return runData
+end
+
+-- Live timer loop
+local function startTimerLoop()
+	if timerConnection then timerConnection:Disconnect() end
+	timerConnection = RunService.Heartbeat:Connect(function()
+		if runData and runData.IsActive and runData.ElapsedTime then
+			local elapsed = runData.ElapsedTime + (os.clock() - (runData._fetchedAt or os.clock()))
+			timerLabel.Text = formatTime(elapsed)
+		end
+	end)
+end
+
+local function stopTimerLoop()
+	if timerConnection then
+		timerConnection:Disconnect()
+		timerConnection = nil
+	end
+end
+
+-- ── Leaderboard loading ───────────────────────────────────────
+local function clearLeaderboard()
+	for _, c in pairs(lbScroll:GetChildren()) do
+		if c:IsA("Frame") then c:Destroy() end
+	end
+end
+
+local function loadLeaderboard(ageKey)
+	clearLeaderboard()
+	-- Loading placeholder
+	local loadingLabel = Instance.new("TextLabel")
+	loadingLabel.Size = UDim2.new(1, 0, 0, 40)
+	loadingLabel.BackgroundTransparency = 1
+	loadingLabel.Text = "Loading..."
+	loadingLabel.TextColor3 = Color3.fromRGB(140, 140, 160)
+	loadingLabel.Font = Enum.Font.Gotham
+	loadingLabel.TextScaled = true
+	loadingLabel.ZIndex = 9
+	loadingLabel.Parent = lbScroll
+	local ll = Instance.new("UITextSizeConstraint")
+	ll.MaxTextSize = 14
+	ll.Parent = loadingLabel
+
+	-- Highlight active tab
+	for idx, tab in ipairs(lbAgeTabs) do
+		local isActive = LB_TAB_KEYS[idx] == ageKey
+		tab.BackgroundColor3 = isActive and Color3.fromRGB(70, 70, 120) or Color3.fromRGB(40, 40, 50)
+		tab.TextColor3 = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 200)
+	end
+
+	task.spawn(function()
+		local ok, results = pcall(function()
+			return GetSpeedrunLeaderboard:InvokeServer(ageKey)
+		end)
+
+		loadingLabel:Destroy()
+
+		if not ok or not results or #results == 0 then
+			local noData = Instance.new("TextLabel")
+			noData.Size = UDim2.new(1, 0, 0, 40)
+			noData.BackgroundTransparency = 1
+			noData.Text = "No times recorded yet. Be the first!"
+			noData.TextColor3 = Color3.fromRGB(140, 140, 160)
+			noData.Font = Enum.Font.Gotham
+			noData.TextScaled = true
+			noData.ZIndex = 9
+			noData.Parent = lbScroll
+			local c = Instance.new("UITextSizeConstraint")
+			c.MaxTextSize = 14
+			c.Parent = noData
+			lbScroll.CanvasSize = UDim2.new(0, 0, 0, 50)
+			return
+		end
+
+		for rank, entry in ipairs(results) do
+			local row = Instance.new("Frame")
+			row.Size = UDim2.new(1, 0, 0, 36)
+			row.BackgroundColor3 = rank == 1 and Color3.fromRGB(50, 45, 20) or Color3.fromRGB(30, 30, 38)
+			row.BackgroundTransparency = 0.2
+			row.BorderSizePixel = 0
+			row.LayoutOrder = rank
+			row.ZIndex = 9
+			row.Parent = lbScroll
+
+			local rowCorner = Instance.new("UICorner")
+			rowCorner.CornerRadius = UDim.new(0, 6)
+			rowCorner.Parent = row
+
+			-- Rank
+			local rankLabel = Instance.new("TextLabel")
+			rankLabel.Size = UDim2.new(0.1, 0, 1, 0)
+			rankLabel.Position = UDim2.new(0.01, 0, 0, 0)
+			rankLabel.BackgroundTransparency = 1
+			rankLabel.Text = rank == 1 and "🥇" or rank == 2 and "🥈" or rank == 3 and "🥉" or "#" .. rank
+			rankLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+			rankLabel.Font = Enum.Font.GothamBold
+			rankLabel.TextScaled = true
+			rankLabel.ZIndex = 10
+			rankLabel.Parent = row
+			local rlc = Instance.new("UITextSizeConstraint")
+			rlc.MaxTextSize = 14
+			rlc.Parent = rankLabel
+
+			-- Name
+			local nameLabel = Instance.new("TextLabel")
+			nameLabel.Size = UDim2.new(0.55, 0, 1, 0)
+			nameLabel.Position = UDim2.new(0.12, 0, 0, 0)
+			nameLabel.BackgroundTransparency = 1
+			nameLabel.Text = entry.name
+			nameLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+			nameLabel.Font = Enum.Font.Gotham
+			nameLabel.TextScaled = true
+			nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+			nameLabel.ZIndex = 10
+			nameLabel.Parent = row
+			local nlc = Instance.new("UITextSizeConstraint")
+			nlc.MaxTextSize = 14
+			nlc.Parent = nameLabel
+
+			-- Time
+			local timeLabel = Instance.new("TextLabel")
+			timeLabel.Size = UDim2.new(0.3, 0, 1, 0)
+			timeLabel.Position = UDim2.new(0.68, 0, 0, 0)
+			timeLabel.BackgroundTransparency = 1
+			timeLabel.Text = formatTime(entry.time)
+			timeLabel.TextColor3 = Color3.fromRGB(80, 220, 120)
+			timeLabel.Font = Enum.Font.GothamBold
+			timeLabel.TextScaled = true
+			timeLabel.TextXAlignment = Enum.TextXAlignment.Right
+			timeLabel.ZIndex = 10
+			timeLabel.Parent = row
+			local tlc = Instance.new("UITextSizeConstraint")
+			tlc.MaxTextSize = 14
+			tlc.Parent = timeLabel
+		end
+
+		lbScroll.CanvasSize = UDim2.new(0, 0, 0, #results * 40 + 10)
+	end)
+end
+
+-- ============================================================
+-- SHOW/HIDE PANELS
+-- ============================================================
+local function showView(view)
+	currentView = view
+	runPanel.Visible = (view == "main")
+	lbPanel.Visible = (view == "leaderboard")
+
+	mainTabBtn.BackgroundColor3 = (view == "main") and Color3.fromRGB(60, 60, 90) or Color3.fromRGB(35, 35, 40)
+	lbTabBtn.BackgroundColor3   = (view == "leaderboard") and Color3.fromRGB(60, 60, 90) or Color3.fromRGB(35, 35, 40)
+
+	if view == "leaderboard" then
+		loadLeaderboard(LB_TAB_KEYS[currentLeaderboardAge])
+	end
+end
+
+local function showContent(unlocked)
+	lockedPanel.Visible = not unlocked
+	runPanel.Visible = unlocked and (currentView == "main")
+	lbPanel.Visible = unlocked and (currentView == "leaderboard")
+	tabBar.Visible = unlocked
+end
+
+-- ============================================================
+-- BUTTON CONNECTIONS
+-- ============================================================
+mainTabBtn.MouseButton1Click:Connect(function()
+	SoundManager.ButtonClick()
+	showView("main")
+end)
+
+lbTabBtn.MouseButton1Click:Connect(function()
+	SoundManager.ButtonClick()
+	showView("leaderboard")
+end)
+
+for idx, tab in ipairs(lbAgeTabs) do
+	tab.MouseButton1Click:Connect(function()
+		SoundManager.ButtonClick()
+		currentLeaderboardAge = idx
+		loadLeaderboard(LB_TAB_KEYS[idx])
+	end)
+end
+
+startBtn.MouseButton1Click:Connect(function()
+	if runData and runData.IsActive then return end -- already running
+	SoundManager.ButtonClick()
+	startBtn.Text = "Starting..."
+	local ok, success, msg = pcall(function()
+		return StartSpeedrun:InvokeServer()
+	end)
+	if ok and success then
+		SoundManager.Success()
+		runData = refreshRunData()
+		if runData then
+			runData._fetchedAt = os.clock()
+			startTimerLoop()
+		end
+	else
+		SoundManager.Error()
+		startBtn.Text = "▶  Start Run"
+		-- Show error briefly in status
+		timerStatus.Text = msg or "Failed to start. Try again."
+		task.delay(3, function() timerStatus.Text = "Press Start to begin a new run" end)
+	end
+end)
+
+resetBtn.MouseButton1Click:Connect(function()
+	SoundManager.ButtonClick()
+	stopTimerLoop()
+	local ok, success = pcall(function()
+		return ResetSpeedrun:InvokeServer()
+	end)
+	if ok and success then
+		timerLabel.Text = "0:00"
+		runData = refreshRunData()
+	end
+end)
+
+closeButton.MouseButton1Click:Connect(function()
+	SoundManager.ButtonClick()
+	-- Integrate with the menu system the same way ResearchGui does
+	local mainUi = PlayerGui:FindFirstChild("MainUi")
+	if mainUi and mainUi:FindFirstChild("Values") then
+		local opened = mainUi.Values.OpenedMenus:FindFirstChild("SpeedrunGui")
+		if opened then opened:Destroy() end
+	end
+	local menuObj = speedrunGui:FindFirstChild("MenuObject")
+	if menuObj then menuObj.Value = false end
+end)
+
+-- ============================================================
+-- SERVER → CLIENT NOTIFICATIONS
+-- ============================================================
+SpeedrunStarted.OnClientEvent:Connect(function()
+	runData = refreshRunData()
+	if runData then
+		runData._fetchedAt = os.clock()
+		startTimerLoop()
+	end
+end)
+
+SpeedrunAgeSplit.OnClientEvent:Connect(function(ageId, splitTime, _, isPersonalBest)
+	if splitRows[ageId] then
+		splitRows[ageId].splitTime.Text = formatTime(splitTime)
+		splitRows[ageId].splitTime.TextColor3 = isPersonalBest and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(80, 220, 120)
+		splitRows[ageId].stroke.Transparency = 0.1
+	end
+	if runData then
+		if not runData.AgeSplits then runData.AgeSplits = {} end
+		runData.AgeSplits[ageId] = splitTime
+	end
+end)
+
+SpeedrunCompleted.OnClientEvent:Connect(function(totalTime, isPersonalBest)
+	stopTimerLoop()
+	timerLabel.Text = formatTime(totalTime)
+	timerLabel.TextColor3 = isPersonalBest and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(80, 220, 120)
+	timerStatus.Text = isPersonalBest and "🏅 New Personal Best!" or "Run Complete!"
+	startBtn.Text = "▶  Start New Run"
+	startBtn.BackgroundColor3 = Color3.fromRGB(50, 140, 70)
+	runData = refreshRunData()
+end)
+
+SpeedrunReset.OnClientEvent:Connect(function()
+	stopTimerLoop()
+	timerLabel.Text = "0:00"
+	timerLabel.TextColor3 = Color3.fromRGB(80, 220, 120)
+	timerStatus.Text = "Press Start to begin a new run"
+	runData = refreshRunData()
+end)
+
+-- ============================================================
+-- MENU OBJECT (integrates with your existing menu system)
+-- ============================================================
+local menuObject = Instance.new("BoolValue")
+menuObject.Name = "MenuObject"
+menuObject.Value = false
+menuObject.Parent = speedrunGui
+
+menuObject.Changed:Connect(function()
+	mainFrame.Visible = menuObject.Value
+	if menuObject.Value then
+		SoundManager.MenuOpen()
+		local data = refreshRunData()
+		if data then
+			data._fetchedAt = os.clock()
+			showContent(data.Unlocked)
+			if data.IsActive then startTimerLoop() end
+		end
+		showView(currentView)
+	else
+		stopTimerLoop()
+	end
+end)
+
+mainFrame.Visible = false
