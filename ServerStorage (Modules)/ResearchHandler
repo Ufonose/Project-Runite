@@ -4,6 +4,7 @@ local RepStorage = game:GetService("ReplicatedStorage")
 
 local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
 local ResearchData = require(ServerStorage.Modules.ResearchData)
+local SpeedrunHandler = require(ServerStorage.Modules.SpeedrunHandler)
 
 local ResearchHandler = {}
 
@@ -172,6 +173,9 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 	RepStorage.Events.MessageClient:FireClient(player, "screen", {
 		["message"] = notificationMessage
 	})
+	
+	-- ✅ NEW: Notify SpeedrunHandler so it can record age splits and unlock detection
+	SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
 
 	return true
 end
