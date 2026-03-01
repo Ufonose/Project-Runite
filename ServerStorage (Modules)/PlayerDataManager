@@ -5,6 +5,7 @@ local PlayerDataManager = {}
 
 local DATA_TEMPLATE = {
 	Money = 400,
+	TotalEarned = 0,
 	ResearchTokens = 0,
 	Items = {},
 	PlotItemPlaced = {},
@@ -47,7 +48,7 @@ local DATA_TEMPLATE = {
 	}
 }
 
-local PlayerStore = ProfileStore.New("Runite_v4", DATA_TEMPLATE)
+local PlayerStore = ProfileStore.New("Runite_v5", DATA_TEMPLATE)
 local ActiveProfiles = {} -- FIXED: now keyed by UserId (number)
 
 -- ============================================================
