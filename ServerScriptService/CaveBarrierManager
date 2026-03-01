@@ -108,47 +108,70 @@ local function setupBarriersForPlayer(player)
 	local plot = setPlot.Value
 	if not plot then return end
 
-	local caveUnlocks = plot:FindFirstChild("CaveUnlocks")
-	if not caveUnlocks then return end
-
-	-- Connect ProximityPrompts
-	for _, barrier in ipairs(caveUnlocks:GetChildren()) do
-		if not barrier:IsA("Model") then continue end
+	-- ── Wire a single barrier's ProximityPrompt ──────────────────
+	local function connectBarrier(barrier)
+		if not barrier:IsA("Model") then return end
 
 		local barrierID = getBarrierValue(barrier, "BarrierID")
-		if not barrierID then continue end
+		if not barrierID then return end
 
-		local prompt = barrier:FindFirstChild("ProximityPrompt") or barrier:FindFirstChildWhichIsA("ProximityPrompt", true)
-		if not prompt then continue end
+		local prompt = barrier:FindFirstChild("ProximityPrompt")
+			or barrier:FindFirstChildWhichIsA("ProximityPrompt", true)
+		if not prompt then return end
 
 		prompt.Triggered:Connect(function(triggeringPlayer)
 			if triggeringPlayer ~= player then return end
-
-			-- Check if data is available in module
 			if not PlayerSession.Get(player) then return end
-
 			if isBarrierUnlocked(player, barrierID) then
 				barrier:Destroy()
 				return
 			end
-
 			attemptUnlockBarrier(player, barrier)
 		end)
 	end
 
-	-- Wait for data to be loaded into the module
-	local dataLoaded = player:WaitForChild("DataLoaded", 30)
-	if not dataLoaded then return end
+	-- ── Wire all barriers in a CaveUnlocks folder ─────────────────
+	local function setupCaveUnlocks(caveUnlocks)
+		-- Connect existing barriers
+		for _, barrier in ipairs(caveUnlocks:GetChildren()) do
+			connectBarrier(barrier)
+		end
 
-	-- Immediate check for already unlocked barriers to destroy them
-	for _, barrier in ipairs(caveUnlocks:GetChildren()) do
-		if barrier:IsA("Model") then
-			local id = getBarrierValue(barrier, "BarrierID")
-			if id and isBarrierUnlocked(player, id) then
-				barrier:Destroy()
+		-- Connect any barriers added later into this folder
+		caveUnlocks.ChildAdded:Connect(function(newBarrier)
+			task.wait() -- let clone fully initialise
+			connectBarrier(newBarrier)
+		end)
+
+		-- Destroy already-unlocked barriers
+		local dataLoaded = player:FindFirstChild("DataLoaded")
+			or player:WaitForChild("DataLoaded", 30)
+		if not dataLoaded then return end
+
+		for _, barrier in ipairs(caveUnlocks:GetChildren()) do
+			if barrier:IsA("Model") then
+				local id = getBarrierValue(barrier, "BarrierID")
+				if id and isBarrierUnlocked(player, id) then
+					barrier:Destroy()
+				end
 			end
 		end
 	end
+
+	-- ── Initial setup ─────────────────────────────────────────────
+	local caveUnlocks = plot:FindFirstChild("CaveUnlocks")
+	if caveUnlocks then
+		setupCaveUnlocks(caveUnlocks)
+	end
+
+	-- ✅ KEY FIX: Watch the PLOT for a replacement CaveUnlocks folder.
+	-- This fires whenever SpeedrunHandler destroys + re-clones the folder.
+	plot.ChildAdded:Connect(function(child)
+		if child.Name == "CaveUnlocks" then
+			task.wait() -- let the clone fully replicate
+			setupCaveUnlocks(child)
+		end
+	end)
 end
 
 -- ============================================================================
