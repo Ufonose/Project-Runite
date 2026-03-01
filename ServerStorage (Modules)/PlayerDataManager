@@ -45,10 +45,36 @@ local DATA_TEMPLATE = {
 		["ActiveObjectives"] = {},
 		["ObjectiveProgress"] = {},
 		["ItemsCollected"] = {},
-	}
+	},
+
+	-- ✅ NEW: Speedrun system
+	Speedrun = {
+		-- Whether this player has ever unlocked speedrun mode
+		-- (set to true permanently once all research is completed)
+		Unlocked = false,
+
+		-- Whether a run is currently in progress
+		IsActive = false,
+
+		-- os.time() when the current run started (0 = no active run)
+		StartTime = 0,
+
+		-- Split times for the current run, keyed by age number (stored as seconds elapsed)
+		-- e.g. AgeSplits = { [1] = 142, [2] = 380, [3] = 710, [4] = 1205 }
+		AgeSplits = {},
+
+		-- Personal best split times per age (preserved across resets, never wiped)
+		BestAgeSplits = {},
+
+		-- Personal best total time in seconds (0 = never completed a full run)
+		BestTotalTime = 0,
+
+		-- Total number of completed speedrun attempts
+		TotalRuns = 0,
+	},
 }
 
-local PlayerStore = ProfileStore.New("Runite_v5", DATA_TEMPLATE)
+local PlayerStore = ProfileStore.New("Runite_s3", DATA_TEMPLATE) -- Runite_v5
 local ActiveProfiles = {} -- FIXED: now keyed by UserId (number)
 
 -- ============================================================
