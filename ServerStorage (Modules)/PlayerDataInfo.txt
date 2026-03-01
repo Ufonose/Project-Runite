@@ -42,6 +42,10 @@ PLAYER_DATA.SIMPLE_VALS = {
 		["VALUE_TYPE"] = "NumberValue",
 		["DEFAULT"] = 0,
 	},
+	["TotalEarned"] = {
+		["VALUE_TYPE"] = "NumberValue",
+		["DEFAULT"] = 0,
+	},
 }
 
 PLAYER_DATA.INVENTORY_TYPES = {
