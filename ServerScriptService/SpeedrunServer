@@ -1,0 +1,29 @@
+-- ServerScriptService/SpeedrunServer
+-- Wires up RemoteFunction handlers for the SpeedrunHandler module
+
+local ServerStorage = game:GetService("ServerStorage")
+local SpeedrunHandler = require(ServerStorage.Modules.SpeedrunHandler)
+
+-- Start a run
+SpeedrunHandler.Remotes.StartSpeedrun.OnServerInvoke = function(player)
+	local success, msg = SpeedrunHandler.StartRun(player)
+	return success, msg
+end
+
+-- Reset/abandon a run
+SpeedrunHandler.Remotes.ResetSpeedrun.OnServerInvoke = function(player)
+	local success = SpeedrunHandler.ResetRun(player)
+	return success
+end
+
+-- Get current speedrun state (for GUI to read on open)
+SpeedrunHandler.Remotes.GetSpeedrunData.OnServerInvoke = function(player)
+	return SpeedrunHandler.GetData(player)
+end
+
+-- Get leaderboard for a specific age or "Total"
+SpeedrunHandler.Remotes.GetSpeedrunLeaderboard.OnServerInvoke = function(_, ageId)
+	return SpeedrunHandler.GetLeaderboard(ageId)
+end
+
+print("✅ SpeedrunServer loaded")
