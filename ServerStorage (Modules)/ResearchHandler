@@ -1,189 +1,927 @@
--- ServerStorage (Modules)/ResearchHandler
-local ServerStorage = game:GetService("ServerStorage")
-local RepStorage = game:GetService("ReplicatedStorage")
+-- StarterGui/SpeedrunGui (LocalScript inside ScreenGui "SpeedrunGui")
 
-local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
-local ResearchData = require(ServerStorage.Modules.ResearchData)
-local SpeedrunHandler = require(ServerStorage.Modules.SpeedrunHandler)
+local Players      = game:GetService("Players")
+local RepStorage   = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local RunService   = game:GetService("RunService")
 
-local ResearchHandler = {}
+local Plr        = Players.LocalPlayer
+local PlayerGui  = Plr:WaitForChild("PlayerGui")
+local SoundManager = require(RepStorage.Modules.SoundManager)
 
-local function getItemNameFromId(itemId)
-	for _, item in pairs(RepStorage.Items:GetChildren()) do
-		local itemStats = item:FindFirstChild("ItemStats")
-		if itemStats then
-			local stats = require(itemStats)
-			if stats.ItemId == itemId then
-				return item.Name
+Plr:WaitForChild("DataLoaded", 30)
+
+local Events               = RepStorage:WaitForChild("Events")
+local StartSpeedrun        = Events:WaitForChild("StartSpeedrun")
+local ResetSpeedrun        = Events:WaitForChild("ResetSpeedrun")
+local GetSpeedrunData      = Events:WaitForChild("GetSpeedrunData")
+local GetSpeedrunLeaderboard = Events:WaitForChild("GetSpeedrunLeaderboard")
+local EnterSpeedrunMode    = Events:WaitForChild("EnterSpeedrunMode")   -- ✅ NEW
+local ReturnToMainPlot     = Events:WaitForChild("ReturnToMainPlot")    -- ✅ NEW
+local SpeedrunStarted      = Events:WaitForChild("SpeedrunStarted")
+local SpeedrunAgeSplit     = Events:WaitForChild("SpeedrunAgeSplit")
+local SpeedrunCompleted    = Events:WaitForChild("SpeedrunCompleted")
+local SpeedrunReset        = Events:WaitForChild("SpeedrunReset")
+local EnteredSpeedrunMode  = Events:WaitForChild("EnteredSpeedrunMode") -- ✅ NEW
+local RestoredMainPlot     = Events:WaitForChild("RestoredMainPlot")    -- ✅ NEW
+
+local speedrunGui  = script.Parent
+
+-- ============================================================
+-- STATE
+-- ============================================================
+local currentView          = "main"
+local currentLeaderboardAge = 1
+local runData              = nil
+local timerConnection      = nil
+
+-- ============================================================
+-- HELPERS
+-- ============================================================
+local function formatTime(seconds)
+	seconds = math.floor(seconds)
+	local h = math.floor(seconds / 3600)
+	local m = math.floor((seconds % 3600) / 60)
+	local s = seconds % 60
+	if h > 0 then
+		return string.format("%d:%02d:%02d", h, m, s)
+	else
+		return string.format("%d:%02d", m, s)
+	end
+end
+
+local AGE_NAMES  = {"First Age", "Second Age", "Third Age", "Fourth Age"}
+local AGE_COLORS = {
+	Color3.fromRGB(120, 100, 80),
+	Color3.fromRGB(100, 120, 140),
+	Color3.fromRGB(140, 100, 140),
+	Color3.fromRGB(143, 143, 0),
+}
+
+-- ============================================================
+-- BUILD MAIN FRAME
+-- ============================================================
+local mainFrame = Instance.new("Frame")
+mainFrame.Name                  = "MainFrame"
+mainFrame.AnchorPoint           = Vector2.new(0.5, 0.5)
+mainFrame.Position              = UDim2.new(0.5, 0, 0.5, 0)
+mainFrame.Size                  = UDim2.new(0.55, 0, 0.75, 0)
+mainFrame.BackgroundColor3      = Color3.fromRGB(25, 25, 30)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel       = 0
+mainFrame.Visible               = false
+mainFrame.ZIndex                = 5
+mainFrame.Parent                = speedrunGui
+
+local function updateSize()
+	local vp = workspace.CurrentCamera.ViewportSize
+	mainFrame.Size = vp.X < 900
+		and UDim2.new(0.95, 0, 0.88, 0)
+		or  UDim2.new(0.55, 0, 0.75, 0)
+end
+updateSize()
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateSize)
+
+local aspect = Instance.new("UIAspectRatioConstraint")
+aspect.AspectRatio  = 1.4
+aspect.DominantAxis = Enum.DominantAxis.Height
+aspect.Parent       = mainFrame
+
+local blur = Instance.new("Frame")
+blur.Size                   = UDim2.new(1, 0, 1, 0)
+blur.BackgroundColor3       = Color3.fromRGB(15, 15, 20)
+blur.BackgroundTransparency = 0.3
+blur.BorderSizePixel        = 0
+blur.ZIndex                 = 6
+blur.Parent                 = mainFrame
+Instance.new("UICorner", blur).CornerRadius = UDim.new(0, 15)
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 15)
+
+local stroke = Instance.new("UIStroke", mainFrame)
+stroke.Color        = Color3.fromRGB(80, 80, 120)
+stroke.Transparency = 0.5
+stroke.Thickness    = 1.5
+
+-- Close button
+local closeButton = Instance.new("TextButton")
+closeButton.Name                  = "CloseButton"
+closeButton.Size                  = UDim2.new(0.08, 0, 0, 0)
+closeButton.AnchorPoint           = Vector2.new(1, 0)
+closeButton.Position              = UDim2.new(1, -8, 0, 8)
+closeButton.BackgroundColor3      = Color3.fromRGB(180, 60, 60)
+closeButton.BackgroundTransparency = 0.3
+closeButton.Text                  = "✕"
+closeButton.TextColor3            = Color3.fromRGB(255, 255, 255)
+closeButton.TextScaled            = true
+closeButton.Font                  = Enum.Font.GothamBold
+closeButton.BorderSizePixel       = 0
+closeButton.ZIndex                = 10
+closeButton.Parent                = mainFrame
+local closeAspect = Instance.new("UIAspectRatioConstraint", closeButton)
+closeAspect.AspectRatio = 1
+Instance.new("UICorner", closeButton).CornerRadius = UDim.new(0.2, 0)
+
+-- Title
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Name            = "Title"
+titleLabel.Size            = UDim2.new(0.85, 0, 0.1, 0)
+titleLabel.Position        = UDim2.new(0.075, 0, 0.02, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text            = "⏱ Speedrun Mode"
+titleLabel.TextColor3      = Color3.fromRGB(255, 215, 0)
+titleLabel.TextScaled      = true
+titleLabel.Font            = Enum.Font.GothamBold
+titleLabel.ZIndex          = 7
+titleLabel.Parent          = mainFrame
+
+-- ============================================================
+-- CONTENT PANELS
+-- ============================================================
+
+-- Panel A: "Enter Speedrun Mode" (shown when not InSpeedrunMode)
+local enterPanel = Instance.new("Frame")
+enterPanel.Name                   = "EnterPanel"
+enterPanel.Size                   = UDim2.new(0.9, 0, 0.78, 0)
+enterPanel.Position               = UDim2.new(0.05, 0, 0.14, 0)
+enterPanel.BackgroundTransparency = 1
+enterPanel.ZIndex                 = 7
+enterPanel.Visible                = false
+enterPanel.Parent                 = mainFrame
+
+local enterDesc = Instance.new("TextLabel")
+enterDesc.Size            = UDim2.new(1, 0, 0.35, 0)
+enterDesc.Position        = UDim2.new(0, 0, 0.08, 0)
+enterDesc.BackgroundTransparency = 1
+enterDesc.Text            = "Your current plot will be saved.\nStart a run, race through all research,\nthen return to your main plot anytime."
+enterDesc.TextColor3      = Color3.fromRGB(180, 180, 200)
+enterDesc.TextScaled      = true
+enterDesc.Font            = Enum.Font.Gotham
+enterDesc.TextWrapped     = true
+enterDesc.ZIndex          = 8
+enterDesc.Parent          = enterPanel
+
+-- Stats row (best time / total runs)
+local statsRow = Instance.new("Frame")
+statsRow.Size                   = UDim2.new(1, 0, 0.18, 0)
+statsRow.Position               = UDim2.new(0, 0, 0.46, 0)
+statsRow.BackgroundTransparency = 1
+statsRow.ZIndex                 = 8
+statsRow.Parent                 = enterPanel
+
+local function makeStatBox(parent, text, xPos)
+	local box = Instance.new("Frame")
+	box.Size                   = UDim2.new(0.45, 0, 1, 0)
+	box.Position               = UDim2.new(xPos, 0, 0, 0)
+	box.BackgroundColor3       = Color3.fromRGB(35, 35, 45)
+	box.BackgroundTransparency = 0.3
+	box.BorderSizePixel        = 0
+	box.ZIndex                 = 8
+	box.Parent                 = parent
+	Instance.new("UICorner", box).CornerRadius = UDim.new(0, 8)
+	local lbl = Instance.new("TextLabel", box)
+	lbl.Size            = UDim2.new(1, 0, 1, 0)
+	lbl.BackgroundTransparency = 1
+	lbl.Text            = text
+	lbl.TextColor3      = Color3.fromRGB(200, 200, 220)
+	lbl.TextScaled      = true
+	lbl.Font            = Enum.Font.Gotham
+	lbl.ZIndex          = 9
+	return lbl
+end
+
+local bestTimeStat = makeStatBox(statsRow, "Best: --:--", 0)
+local totalRunsStat = makeStatBox(statsRow, "Runs: 0", 0.55)
+
+-- Enter button
+local enterBtn = Instance.new("TextButton")
+enterBtn.Name                   = "EnterBtn"
+enterBtn.Size                   = UDim2.new(0.7, 0, 0.15, 0)
+enterBtn.AnchorPoint            = Vector2.new(0.5, 0)
+enterBtn.Position               = UDim2.new(0.5, 0, 0.72, 0)
+enterBtn.BackgroundColor3       = Color3.fromRGB(50, 140, 200)
+enterBtn.BackgroundTransparency = 0.1
+enterBtn.Text                   = "🚀  Enter Speedrun Mode"
+enterBtn.TextColor3             = Color3.fromRGB(255, 255, 255)
+enterBtn.TextScaled             = true
+enterBtn.Font                   = Enum.Font.GothamBold
+enterBtn.BorderSizePixel        = 0
+enterBtn.ZIndex                 = 8
+enterBtn.Parent                 = enterPanel
+Instance.new("UICorner", enterBtn).CornerRadius = UDim.new(0, 8)
+
+-- Locked message (if not unlocked)
+local lockedLabel = Instance.new("TextLabel")
+lockedLabel.Size            = UDim2.new(1, 0, 0.12, 0)
+lockedLabel.Position        = UDim2.new(0, 0, 0, 0)
+lockedLabel.BackgroundTransparency = 1
+lockedLabel.Text            = "🔒 Complete all research objectives to unlock"
+lockedLabel.TextColor3      = Color3.fromRGB(255, 140, 60)
+lockedLabel.TextScaled      = true
+lockedLabel.Font            = Enum.Font.GothamBold
+lockedLabel.ZIndex          = 8
+lockedLabel.Visible         = false
+lockedLabel.Parent          = enterPanel
+
+-- Panel B: Speedrun Controls (shown when InSpeedrunMode)
+local runPanel = Instance.new("Frame")
+runPanel.Name                   = "RunPanel"
+runPanel.Size                   = UDim2.new(0.9, 0, 0.78, 0)
+runPanel.Position               = UDim2.new(0.05, 0, 0.14, 0)
+runPanel.BackgroundTransparency = 1
+runPanel.ZIndex                 = 7
+runPanel.Visible                = false
+runPanel.Parent                 = mainFrame
+
+-- Timer display
+local timerLabel = Instance.new("TextLabel")
+timerLabel.Size            = UDim2.new(1, 0, 0.2, 0)
+timerLabel.Position        = UDim2.new(0, 0, 0, 0)
+timerLabel.BackgroundTransparency = 1
+timerLabel.Text            = "0:00"
+timerLabel.TextColor3      = Color3.fromRGB(80, 220, 120)
+timerLabel.TextScaled      = true
+timerLabel.Font            = Enum.Font.GothamBold
+timerLabel.ZIndex          = 8
+timerLabel.Parent          = runPanel
+
+local timerStatus = Instance.new("TextLabel")
+timerStatus.Size            = UDim2.new(1, 0, 0.1, 0)
+timerStatus.Position        = UDim2.new(0, 0, 0.2, 0)
+timerStatus.BackgroundTransparency = 1
+timerStatus.Text            = "Press Start to begin a new run"
+timerStatus.TextColor3      = Color3.fromRGB(150, 150, 180)
+timerStatus.TextScaled      = true
+timerStatus.Font            = Enum.Font.Gotham
+timerStatus.ZIndex          = 8
+timerStatus.Parent          = runPanel
+
+-- Splits area
+local splitsFrame = Instance.new("Frame")
+splitsFrame.Size                   = UDim2.new(1, 0, 0.36, 0)
+splitsFrame.Position               = UDim2.new(0, 0, 0.32, 0)
+splitsFrame.BackgroundTransparency = 1
+splitsFrame.ZIndex                 = 8
+splitsFrame.Parent                 = runPanel
+
+local splitsLayout = Instance.new("UIListLayout", splitsFrame)
+splitsLayout.SortOrder       = Enum.SortOrder.LayoutOrder
+splitsLayout.FillDirection   = Enum.FillDirection.Vertical
+splitsLayout.Padding         = UDim.new(0.01, 0)
+
+local splitRows = {}
+for i = 1, 4 do
+	local row = Instance.new("Frame")
+	row.Size                   = UDim2.new(1, 0, 0.22, 0)
+	row.BackgroundColor3       = Color3.fromRGB(30, 30, 40)
+	row.BackgroundTransparency = 0.4
+	row.BorderSizePixel        = 0
+	row.LayoutOrder            = i
+	row.ZIndex                 = 8
+	row.Parent                 = splitsFrame
+
+	local rowCorner = Instance.new("UICorner", row)
+	rowCorner.CornerRadius = UDim.new(0, 6)
+
+	local rowStroke = Instance.new("UIStroke", row)
+	rowStroke.Color        = AGE_COLORS[i]
+	rowStroke.Transparency = 0.7
+	rowStroke.Thickness    = 1
+
+	local ageDot = Instance.new("Frame")
+	ageDot.Size                   = UDim2.new(0, 0, 0.6, 0)
+	ageDot.AnchorPoint            = Vector2.new(0, 0.5)
+	ageDot.Position               = UDim2.new(0.02, 0, 0.5, 0)
+	ageDot.BackgroundColor3       = AGE_COLORS[i]
+	ageDot.BackgroundTransparency = 0.2
+	ageDot.BorderSizePixel        = 0
+	ageDot.ZIndex                 = 9
+	ageDot.Parent                 = row
+	local dotAspect = Instance.new("UIAspectRatioConstraint", ageDot)
+	dotAspect.AspectRatio = 1
+	Instance.new("UICorner", ageDot).CornerRadius = UDim.new(1, 0)
+
+	local ageName = Instance.new("TextLabel")
+	ageName.Size            = UDim2.new(0.55, 0, 1, 0)
+	ageName.Position        = UDim2.new(0.1, 0, 0, 0)
+	ageName.BackgroundTransparency = 1
+	ageName.Text            = AGE_NAMES[i]
+	ageName.TextColor3      = AGE_COLORS[i]
+	ageName.TextScaled      = true
+	ageName.Font            = Enum.Font.GothamBold
+	ageName.TextXAlignment  = Enum.TextXAlignment.Left
+	ageName.ZIndex          = 9
+	ageName.Parent          = row
+
+	local splitTime = Instance.new("TextLabel")
+	splitTime.Size            = UDim2.new(0.28, 0, 0.55, 0)
+	splitTime.Position        = UDim2.new(0.63, 0, 0, 0)
+	splitTime.BackgroundTransparency = 1
+	splitTime.Text            = "--:--"
+	splitTime.TextColor3      = Color3.fromRGB(120, 120, 140)
+	splitTime.TextScaled      = true
+	splitTime.Font            = Enum.Font.GothamBold
+	splitTime.TextXAlignment  = Enum.TextXAlignment.Right
+	splitTime.ZIndex          = 9
+	splitTime.Parent          = row
+
+	local pbLabel = Instance.new("TextLabel")
+	pbLabel.Size              = UDim2.new(0.28, 0, 0.45, 0)
+	pbLabel.Position          = UDim2.new(0.63, 0, 0.55, 0)
+	pbLabel.BackgroundTransparency = 1
+	pbLabel.Text              = "PB: --"
+	pbLabel.TextColor3        = Color3.fromRGB(255, 215, 0)
+	pbLabel.TextScaled        = true
+	pbLabel.Font              = Enum.Font.Gotham
+	pbLabel.TextXAlignment    = Enum.TextXAlignment.Right
+	pbLabel.ZIndex            = 9
+	pbLabel.Parent            = row
+
+	splitRows[i] = { row = row, splitTime = splitTime, pbLabel = pbLabel, stroke = rowStroke }
+end
+
+-- Button row: Start | Reset
+local btnRow = Instance.new("Frame")
+btnRow.Size                   = UDim2.new(1, 0, 0.12, 0)
+btnRow.Position               = UDim2.new(0, 0, 0.7, 0)
+btnRow.BackgroundTransparency = 1
+btnRow.ZIndex                 = 8
+btnRow.Parent                 = runPanel
+
+local startBtn = Instance.new("TextButton")
+startBtn.Size                   = UDim2.new(0.48, 0, 1, 0)
+startBtn.Position               = UDim2.new(0, 0, 0, 0)
+startBtn.BackgroundColor3       = Color3.fromRGB(50, 140, 70)
+startBtn.BackgroundTransparency = 0.1
+startBtn.Text                   = "▶  Start Run"
+startBtn.TextColor3             = Color3.fromRGB(255, 255, 255)
+startBtn.TextScaled             = true
+startBtn.Font                   = Enum.Font.GothamBold
+startBtn.BorderSizePixel        = 0
+startBtn.ZIndex                 = 9
+startBtn.Parent                 = btnRow
+Instance.new("UICorner", startBtn).CornerRadius = UDim.new(0, 8)
+
+local resetBtn = Instance.new("TextButton")
+resetBtn.Size                   = UDim2.new(0.48, 0, 1, 0)
+resetBtn.Position               = UDim2.new(0.52, 0, 0, 0)
+resetBtn.BackgroundColor3       = Color3.fromRGB(160, 60, 60)
+resetBtn.BackgroundTransparency = 0.1
+resetBtn.Text                   = "↺  Reset"
+resetBtn.TextColor3             = Color3.fromRGB(255, 255, 255)
+resetBtn.TextScaled             = true
+resetBtn.Font                   = Enum.Font.GothamBold
+resetBtn.BorderSizePixel        = 0
+resetBtn.ZIndex                 = 9
+resetBtn.Parent                 = btnRow
+Instance.new("UICorner", resetBtn).CornerRadius = UDim.new(0, 8)
+
+-- Return to Main Plot button
+local returnBtn = Instance.new("TextButton")
+returnBtn.Size                   = UDim2.new(1, 0, 0.1, 0)
+returnBtn.Position               = UDim2.new(0, 0, 0.87, 0)
+returnBtn.BackgroundColor3       = Color3.fromRGB(80, 55, 140)
+returnBtn.BackgroundTransparency = 0.1
+returnBtn.Text                   = "🏠  Return to Main Plot"
+returnBtn.TextColor3             = Color3.fromRGB(220, 200, 255)
+returnBtn.TextScaled             = true
+returnBtn.Font                   = Enum.Font.GothamBold
+returnBtn.BorderSizePixel        = 0
+returnBtn.ZIndex                 = 9
+returnBtn.Parent                 = runPanel
+Instance.new("UICorner", returnBtn).CornerRadius = UDim.new(0, 8)
+
+-- ============================================================
+-- LEADERBOARD TAB (reachable from runPanel)
+-- ============================================================
+local lbPanel = Instance.new("Frame")
+lbPanel.Name                   = "LeaderboardPanel"
+lbPanel.Size                   = UDim2.new(0.9, 0, 0.78, 0)
+lbPanel.Position               = UDim2.new(0.05, 0, 0.14, 0)
+lbPanel.BackgroundTransparency = 1
+lbPanel.ZIndex                 = 7
+lbPanel.Visible                = false
+lbPanel.Parent                 = mainFrame
+
+-- Age selector row
+local ageSelectorRow = Instance.new("Frame")
+ageSelectorRow.Size                   = UDim2.new(1, 0, 0.12, 0)
+ageSelectorRow.Position               = UDim2.new(0, 0, 0, 0)
+ageSelectorRow.BackgroundTransparency = 1
+ageSelectorRow.ZIndex                 = 8
+ageSelectorRow.Parent                 = lbPanel
+
+local ageTabNames = {"Age 1", "Age 2", "Age 3", "Age 4", "Total"}
+local ageTabs = {}
+for i, name in ipairs(ageTabNames) do
+	local tab = Instance.new("TextButton")
+	tab.Size                   = UDim2.new(0.18, 0, 1, 0)
+	tab.Position               = UDim2.new((i - 1) * 0.2, 0, 0, 0)
+	tab.BackgroundColor3       = Color3.fromRGB(35, 35, 50)
+	tab.BackgroundTransparency = 0.3
+	tab.Text                   = name
+	tab.TextColor3             = Color3.fromRGB(180, 180, 200)
+	tab.TextScaled             = true
+	tab.Font                   = Enum.Font.GothamBold
+	tab.BorderSizePixel        = 0
+	tab.ZIndex                 = 9
+	tab.Parent                 = ageSelectorRow
+	Instance.new("UICorner", tab).CornerRadius = UDim.new(0, 6)
+	ageTabs[i] = tab
+end
+
+-- Leaderboard list
+local lbList = Instance.new("ScrollingFrame")
+lbList.Size                   = UDim2.new(1, 0, 0.78, 0)
+lbList.Position               = UDim2.new(0, 0, 0.14, 0)
+lbList.BackgroundTransparency = 1
+lbList.BorderSizePixel        = 0
+lbList.ScrollBarThickness     = 4
+lbList.ZIndex                 = 8
+lbList.Parent                 = lbPanel
+
+local lbLayout = Instance.new("UIListLayout", lbList)
+lbLayout.SortOrder     = Enum.SortOrder.LayoutOrder
+lbLayout.Padding       = UDim.new(0.01, 0)
+
+local lbBackBtn = Instance.new("TextButton")
+lbBackBtn.Size                   = UDim2.new(0.5, 0, 0.08, 0)
+lbBackBtn.AnchorPoint            = Vector2.new(0.5, 0)
+lbBackBtn.Position               = UDim2.new(0.5, 0, 0.92, 0)
+lbBackBtn.BackgroundColor3       = Color3.fromRGB(50, 50, 70)
+lbBackBtn.BackgroundTransparency = 0.3
+lbBackBtn.Text                   = "← Back"
+lbBackBtn.TextColor3             = Color3.fromRGB(200, 200, 220)
+lbBackBtn.TextScaled             = true
+lbBackBtn.Font                   = Enum.Font.GothamBold
+lbBackBtn.BorderSizePixel        = 0
+lbBackBtn.ZIndex                 = 9
+lbBackBtn.Parent                 = lbPanel
+Instance.new("UICorner", lbBackBtn).CornerRadius = UDim.new(0, 8)
+
+-- Leaderboard button inside runPanel (open lb)
+local lbBtn = Instance.new("TextButton")
+lbBtn.Name                   = "LeaderboardBtn"
+lbBtn.Size                   = UDim2.new(0.45, 0, 0.1, 0)
+lbBtn.Position               = UDim2.new(0, 0, 0.87, 0)
+lbBtn.BackgroundColor3       = Color3.fromRGB(40, 80, 130)
+lbBtn.BackgroundTransparency = 0.2
+lbBtn.Text                   = "🏆 Leaderboard"
+lbBtn.TextColor3             = Color3.fromRGB(200, 220, 255)
+lbBtn.TextScaled             = true
+lbBtn.Font                   = Enum.Font.GothamBold
+lbBtn.BorderSizePixel        = 0
+lbBtn.ZIndex                 = 9
+lbBtn.Parent                 = runPanel
+Instance.new("UICorner", lbBtn).CornerRadius = UDim.new(0, 8)
+
+-- Move returnBtn to not overlap
+returnBtn.Size     = UDim2.new(0.5, 0, 0.1, 0)
+returnBtn.Position = UDim2.new(0.5, 0, 0.87, 0)
+
+local function loadLeaderboard(ageKey)
+	-- Clear list
+	for _, c in pairs(lbList:GetChildren()) do
+		if not c:IsA("UIListLayout") then c:Destroy() end
+	end
+
+	local loadingLbl = Instance.new("TextLabel")
+	loadingLbl.Size            = UDim2.new(1, 0, 0, 32)
+	loadingLbl.BackgroundTransparency = 1
+	loadingLbl.Text            = "Loading..."
+	loadingLbl.TextColor3      = Color3.fromRGB(150, 150, 170)
+	loadingLbl.TextScaled      = true
+	loadingLbl.Font            = Enum.Font.Gotham
+	loadingLbl.ZIndex          = 9
+	loadingLbl.LayoutOrder     = 0
+	loadingLbl.Parent          = lbList
+
+	-- Highlight active tab
+	for i, tab in ipairs(ageTabs) do
+		local isActive = (i == ageKey) or (ageKey == "Total" and i == 5)
+		tab.BackgroundColor3 = isActive
+			and Color3.fromRGB(60, 100, 180)
+			or  Color3.fromRGB(35, 35, 50)
+	end
+
+	task.spawn(function()
+		local ok, data = pcall(function()
+			return GetSpeedrunLeaderboard:InvokeServer(ageKey)
+		end)
+		loadingLbl:Destroy()
+		if not ok or not data then return end
+
+		for _, entry in ipairs(data) do
+			local row = Instance.new("Frame")
+			row.Size                   = UDim2.new(1, 0, 0, 34)
+			row.BackgroundColor3       = Color3.fromRGB(30, 30, 45)
+			row.BackgroundTransparency = 0.3
+			row.BorderSizePixel        = 0
+			row.LayoutOrder            = entry.rank
+			row.ZIndex                 = 9
+			row.Parent                 = lbList
+			Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
+
+			local rankLbl = Instance.new("TextLabel", row)
+			rankLbl.Size            = UDim2.new(0.12, 0, 1, 0)
+			rankLbl.Position        = UDim2.new(0.01, 0, 0, 0)
+			rankLbl.BackgroundTransparency = 1
+			rankLbl.Text            = "#" .. entry.rank
+			rankLbl.TextColor3      = entry.rank == 1 and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(160, 160, 180)
+			rankLbl.TextScaled      = true
+			rankLbl.Font            = Enum.Font.GothamBold
+			rankLbl.ZIndex          = 10
+
+			local nameLbl = Instance.new("TextLabel", row)
+			nameLbl.Size            = UDim2.new(0.55, 0, 1, 0)
+			nameLbl.Position        = UDim2.new(0.14, 0, 0, 0)
+			nameLbl.BackgroundTransparency = 1
+			nameLbl.Text            = entry.name
+			nameLbl.TextColor3      = Color3.fromRGB(220, 220, 240)
+			nameLbl.TextScaled      = true
+			nameLbl.Font            = Enum.Font.Gotham
+			nameLbl.TextXAlignment  = Enum.TextXAlignment.Left
+			nameLbl.ZIndex          = 10
+
+			local timeLbl = Instance.new("TextLabel", row)
+			timeLbl.Size            = UDim2.new(0.28, 0, 1, 0)
+			timeLbl.Position        = UDim2.new(0.71, 0, 0, 0)
+			timeLbl.BackgroundTransparency = 1
+			timeLbl.Text            = formatTime(entry.time)
+			timeLbl.TextColor3      = Color3.fromRGB(80, 220, 120)
+			timeLbl.TextScaled      = true
+			timeLbl.Font            = Enum.Font.GothamBold
+			timeLbl.TextXAlignment  = Enum.TextXAlignment.Right
+			timeLbl.ZIndex          = 10
+		end
+
+		if #data == 0 then
+			local empty = Instance.new("TextLabel")
+			empty.Size            = UDim2.new(1, 0, 0, 32)
+			empty.BackgroundTransparency = 1
+			empty.Text            = "No entries yet!"
+			empty.TextColor3      = Color3.fromRGB(120, 120, 140)
+			empty.TextScaled      = true
+			empty.Font            = Enum.Font.Gotham
+			empty.ZIndex          = 9
+			empty.Parent          = lbList
+		end
+
+		lbList.CanvasSize = UDim2.new(0, 0, 0, lbLayout.AbsoluteContentSize.Y + 8)
+	end)
+end
+
+-- Tab buttons
+for i, tab in ipairs(ageTabs) do
+	tab.MouseButton1Click:Connect(function()
+		SoundManager.ButtonClick()
+		currentLeaderboardAge = i == 5 and "Total" or i
+		loadLeaderboard(currentLeaderboardAge)
+	end)
+end
+
+lbBtn.MouseButton1Click:Connect(function()
+	SoundManager.ButtonClick()
+	runPanel.Visible = false
+	lbPanel.Visible  = true
+	loadLeaderboard(currentLeaderboardAge)
+end)
+
+lbBackBtn.MouseButton1Click:Connect(function()
+	SoundManager.ButtonClick()
+	lbPanel.Visible  = false
+	runPanel.Visible = true
+end)
+local function startTimerLoop()
+	if timerConnection then timerConnection:Disconnect() end
+	timerConnection = RunService.Heartbeat:Connect(function()
+		if runData and runData.IsActive then
+			local elapsed = (os.clock() - runData._fetchedAt) + (runData.ElapsedTime or 0)
+			timerLabel.Text = formatTime(elapsed)
+		end
+	end)
+end
+
+local function stopTimerLoop()
+	if timerConnection then
+		timerConnection:Disconnect()
+		timerConnection = nil
+	end
+end
+
+-- Close button (top-right of mainFrame)
+local closeBtn = Instance.new("TextButton")
+closeBtn.Name                   = "CloseBtn"
+closeBtn.Size                   = UDim2.new(0.07, 0, 0, 0)
+closeBtn.AnchorPoint            = Vector2.new(1, 0)
+closeBtn.Position               = UDim2.new(1, -6, 0, 6)
+closeBtn.BackgroundColor3       = Color3.fromRGB(180, 55, 55)
+closeBtn.BackgroundTransparency = 0.2
+closeBtn.Text                   = "✕"
+closeBtn.TextColor3             = Color3.fromRGB(255, 255, 255)
+closeBtn.TextScaled             = true
+closeBtn.Font                   = Enum.Font.GothamBold
+closeBtn.BorderSizePixel        = 0
+closeBtn.ZIndex                 = 12
+closeBtn.Parent                 = mainFrame
+local closeBtnAspect = Instance.new("UIAspectRatioConstraint", closeBtn)
+closeBtnAspect.AspectRatio = 1
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0.25, 0)
+
+closeBtn.MouseButton1Click:Connect(function()
+	SoundManager.ButtonClick()
+	local mainUi = PlayerGui:FindFirstChild("MainUi")
+	if mainUi then
+		local opened = mainUi:FindFirstChild("Values") and mainUi.Values.OpenedMenus:FindFirstChild("SpeedrunGui")
+		if opened then opened:Destroy() end
+	end
+	local menuObj = speedrunGui:FindFirstChild("MenuObject")
+	if menuObj then menuObj.Value = false end
+end)
+
+-- ============================================================
+-- PANEL SWITCHING
+-- ============================================================
+local function showEnterPanel(isUnlocked)
+	enterPanel.Visible = true
+	runPanel.Visible   = false
+	lbPanel.Visible    = false
+	lockedLabel.Visible = not isUnlocked
+	enterBtn.Active     = isUnlocked
+	enterBtn.BackgroundTransparency = isUnlocked and 0.1 or 0.5
+end
+
+local function showRunPanel()
+	enterPanel.Visible = false
+	runPanel.Visible   = true
+	lbPanel.Visible    = false
+end
+
+-- ============================================================
+-- REFRESH DATA
+-- ============================================================
+local function refreshRunData()
+	local ok, data = pcall(function()
+		return GetSpeedrunData:InvokeServer()
+	end)
+	if ok and data then
+		runData = data
+		return data
+	end
+	return nil
+end
+
+local function syncStatsDisplay(data)
+	if not data then return end
+	if data.BestTotalTime and data.BestTotalTime > 0 then
+		bestTimeStat.Text = "Best: " .. formatTime(data.BestTotalTime)
+	else
+		bestTimeStat.Text = "Best: --:--"
+	end
+	totalRunsStat.Text = "Runs: " .. (data.TotalRuns or 0)
+end
+
+local function resetSplitRows()
+	for i = 1, 4 do
+		if splitRows[i] then
+			splitRows[i].splitTime.Text       = "--:--"
+			splitRows[i].splitTime.TextColor3 = Color3.fromRGB(120, 120, 140)
+			splitRows[i].stroke.Transparency  = 0.7
+		end
+	end
+end
+
+-- ============================================================
+-- OPEN / REFRESH LOGIC
+-- ============================================================
+local function onOpen()
+	local data = refreshRunData()
+	if not data then return end
+
+	data._fetchedAt = os.clock()
+	syncStatsDisplay(data)
+	resetSplitRows()
+
+	-- Fill in any existing splits
+	if data.SegmentSplits then
+		for i, seg in pairs(data.SegmentSplits) do
+			if splitRows[i] then
+				splitRows[i].splitTime.Text       = formatTime(seg)
+				splitRows[i].splitTime.TextColor3 = Color3.fromRGB(80, 220, 120)
+				splitRows[i].stroke.Transparency  = 0.1
 			end
 		end
 	end
-	return "Unknown Item"
-end
 
-function ResearchHandler.InitializePlayer(player)
-	local session = PlayerSession.Get(player) -- FIXED
-	if not session then return false end
-
-	if not session["Research"] then
-		session["Research"] = {
-			CompletedObjectives = {},
-			ActiveObjectives = {},
-			ObjectiveProgress = {},
-			ItemsCollected = {},
-		}
-	end
-
-	if not session["Research"]["ItemsCollected"] then
-		session["Research"]["ItemsCollected"] = {}
-	end
-
-	return true
-end
-
-function ResearchHandler.TrackItemCollection(player, itemName, amount)
-	if not ResearchHandler.InitializePlayer(player) then return end
-
-	local session = PlayerSession.Get(player) -- FIXED
-	local research = session["Research"]
-
-	if not research.ItemsCollected[itemName] then
-		research.ItemsCollected[itemName] = 0
-	end
-	research.ItemsCollected[itemName] = research.ItemsCollected[itemName] + amount
-end
-
-function ResearchHandler.StartObjective(player, objectiveId)
-	if not ResearchHandler.InitializePlayer(player) then return false end
-
-	local session = PlayerSession.Get(player) -- FIXED
-	local research = session["Research"]
-	local objective = ResearchData.GetObjective(objectiveId)
-
-	if not objective then return false end
-
-	if table.find(research.CompletedObjectives, objectiveId) then return false, "Already completed" end
-	if table.find(research.ActiveObjectives, objectiveId) then return false, "Already active" end
-
-	if not ResearchData.CanStartObjective(objectiveId, research.CompletedObjectives) then
-		return false, "Prerequisites not met"
-	end
-
-	table.insert(research.ActiveObjectives, objectiveId)
-	research.ObjectiveProgress[tostring(objectiveId)] = {}
-
-	for _, requirement in pairs(objective.Requirements) do
-		research.ObjectiveProgress[tostring(objectiveId)][requirement.ItemName] = 0
-	end
-
-	return true
-end
-
-function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
-	if not ResearchHandler.InitializePlayer(player) then return false end
-
-	local session = PlayerSession.Get(player) -- FIXED
-	local research = session["Research"]
-	local objective = ResearchData.GetObjective(objectiveId)
-
-	if not objective or not table.find(research.ActiveObjectives, objectiveId) then
-		return false
-	end
-
-	local requirement = nil
-	for _, req in pairs(objective.Requirements) do
-		if req.ItemName == itemName then
-			requirement = req
-			break
+	if data.InSpeedrunMode then
+		showRunPanel()
+		timerLabel.Text = formatTime(data.ElapsedTime or 0)
+		if data.IsActive then
+			timerStatus.Text = "Run in progress..."
+			startTimerLoop()
+		else
+			timerStatus.Text = "Press Start to begin a new run"
 		end
+	else
+		showEnterPanel(data.Unlocked)
 	end
-
-	if not requirement then return false end
-
-	local progressKey = tostring(objectiveId)
-	local currentProgress = research.ObjectiveProgress[progressKey][itemName] or 0
-	local newProgress = math.min(currentProgress + amount, requirement.Amount)
-	research.ObjectiveProgress[progressKey][itemName] = newProgress
-
-	if ResearchHandler.CheckObjectiveComplete(player, objectiveId) then
-		ResearchHandler.CompleteObjective(player, objectiveId)
-	end
-
-	return true, newProgress
 end
 
-function ResearchHandler.CheckObjectiveComplete(player, objectiveId)
-	local session = PlayerSession.Get(player) -- FIXED
-	if not session then return false end
+-- ============================================================
+-- BUTTON HANDLERS
+-- ============================================================
+enterBtn.MouseButton1Click:Connect(function()
+	if not runData or not runData.Unlocked then return end
+	SoundManager.ButtonClick()
+	enterBtn.Active = false
+	enterBtn.Text   = "Saving snapshot..."
 
-	local research = session["Research"]
-	local objective = ResearchData.GetObjective(objectiveId)
+	local ok, success, msg = pcall(function()
+		return EnterSpeedrunMode:InvokeServer()
+	end)
 
-	if not objective or not research.ObjectiveProgress[tostring(objectiveId)] then
-		return false
-	end
-
-	for _, requirement in pairs(objective.Requirements) do
-		local progress = research.ObjectiveProgress[tostring(objectiveId)][requirement.ItemName] or 0
-		if progress < requirement.Amount then
-			return false
-		end
-	end
-
-	return true
-end
-
-function ResearchHandler.CompleteObjective(player, objectiveId)
-	local session = PlayerSession.Get(player) -- FIXED
-	if not session then return false end
-
-	local research = session["Research"]
-	local objective = ResearchData.GetObjective(objectiveId)
-
-	if not objective then return false end
-
-	table.insert(research.CompletedObjectives, objectiveId)
-
-	local index = table.find(research.ActiveObjectives, objectiveId)
-	if index then table.remove(research.ActiveObjectives, index) end
-
-	local tokenReward = objective.Rewards.ResearchTokens or 0
-	if tokenReward > 0 then
-		player.ResearchTokens.Value = player.ResearchTokens.Value + tokenReward
-	end
-
-	local unlockedMachines = {}
-	if objective.Rewards.UnlockMachines then
-		for _, machineId in pairs(objective.Rewards.UnlockMachines) do
-			local itemKey = tostring(machineId)
-			if session["Items"][itemKey] then
-				session["Items"][itemKey]["Unlocked"] = true
-				table.insert(unlockedMachines, getItemNameFromId(machineId))
+	if ok and success then
+		runData = refreshRunData()
+		if runData then runData._fetchedAt = os.clock() end
+		resetSplitRows()
+		showRunPanel()
+		timerLabel.Text  = "0:00"
+		timerStatus.Text = "Press Start to begin a new run"
+	else
+		enterBtn.Text   = "🚀  Enter Speedrun Mode"
+		enterBtn.Active = true
+		timerStatus.Text = msg or "Something went wrong, try again"
+		task.delay(3, function()
+			if not runData or not runData.InSpeedrunMode then
+				timerStatus.Text = ""
 			end
+		end)
+	end
+end)
+
+startBtn.MouseButton1Click:Connect(function()
+	SoundManager.ButtonClick()
+	stopTimerLoop()
+	local ok, success, msg = pcall(function()
+		return StartSpeedrun:InvokeServer()
+	end)
+	if ok and success then
+		runData = refreshRunData()
+		if runData then
+			runData._fetchedAt = os.clock()
+			resetSplitRows()
+			timerLabel.Text      = "0:00"
+			timerLabel.TextColor3 = Color3.fromRGB(80, 220, 120)
+			timerStatus.Text     = "Run in progress..."
+			startTimerLoop()
 		end
+	else
+		timerStatus.Text = msg or "Try again."
+		task.delay(3, function() timerStatus.Text = "Press Start to begin a new run" end)
 	end
+end)
 
-	local notificationMessage = objective.Name .. " completed!"
-	if tokenReward > 0 then
-		notificationMessage = notificationMessage .. " +" .. tokenReward .. " Research Tokens"
-	elseif #unlockedMachines > 0 then
-		notificationMessage = notificationMessage .. " 🔓 Unlocked: " .. table.concat(unlockedMachines, ", ")
+resetBtn.MouseButton1Click:Connect(function()
+	SoundManager.ButtonClick()
+	stopTimerLoop()
+	local ok, success = pcall(function()
+		return ResetSpeedrun:InvokeServer()
+	end)
+	if ok and success then
+		timerLabel.Text       = "0:00"
+		timerLabel.TextColor3 = Color3.fromRGB(80, 220, 120)
+		timerStatus.Text      = "Press Start to begin a new run"
+		resetSplitRows()
+		runData = refreshRunData()
 	end
+end)
 
-	RepStorage.Events.MessageClient:FireClient(player, "screen", {
-		["message"] = notificationMessage
-	})
-	
-	-- ✅ NEW: Notify SpeedrunHandler so it can record age splits and unlock detection
-	SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
+returnBtn.MouseButton1Click:Connect(function()
+	SoundManager.ButtonClick()
+	stopTimerLoop()
+	returnBtn.Active = false
+	returnBtn.Text   = "⏳ Restoring plot..."
 
-	return true
-end
+	local ok, success, msg = pcall(function()
+		return ReturnToMainPlot:InvokeServer()
+	end)
 
-function ResearchHandler.GetPlayerResearch(player)
-	ResearchHandler.InitializePlayer(player)
-	local session = PlayerSession.Get(player) -- FIXED
-	return session and session["Research"]
-end
+	if ok and success then
+		-- Server fires RestoredMainPlot which handles the state update
+		runData = nil
+	else
+		returnBtn.Active = true
+		returnBtn.Text   = "🏠  Return to Main Plot"
+		timerStatus.Text = msg or "Restore failed, try again"
+		task.delay(3, function() timerStatus.Text = "Press Start to begin a new run" end)
+	end
+end)
 
-return ResearchHandler
+closeButton.MouseButton1Click:Connect(function()
+	SoundManager.ButtonClick()
+	local mainUi = PlayerGui:FindFirstChild("MainUi")
+	if mainUi and mainUi:FindFirstChild("Values") then
+		local opened = mainUi.Values.OpenedMenus:FindFirstChild("SpeedrunGui")
+		if opened then opened:Destroy() end
+	end
+	local menuObj = speedrunGui:FindFirstChild("MenuObject")
+	if menuObj then menuObj.Value = false end
+end)
+
+-- ============================================================
+-- SERVER → CLIENT NOTIFICATIONS
+-- ============================================================
+SpeedrunStarted.OnClientEvent:Connect(function()
+	runData = refreshRunData()
+	if runData then
+		runData._fetchedAt = os.clock()
+		setStartBtnActive(false)
+		startBtn.Text = "▶  Running..."
+		startTimerLoop()
+	end
+end)
+
+SpeedrunAgeSplit.OnClientEvent:Connect(function(ageId, segmentTime, cumulativeTime, isSegmentPB)
+	if splitRows[ageId] then
+		splitRows[ageId].splitTime.Text       = formatTime(segmentTime)
+		splitRows[ageId].splitTime.TextColor3 = isSegmentPB
+			and Color3.fromRGB(255, 215, 0)
+			or  Color3.fromRGB(80, 220, 120)
+		splitRows[ageId].stroke.Transparency  = 0.1
+	end
+	if runData then
+		runData.AgeSplits     = runData.AgeSplits or {}
+		runData.SegmentSplits = runData.SegmentSplits or {}
+		runData.AgeSplits[ageId]     = cumulativeTime
+		runData.SegmentSplits[ageId] = segmentTime
+	end
+end)
+
+SpeedrunCompleted.OnClientEvent:Connect(function(totalTime, isPersonalBest)
+	stopTimerLoop()
+	timerLabel.Text       = formatTime(totalTime)
+	timerLabel.TextColor3 = isPersonalBest
+		and Color3.fromRGB(255, 215, 0)
+		or  Color3.fromRGB(80, 220, 120)
+	timerStatus.Text  = isPersonalBest and "🏅 New Personal Best!" or "Run Complete!"
+	startBtn.Text     = "▶  Start New Run"
+	runData = refreshRunData()
+	syncStatsDisplay(runData)
+end)
+
+SpeedrunReset.OnClientEvent:Connect(function()
+	stopTimerLoop()
+	timerLabel.Text       = "0:00"
+	timerLabel.TextColor3 = Color3.fromRGB(80, 220, 120)
+	timerStatus.Text      = "Press Start to begin a new run"
+	resetSplitRows()
+	runData = refreshRunData()
+end)
+
+-- ✅ NEW: Server confirmed entering speedrun mode (e.g. on rejoin)
+EnteredSpeedrunMode.OnClientEvent:Connect(function()
+	runData = refreshRunData()
+	if runData then
+		runData._fetchedAt = os.clock()
+		resetSplitRows()
+		showRunPanel()
+		timerLabel.Text  = "0:00"
+		timerStatus.Text = "Press Start to begin a new run"
+	end
+end)
+
+-- ✅ NEW: Server confirmed plot restored — close or go back to enter panel
+RestoredMainPlot.OnClientEvent:Connect(function()
+	stopTimerLoop()
+	returnBtn.Active = true
+	returnBtn.Text   = "🏠  Return to Main Plot"
+	-- Reset enter button so it doesn't stay stuck on "Saving snapshot..."
+	enterBtn.Text   = "🚀  Enter Speedrun Mode"
+	enterBtn.Active = true
+	enterBtn.BackgroundTransparency = 0.1
+	runData = refreshRunData()
+	syncStatsDisplay(runData)
+	showEnterPanel(runData and runData.Unlocked)
+	-- Optionally close the GUI entirely after restore:
+	-- local menuObj = speedrunGui:FindFirstChild("MenuObject")
+	-- if menuObj then menuObj.Value = false end
+end)
+
+-- ============================================================
+-- MENU OBJECT (integrates with existing menu system)
+-- ============================================================
+local menuObject = Instance.new("BoolValue")
+menuObject.Name   = "MenuObject"
+menuObject.Value  = false
+menuObject.Parent = speedrunGui
+
+menuObject.Changed:Connect(function()
+	mainFrame.Visible = menuObject.Value
+	if menuObject.Value then
+		SoundManager.MenuOpen()
+		onOpen()
+	else
+		stopTimerLoop()
+	end
+end)
+
+mainFrame.Visible = false
