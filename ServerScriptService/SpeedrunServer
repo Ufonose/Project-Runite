@@ -1,19 +1,17 @@
 -- ServerScriptService/SpeedrunServer
 
-local ServerStorage = game:GetService("ServerStorage")
-local Players       = game:GetService("Players")
+local ServerStorage   = game:GetService("ServerStorage")
+local Players         = game:GetService("Players")
 local SpeedrunHandler = require(ServerStorage.Modules.SpeedrunHandler)
 
 -- Start a run
 SpeedrunHandler.Remotes.StartSpeedrun.OnServerInvoke = function(player)
-	local success, msg = SpeedrunHandler.StartRun(player)
-	return success, msg
+	return SpeedrunHandler.StartRun(player)
 end
 
 -- Reset/abandon a run
 SpeedrunHandler.Remotes.ResetSpeedrun.OnServerInvoke = function(player)
-	local success = SpeedrunHandler.ResetRun(player)
-	return success
+	return SpeedrunHandler.ResetRun(player)
 end
 
 -- Get current speedrun state
@@ -26,7 +24,17 @@ SpeedrunHandler.Remotes.GetSpeedrunLeaderboard.OnServerInvoke = function(_, ageI
 	return SpeedrunHandler.GetLeaderboard(ageId)
 end
 
--- Resume run if player rejoins mid-run (pause is handled in PlayerDataHandler)
+-- ✅ NEW: Enter Speedrun Mode (snapshot + show controls)
+SpeedrunHandler.Remotes.EnterSpeedrunMode.OnServerInvoke = function(player)
+	return SpeedrunHandler.EnterSpeedrunMode(player)
+end
+
+-- ✅ NEW: Return to Main Plot (restore snapshot)
+SpeedrunHandler.Remotes.ReturnToMainPlot.OnServerInvoke = function(player)
+	return SpeedrunHandler.ReturnToMainPlot(player)
+end
+
+-- Resume run if player rejoins mid-run
 Players.PlayerAdded:Connect(function(player)
 	local dataLoaded = player:WaitForChild("DataLoaded", 30)
 	if dataLoaded then
