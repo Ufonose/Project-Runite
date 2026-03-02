@@ -74,10 +74,14 @@ local DATA_TEMPLATE = {
 
 		-- Total number of completed speedrun attempts
 		TotalRuns = 0,
+		
+		-- ✅ NEW: snapshot system
+		InSpeedrunMode  = false,  -- true while the player is in the speedrun lobby
+		Snapshot        = false,  -- stores main plot state before entering speedrun mode
 	},
 }
 
-local PlayerStore = ProfileStore.New("Runite_s3", DATA_TEMPLATE) -- Runite_v5
+local PlayerStore = ProfileStore.New("Runite_s5", DATA_TEMPLATE) -- Runite_v5
 local ActiveProfiles = {} -- FIXED: now keyed by UserId (number)
 
 -- ============================================================
