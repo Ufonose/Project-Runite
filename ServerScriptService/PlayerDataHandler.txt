@@ -5,10 +5,11 @@ local Plrs = game:GetService("Players")
 
 -- Modules
 local DATA_FUNCTION_HANDLING = require(ServerStorage.Modules.DataHandling)
-local PLAYER_DATA_INFO = require(ServerStorage.Modules.PlayerDataInfo)
-local CASH_LIB = require(RepStorage.Modules.CashLib)
-local MainLib = require(RepStorage.Modules.MainLib)
-local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
+local PLAYER_DATA_INFO       = require(ServerStorage.Modules.PlayerDataInfo)
+local CASH_LIB               = require(RepStorage.Modules.CashLib)
+local MainLib                = require(RepStorage.Modules.MainLib)
+local PlayerSession          = require(ServerStorage.Modules.PlayerDataManager)
+local SpeedrunHandler        = require(ServerStorage.Modules.SpeedrunHandler) -- ⭐ NEW
 
 -- Stores OnSave connections so we can disconnect them before the plot gets cleared
 local onSaveConnections = {} -- [UserId] = connection
@@ -17,6 +18,9 @@ local onSaveConnections = {} -- [UserId] = connection
 local function PREPARE_FINAL_SAVE(Plr)
 	local session = PlayerSession.Get(Plr)
 	if not session then return end
+
+	-- ⭐ Pause any active speedrun BEFORE the session is destroyed
+	SpeedrunHandler.PauseRun(Plr)
 
 	-- Disconnect OnSave hook FIRST so it can't fire during EndSession
 	-- and overwrite PlotItemPlaced with an empty table after CLEAR_PLOT runs
@@ -48,7 +52,7 @@ local function LOAD_DATA(Plr)
 	-- 2. Setup Simple Values (Rebirths, etc)
 	for val_name, val_data in pairs(PLAYER_DATA_INFO.SIMPLE_VALS) do
 		local v = Instance.new(val_data["VALUE_TYPE"], Plr)
-		v.Name = val_name
+		v.Name  = val_name
 		v.Value = session[val_name] or val_data["DEFAULT"]
 		v.Changed:Connect(function(newVal) session[val_name] = newVal end)
 	end
@@ -78,11 +82,14 @@ local function LOAD_DATA(Plr)
 
 	-- 4. Internal Cash Logic
 	local plr_cash = Instance.new("NumberValue", ServerStorage.ServerLockedPlayerInfo.PlayerCash)
-	plr_cash.Name = Plr.Name
+	plr_cash.Name  = Plr.Name
 	plr_cash.Value = session["Money"] or 400
 
 	-- 5. Inventory Setup
-	local default_inv = {["2"] = {["Amount"] = 18, ["Unlocked"] = true}, ["7"] = {["Amount"] = 4, ["Unlocked"] = true}}
+	local default_inv = {
+		["2"] = {["Amount"] = 18, ["Unlocked"] = true},
+		["7"] = {["Amount"] = 4,  ["Unlocked"] = true},
+	}
 	if not session["Items"] or next(session["Items"]) == nil then
 		session["Items"] = default_inv
 	end
@@ -102,7 +109,7 @@ local function LOAD_DATA(Plr)
 	DATA_FUNCTION_HANDLING.LOAD_PLOT(Plr, plot_table)
 
 	-- 7. Leaderstats Setup
-	local ls = Instance.new("Folder", Plr); ls.Name = "leaderstats"
+	local ls    = Instance.new("Folder", Plr); ls.Name = "leaderstats"
 	local cStat = Instance.new("StringValue", ls); cStat.Name = "Cash"
 	local rStat = Instance.new("StringValue", ls); rStat.Name = "Rebirths"
 
@@ -119,7 +126,7 @@ local function LOAD_DATA(Plr)
 
 	-- 8. Final Completion Signal
 	local dsTag = Instance.new("BoolValue")
-	dsTag.Name = "DataLoaded"
+	dsTag.Name   = "DataLoaded"
 	dsTag.Parent = Plr
 
 	loadingTag:Destroy()
@@ -128,7 +135,7 @@ end
 
 -- Events
 Plrs.PlayerRemoving:Connect(function(Plr)
-	PREPARE_FINAL_SAVE(Plr)
+	PREPARE_FINAL_SAVE(Plr)  -- PauseRun happens here, before session is destroyed
 	MainLib.CLEAR_PLOT(Plr)
 
 	local c = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
