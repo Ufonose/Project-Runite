@@ -311,3 +311,18 @@ SpeedrunStarted.OnClientEvent:Connect(function()
 		end)
 	end
 end)
+
+-- Add this block alongside the existing SpeedrunReset and SpeedrunStarted listeners
+-- at the bottom of MinerHotspotClient
+
+local RestoredMainPlot = RepStorage:WaitForChild("Events"):WaitForChild("RestoredMainPlot")
+RestoredMainPlot.OnClientEvent:Connect(function()
+	task.wait(0.5) -- wait for LOAD_PLOT + ActivateHotspot to finish on server
+	local newHotspotFolder = player.SetPlot.Value:FindFirstChild("MinerHotspots")
+	if not newHotspotFolder then return end
+	for _, hotspot in pairs(newHotspotFolder:GetChildren()) do
+		task.spawn(function()
+			pcall(function() setupHotspot(hotspot) end)
+		end)
+	end
+end)
