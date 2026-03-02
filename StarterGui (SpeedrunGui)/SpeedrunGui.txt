@@ -593,18 +593,18 @@ lbPadding.Parent = lbScroll
 local function updateSplitRows(data)
 	if not data then return end
 	for i = 1, 4 do
-		local row = splitRows[i]
-		local split = data.AgeSplits and data.AgeSplits[i]
-		local pb    = data.BestAgeSplits and data.BestAgeSplits[i]
+		local row     = splitRows[i]
+		local segment = data.SegmentSplits and data.SegmentSplits[i]  -- segment time for this age
+		local pb      = data.BestAgeSplits and data.BestAgeSplits[i]  -- best segment PB
 
-		if split then
-			row.splitTime.Text = formatTime(split)
+		if segment then
+			row.splitTime.Text       = formatTime(segment)
 			row.splitTime.TextColor3 = Color3.fromRGB(80, 220, 120)
-			row.stroke.Transparency = 0.1
+			row.stroke.Transparency  = 0.1
 		else
-			row.splitTime.Text = "--:--"
+			row.splitTime.Text       = "--:--"
 			row.splitTime.TextColor3 = Color3.fromRGB(160, 160, 180)
-			row.stroke.Transparency = 0.6
+			row.stroke.Transparency  = 0.6
 		end
 
 		if pb then
@@ -614,10 +614,10 @@ local function updateSplitRows(data)
 		end
 	end
 
-	-- Total PB row
+	-- Total row still shows full cumulative time
 	local bestTotal = data.BestTotalTime or 0
 	local totalRuns = data.TotalRuns or 0
-	local bestStr = bestTotal > 0 and formatTime(bestTotal) or "--"
+	local bestStr   = bestTotal > 0 and formatTime(bestTotal) or "--"
 	totalPBLabel.Text = "🏅 Best Total: " .. bestStr .. "  |  Runs: " .. totalRuns
 end
 
@@ -886,15 +886,17 @@ SpeedrunStarted.OnClientEvent:Connect(function()
 	end
 end)
 
-SpeedrunAgeSplit.OnClientEvent:Connect(function(ageId, splitTime, _, isPersonalBest)
+SpeedrunAgeSplit.OnClientEvent:Connect(function(ageId, segmentTime, cumulativeTime, isSegmentPB)
 	if splitRows[ageId] then
-		splitRows[ageId].splitTime.Text = formatTime(splitTime)
-		splitRows[ageId].splitTime.TextColor3 = isPersonalBest and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(80, 220, 120)
-		splitRows[ageId].stroke.Transparency = 0.1
+		splitRows[ageId].splitTime.Text       = formatTime(segmentTime)
+		splitRows[ageId].splitTime.TextColor3 = isSegmentPB and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(80, 220, 120)
+		splitRows[ageId].stroke.Transparency  = 0.1
 	end
 	if runData then
-		if not runData.AgeSplits then runData.AgeSplits = {} end
-		runData.AgeSplits[ageId] = splitTime
+		if not runData.AgeSplits     then runData.AgeSplits     = {} end
+		if not runData.SegmentSplits then runData.SegmentSplits = {} end
+		runData.AgeSplits[ageId]     = cumulativeTime
+		runData.SegmentSplits[ageId] = segmentTime
 	end
 end)
 
