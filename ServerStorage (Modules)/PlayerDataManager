@@ -58,6 +58,9 @@ local DATA_TEMPLATE = {
 
 		-- os.time() when the current run started (0 = no active run)
 		StartTime = 0,
+		
+		-- seconds elapsed when the player left mid-run
+		ElapsedOnPause = 0,
 
 		-- Split times for the current run, keyed by age number (stored as seconds elapsed)
 		-- e.g. AgeSplits = { [1] = 142, [2] = 380, [3] = 710, [4] = 1205 }
