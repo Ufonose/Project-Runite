@@ -78,6 +78,7 @@ local DATA_TEMPLATE = {
 		-- ✅ NEW: snapshot system
 		InSpeedrunMode  = false,  -- true while the player is in the speedrun lobby
 		Snapshot        = false,  -- stores main plot state before entering speedrun mode
+		CompletedTime  = 0,
 	},
 }
 
