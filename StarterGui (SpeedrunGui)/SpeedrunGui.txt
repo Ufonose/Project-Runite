@@ -32,8 +32,8 @@ local speedrunGui = script.Parent
 local currentLeaderboardAge = 1
 local runData               = nil
 local timerConnection       = nil
-local activeTab             = "speedrun" -- "speedrun" | "leaderboard"
-local speedrunSubPanel      = "enter"    -- "enter" | "run"
+local activeTab             = "speedrun"
+local speedrunSubPanel      = "enter"
 
 -- ============================================================
 -- HELPERS
@@ -92,7 +92,6 @@ end
 updateSize()
 workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateSize)
 
--- Glass blur layer
 local blur = Instance.new("Frame", mainFrame)
 blur.Size                   = UDim2.new(1, 0, 1, 0)
 blur.BackgroundColor3       = Color3.fromRGB(15, 15, 20)
@@ -141,7 +140,6 @@ titleText.ZIndex          = 8
 local ttc = Instance.new("UITextSizeConstraint", titleText)
 ttc.MaxTextSize = 22
 
--- Close button
 local closeBtn = Instance.new("TextButton", titleBar)
 closeBtn.Size                   = UDim2.new(0.08, 0, 0.65, 0)
 closeBtn.AnchorPoint            = Vector2.new(1, 0.5)
@@ -172,7 +170,7 @@ closeBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ============================================================
--- TAB BAR (Speedrun | Leaderboard)
+-- TAB BAR
 -- ============================================================
 local tabBar = Instance.new("Frame", mainFrame)
 tabBar.Name                   = "TabBar"
@@ -206,10 +204,6 @@ end
 
 local speedrunTab    = makeTab("⏱  Speedrun", 1)
 local leaderboardTab = makeTab("🏆  Leaderboard", 2)
-
-local lbLayout = Instance.new("UIListLayout", lbList)
-lbLayout.SortOrder = Enum.SortOrder.LayoutOrder
-lbLayout.Padding   = UDim.new(0.008, 0)
 
 -- ============================================================
 -- CONTENT AREA
@@ -383,7 +377,6 @@ modalGrad.Color = ColorSequence.new{
 }
 modalGrad.Rotation = 135
 
--- Icon
 local modalIcon = Instance.new("TextLabel", modal)
 modalIcon.Size            = UDim2.new(1, 0, 0.22, 0)
 modalIcon.Position        = UDim2.new(0, 0, 0.03, 0)
@@ -392,7 +385,6 @@ modalIcon.Text            = "💾"
 modalIcon.TextScaled      = true
 modalIcon.ZIndex          = 22
 
--- Title
 local modalTitle = Instance.new("TextLabel", modal)
 modalTitle.Size            = UDim2.new(0.9, 0, 0.13, 0)
 modalTitle.Position        = UDim2.new(0.05, 0, 0.26, 0)
@@ -404,7 +396,6 @@ modalTitle.Font            = Enum.Font.GothamBold
 modalTitle.ZIndex          = 22
 local mtTc = Instance.new("UITextSizeConstraint", modalTitle); mtTc.MaxTextSize = 20
 
--- Body text
 local modalBody = Instance.new("TextLabel", modal)
 modalBody.Size            = UDim2.new(0.86, 0, 0.26, 0)
 modalBody.Position        = UDim2.new(0.07, 0, 0.41, 0)
@@ -417,7 +408,6 @@ modalBody.TextWrapped     = true
 modalBody.ZIndex          = 22
 local mbTc = Instance.new("UITextSizeConstraint", modalBody); mbTc.MaxTextSize = 13
 
--- Confirm button
 local modalConfirm = Instance.new("TextButton", modal)
 modalConfirm.Size                   = UDim2.new(0.44, 0, 0.13, 0)
 modalConfirm.Position               = UDim2.new(0.05, 0, 0.83, 0)
@@ -434,7 +424,6 @@ local mcTc = Instance.new("UITextSizeConstraint", modalConfirm); mcTc.MaxTextSiz
 modalConfirm.MouseEnter:Connect(function() modalConfirm.BackgroundColor3 = Color3.fromRGB(55, 150, 220) end)
 modalConfirm.MouseLeave:Connect(function() modalConfirm.BackgroundColor3 = Color3.fromRGB(40, 130, 200) end)
 
--- Cancel button
 local modalCancel = Instance.new("TextButton", modal)
 modalCancel.Size                   = UDim2.new(0.44, 0, 0.13, 0)
 modalCancel.Position               = UDim2.new(0.51, 0, 0.83, 0)
@@ -641,8 +630,6 @@ local rsmccTc = Instance.new("UITextSizeConstraint", resetModalCancel); rsmccTc.
 resetModalCancel.MouseEnter:Connect(function() resetModalCancel.BackgroundColor3 = Color3.fromRGB(80, 80, 100) end)
 resetModalCancel.MouseLeave:Connect(function() resetModalCancel.BackgroundColor3 = Color3.fromRGB(60, 60, 75) end)
 
--- (modal handlers wired below after all locals are in scope)
-
 -- ============================================================
 -- PANEL B: Run Controls
 -- ============================================================
@@ -757,7 +744,7 @@ for i = 1, 4 do
 	pbLabel.Text            = "PB: --"
 	pbLabel.TextColor3      = Color3.fromRGB(180, 150, 50)
 	pbLabel.TextScaled      = true
-	pbLabel.Font            = Enum.Font.Gotham
+	pbLabel.Font            = Enum.Font.GothamBold
 	pbLabel.TextXAlignment  = Enum.TextXAlignment.Left
 	pbLabel.ZIndex          = 9
 	local pbTc = Instance.new("UITextSizeConstraint", pbLabel); pbTc.MaxTextSize = 11
@@ -808,8 +795,8 @@ totalsIcon.TextScaled      = true
 totalsIcon.ZIndex          = 9
 
 local totalsName = Instance.new("TextLabel", totalsRow)
-totalsName.Size            = UDim2.new(0.3, 0, 0.6, 0)
-totalsName.Position        = UDim2.new(0.14, 0, 0.2, 0)
+totalsName.Size            = UDim2.new(0.45, 0, 0.55, 0)
+totalsName.Position        = UDim2.new(0.14, 0, 0.04, 0)
 totalsName.BackgroundTransparency = 1
 totalsName.Text            = "Total"
 totalsName.TextColor3      = Color3.fromRGB(255, 200, 50)
@@ -819,31 +806,30 @@ totalsName.TextXAlignment  = Enum.TextXAlignment.Left
 totalsName.ZIndex          = 9
 local tnTc = Instance.new("UITextSizeConstraint", totalsName); tnTc.MaxTextSize = 14
 
-local totalRunsLabel = Instance.new("TextLabel", totalsRow)
-totalRunsLabel.Size            = UDim2.new(0.25, 0, 0.6, 0)
-totalRunsLabel.AnchorPoint     = Vector2.new(0.5, 0.5)
-totalRunsLabel.Position        = UDim2.new(0.57, 0, 0.5, 0)
-totalRunsLabel.BackgroundTransparency = 1
-totalRunsLabel.Text            = "0 runs"
-totalRunsLabel.TextColor3      = Color3.fromRGB(150, 150, 180)
-totalRunsLabel.TextScaled      = true
-totalRunsLabel.Font            = Enum.Font.Gotham
-totalRunsLabel.TextXAlignment  = Enum.TextXAlignment.Center
-totalRunsLabel.ZIndex          = 9
-local trlTc = Instance.new("UITextSizeConstraint", totalRunsLabel); trlTc.MaxTextSize = 12
-
 local totalPBLabel = Instance.new("TextLabel", totalsRow)
-totalPBLabel.Size            = UDim2.new(0.28, 0, 0.6, 0)
-totalPBLabel.AnchorPoint     = Vector2.new(1, 0.5)
-totalPBLabel.Position        = UDim2.new(0.97, 0, 0.5, 0)
+totalPBLabel.Size            = UDim2.new(0.4, 0, 0.4, 0)
+totalPBLabel.Position        = UDim2.new(0.14, 0, 0.55, 0)
 totalPBLabel.BackgroundTransparency = 1
 totalPBLabel.Text            = "PB: --:--"
 totalPBLabel.TextColor3      = Color3.fromRGB(180, 150, 50)
 totalPBLabel.TextScaled      = true
 totalPBLabel.Font            = Enum.Font.GothamBold
-totalPBLabel.TextXAlignment  = Enum.TextXAlignment.Right
+totalPBLabel.TextXAlignment  = Enum.TextXAlignment.Left
 totalPBLabel.ZIndex          = 9
-local tplTc = Instance.new("UITextSizeConstraint", totalPBLabel); tplTc.MaxTextSize = 13
+local tplTc = Instance.new("UITextSizeConstraint", totalPBLabel); tplTc.MaxTextSize = 11
+
+local totalTimeDisplay = Instance.new("TextLabel", totalsRow)
+totalTimeDisplay.Size            = UDim2.new(0.32, 0, 0.9, 0)
+totalTimeDisplay.AnchorPoint     = Vector2.new(1, 0.5)
+totalTimeDisplay.Position        = UDim2.new(0.97, 0, 0.5, 0)
+totalTimeDisplay.BackgroundTransparency = 1
+totalTimeDisplay.Text            = "--:--"
+totalTimeDisplay.TextColor3      = Color3.fromRGB(100, 100, 130)
+totalTimeDisplay.TextScaled      = true
+totalTimeDisplay.Font            = Enum.Font.GothamBold
+totalTimeDisplay.TextXAlignment  = Enum.TextXAlignment.Right
+totalTimeDisplay.ZIndex          = 9
+local ttdTc = Instance.new("UITextSizeConstraint", totalTimeDisplay); ttdTc.MaxTextSize = 16
 
 -- Buttons
 local btnRow = Instance.new("Frame", runPanel)
@@ -951,10 +937,14 @@ lbList.ScrollBarImageColor3   = Color3.fromRGB(80, 80, 110)
 lbList.ZIndex                 = 8
 
 local lbPadding = Instance.new("UIPadding", lbList)
-lbPadding.PaddingLeft   = UDim.new(0, 3)
-lbPadding.PaddingRight  = UDim.new(0, 3)
-lbPadding.PaddingTop    = UDim.new(0, 3)
-lbPadding.PaddingBottom = UDim.new(0, 3)
+lbPadding.PaddingLeft   = UDim.new(0, 6)
+lbPadding.PaddingRight  = UDim.new(0, 6)
+lbPadding.PaddingTop    = UDim.new(0, 6)
+lbPadding.PaddingBottom = UDim.new(0, 6)
+
+local lbLayout = Instance.new("UIListLayout", lbList)
+lbLayout.SortOrder = Enum.SortOrder.LayoutOrder
+lbLayout.Padding   = UDim.new(0, 6)
 
 -- ============================================================
 -- TAB SWITCHING LOGIC
@@ -1028,6 +1018,8 @@ local function syncPBLabels(data)
 			splitRows[i].pbLabel.Text = (t and t > 0) and ("PB: " .. formatTime(t)) or "PB: --"
 		end
 	end
+	totalPBLabel.Text = (data.BestTotalTime and data.BestTotalTime > 0)
+		and ("PB: " .. formatTime(data.BestTotalTime)) or "PB: --:--"
 end
 
 local function resetSplitRows()
@@ -1038,6 +1030,8 @@ local function resetSplitRows()
 			splitRows[i].stroke.Transparency  = 0.7
 		end
 	end
+	totalTimeDisplay.Text       = "--:--"
+	totalTimeDisplay.TextColor3 = Color3.fromRGB(100, 100, 130)
 end
 
 local function syncStatsDisplay(data)
@@ -1045,10 +1039,6 @@ local function syncStatsDisplay(data)
 	bestTimeStat.Text  = (data.BestTotalTime and data.BestTotalTime > 0)
 		and formatTime(data.BestTotalTime) or "--:--"
 	totalRunsStat.Text = tostring(data.TotalRuns or 0)
-	-- totals row in run panel
-	totalRunsLabel.Text = (data.TotalRuns or 0) .. " runs"
-	totalPBLabel.Text   = (data.BestTotalTime and data.BestTotalTime > 0)
-		and ("PB: " .. formatTime(data.BestTotalTime)) or "PB: --:--"
 end
 
 local function refreshRunData()
@@ -1071,7 +1061,7 @@ end
 
 function loadLeaderboard(ageId)
 	for _, c in ipairs(lbList:GetChildren()) do
-		if not c:IsA("UIListLayout") then c:Destroy() end
+		if not c:IsA("UIListLayout") and not c:IsA("UIPadding") then c:Destroy() end
 	end
 	updateAgeTabs(ageId)
 
@@ -1079,14 +1069,18 @@ function loadLeaderboard(ageId)
 	if ok and entries and #entries > 0 then
 		for rank, entry in ipairs(entries) do
 			local row = Instance.new("Frame", lbList)
-			row.Size                   = UDim2.new(1, 0, 0, 40)
+			row.Size                   = UDim2.new(1, -2, 0, 44)
 			row.BackgroundColor3       = rank == 1 and Color3.fromRGB(45, 40, 20) or Color3.fromRGB(28, 28, 38)
 			row.BackgroundTransparency = 0.3
 			row.BorderSizePixel        = 0
 			row.LayoutOrder            = rank
 			row.ZIndex                 = 9
 			makeCorner(row, 8)
-			if rank == 1 then makeStroke(row, Color3.fromRGB(200, 170, 50), 1, 0.3) end
+			if rank == 1 then
+				makeStroke(row, Color3.fromRGB(200, 170, 50), 1, 0.3)
+			else
+				makeStroke(row, Color3.fromRGB(60, 60, 80), 1, 0.6)
+			end
 
 			local medals = {"🥇", "🥈", "🥉"}
 			local rankLbl = Instance.new("TextLabel", row)
@@ -1134,7 +1128,7 @@ function loadLeaderboard(ageId)
 		empty.ZIndex          = 9
 		local emTc = Instance.new("UITextSizeConstraint", empty); emTc.MaxTextSize = 13
 	end
-	lbList.CanvasSize = UDim2.new(0, 0, 0, lbLayout.AbsoluteContentSize.Y + 10)
+	lbList.CanvasSize = UDim2.new(0, 0, 0, lbLayout.AbsoluteContentSize.Y + 12)
 end
 
 for i, tab in ipairs(ageTabs) do
@@ -1204,12 +1198,11 @@ local function onOpen()
 		enterBtn.TextColor3             = data.Unlocked and Color3.fromRGB(255,255,255) or Color3.fromRGB(100,100,110)
 	end
 
-	-- Always start on speedrun tab
 	showSpeedrunTab()
 end
 
 -- ============================================================
--- MODAL HANDLERS (down here so all locals are in scope)
+-- MODAL HANDLERS
 -- ============================================================
 modalCancel.MouseButton1Click:Connect(function()
 	SoundManager.ButtonClick()
@@ -1350,10 +1343,8 @@ SpeedrunCompleted.OnClientEvent:Connect(function(totalTime, isPersonalBest)
 	timerStatus.Text      = isPersonalBest and "🏅  New Personal Best!" or "Run Complete!"
 	setStartBtnActive(true)
 	startBtn.Text         = "▶  Start New Run"
-	if isPersonalBest then
-		totalPBLabel.Text   = "PB: " .. formatTime(totalTime)
-		totalPBLabel.TextColor3 = Color3.fromRGB(255, 210, 50)
-	end
+	totalTimeDisplay.Text       = formatTime(totalTime)
+	totalTimeDisplay.TextColor3 = isPersonalBest and Color3.fromRGB(255, 210, 50) or Color3.fromRGB(80, 220, 120)
 	runData = refreshRunData()
 	syncStatsDisplay(runData)
 	syncPBLabels(runData)
@@ -1395,6 +1386,7 @@ RestoredMainPlot.OnClientEvent:Connect(function()
 	speedrunSubPanel = "enter"
 	runData = refreshRunData()
 	syncStatsDisplay(runData)
+	syncPBLabels(runData)
 	lockedLabel.Visible             = not (runData and runData.Unlocked)
 	enterBtn.BackgroundTransparency = (runData and runData.Unlocked) and 0.1 or 0.6
 	showSpeedrunTab()
