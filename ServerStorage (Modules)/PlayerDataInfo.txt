@@ -10,6 +10,10 @@ PLAYER_DATA.SETTINGS_VALUES = {
 	["HideResearch"] = {
 		["VALUE_TYPE"] = "BoolValue",
 		["DEFAULT"] = false,
+	},	
+	["HideSpeedrunHUD"] = {
+		["VALUE_TYPE"] = "BoolValue",
+		["DEFAULT"] = false,
 	},
 	["UISounds"] = {
 		["VALUE_TYPE"] = "BoolValue",
