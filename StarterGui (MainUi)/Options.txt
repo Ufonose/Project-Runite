@@ -53,6 +53,23 @@ function module.LOAD(MODULE_INFO)
 		-- Listen for changes
 		hideResearchSetting.Changed:Connect(updateResearchDisplay)
 	end
+	
+	-- SpeedrunHUD visibility toggle
+	local function updateSpeedrunHUD()
+		local speedrunHUD = PlayerGui:FindFirstChild("SpeedrunHUD")
+		if speedrunHUD then
+			local hide = Plr.Settings:FindFirstChild("HideSpeedrunHUD")
+			if hide then
+				speedrunHUD.Enabled = not hide.Value
+			end
+		end
+	end
+
+	local hideSpeedrunSetting = Plr.Settings:FindFirstChild("HideSpeedrunHUD")
+	if hideSpeedrunSetting then
+		updateSpeedrunHUD()
+		hideSpeedrunSetting.Changed:Connect(updateSpeedrunHUD)
+	end
 
 	-- Clear ores button functionality
 	modernUI.ClearOresButton.MouseButton1Click:Connect(function()
