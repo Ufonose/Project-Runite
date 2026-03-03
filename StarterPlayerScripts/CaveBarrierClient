@@ -296,11 +296,7 @@ task.spawn(function()
 	end
 end)
 
-SpeedrunReset.OnClientEvent:Connect(function()
-	barrierGUIs = {}
-	task.wait(0.5)
-	setupBarrierGUIs()
-end)
+
 
 -- ✅ ADD THIS: Start Run also rebuilds barriers
 local SpeedrunStarted = ReplicatedStorage:WaitForChild("Events"):WaitForChild("SpeedrunStarted")
