@@ -534,6 +534,7 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	-- 1. Game Settings Section
 	local gameSection, gameContent = createSection("Game Settings", "🎮", 1)
 	local hideResearchToggle = createToggle(gameContent, "Hide Active Research Display", "HideResearch", 1)
+	local hideSpeedrunToggle  = createToggle(gameContent, "Hide Speedrun Time Display", "HideSpeedrunHUD", 2)
 
 	-- 2. Plot Settings Section
 	local plotSection, plotContent = createSection("Plot Settings", "🏗️", 2)
