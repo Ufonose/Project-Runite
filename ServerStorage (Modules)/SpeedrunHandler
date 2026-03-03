@@ -115,6 +115,29 @@ local function deepCopy(t)
 end
 
 -- ============================================================
+-- TELEPORT TO SPAWN
+-- ============================================================
+local SPAWN_HEIGHT = 5
+
+local function teleportToSpawn(player)
+	local setPlot  = player:FindFirstChild("SetPlot")
+	local plot     = setPlot and setPlot.Value
+	if not plot then return end
+
+	local spawnPart = plot:FindFirstChild("SpawnLocation")
+	if not spawnPart then
+		warn("[Speedrun] SpawnLocation not found in plot for", player.Name)
+		return
+	end
+
+	local char = player.Character
+	local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	hrp.CFrame = CFrame.new(spawnPart.Position + Vector3.new(0, SPAWN_HEIGHT, 0))
+end
+
+-- ============================================================
 -- RESET (used by StartRun and ResetRun)
 -- ============================================================
 local function performReset(player)
@@ -222,45 +245,87 @@ local saveCooldowns = {}
 local function saveToLeaderboard(player, ageId, timeSeconds)
 	local key = tostring(player.UserId) .. "_" .. tostring(ageId)
 	local now = os.time()
-	if saveCooldowns[key] and now - saveCooldowns[key] < 30 then return end
+	if saveCooldowns[key] and now - saveCooldowns[key] < 30 then
+		warn("[Speedrun LB] Cooldown blocked save for", player.Name, "ageId:", ageId)
+		return
+	end
 	saveCooldowns[key] = now
 
 	local store = LeaderboardStores[ageId]
-	if not store then return end
+	if not store then
+		warn("[Speedrun LB] No store found for ageId:", ageId)
+		return
+	end
 
-	-- Store as negative: highest magnitude = fastest time shows up first in descending sort
 	local negTime = -math.floor(timeSeconds)
-	pcall(function()
+	local ok, err = pcall(function()
 		store:UpdateAsync(tostring(player.UserId), function(existing)
-			-- Keep the most negative (= fastest) value
-			if existing == nil or negTime < existing then return negTime end
+			print(string.format("[Speedrun LB] %s | Age %s | existing=%s new=%d",
+				player.Name, tostring(ageId), tostring(existing), negTime))
+			if existing == nil or negTime > existing then return negTime end
 			return existing
 		end)
 	end)
+
+	if ok then
+		print(string.format("[Speedrun LB] ✅ Saved %s | Age %s | %ds", player.Name, tostring(ageId), timeSeconds))
+	else
+		warn(string.format("[Speedrun LB] ❌ UpdateAsync failed | Age %s | %s", tostring(ageId), tostring(err)))
+	end
 end
 
 -- ============================================================
 -- FETCH LEADERBOARD
 -- ============================================================
+local nameCache = {}
+
 local function fetchLeaderboard(ageId)
 	local store = LeaderboardStores[ageId]
 	if not store then return {} end
 
-	local results = {}
-	-- false = descending: most negative value (fastest time) comes first
-	local success, pages = pcall(function() return store:GetSortedAsync(false, 10) end)
+	local success, pages = pcall(function() return store:GetSortedAsync(false, 100) end)
 	if not success then return {} end
 
 	local ok, pageData = pcall(function() return pages:GetCurrentPage() end)
 	if not ok then return {} end
 
+	-- Build result slots first so order is preserved
+	local results = {}
 	for rank, entry in ipairs(pageData) do
-		local uid  = tonumber(entry.key)
-		local name = "[Unknown]"
-		pcall(function() name = Players:GetNameFromUserIdAsync(uid) end)
-		-- Convert back from negative to positive seconds for display
-		table.insert(results, { rank = rank, name = name, time = math.abs(entry.value), userId = uid })
+		results[rank] = {
+			rank   = rank,
+			name   = "[Unknown]",
+			time   = math.abs(entry.value),
+			userId = tonumber(entry.key),
+		}
 	end
+
+	-- Fetch all names in parallel
+	local pending = #results
+	local done    = Instance.new("BindableEvent")
+
+	for rank, result in ipairs(results) do
+		task.spawn(function()
+			local uid = result.userId
+			if nameCache[uid] then
+				result.name = nameCache[uid]
+			else
+				local nameOk, name = pcall(function()
+					return Players:GetNameFromUserIdAsync(uid)
+				end)
+				if nameOk and name then
+					nameCache[uid] = name
+					result.name = name
+				end
+			end
+			pending -= 1
+			if pending == 0 then done:Fire() end
+		end)
+	end
+
+	if pending > 0 then done.Event:Wait() end
+	done:Destroy()
+
 	return results
 end
 
@@ -360,6 +425,8 @@ function SpeedrunHandler.EnterSpeedrunMode(player)
 	}
 	speedrun.InSpeedrunMode = true
 
+	performReset(player)
+	teleportToSpawn(player)
 	SpeedrunHandler.Remotes.EnteredSpeedrunMode:FireClient(player)
 	print(string.format("[Speedrun] %s entered speedrun mode — snapshot saved", player.Name))
 	return true, "Entered speedrun mode"
@@ -433,9 +500,7 @@ function SpeedrunHandler.ReturnToMainPlot(player)
 		pcall(function() MinerHotspotHandler.ActivateHotspot(player, hotspotId) end)
 	end
 
-	-- ✅ Remove barriers that were already unlocked in the main plot.
-	-- performReset cloned all barriers back from PlotTemplates, so we need to
-	-- destroy the ones the player had already paid for before entering speedrun mode.
+	-- Remove barriers that were already unlocked in the main plot
 	local unlockedBarriers = session["UnlockedBarriers"] or {}
 	local caveUnlocks = PLR_PLOT:FindFirstChild("CaveUnlocks")
 	if caveUnlocks then
@@ -443,7 +508,6 @@ function SpeedrunHandler.ReturnToMainPlot(player)
 			if barrier:IsA("Model") then
 				local barrierID = barrier:GetAttribute("BarrierID")
 				if not barrierID then
-					-- fallback: check for a ValueBase child
 					local v = barrier:FindFirstChild("BarrierID")
 					if v then barrierID = v.Value end
 				end
@@ -458,6 +522,7 @@ function SpeedrunHandler.ReturnToMainPlot(player)
 	speedrun.InSpeedrunMode = false
 	speedrun.Snapshot       = false
 
+	teleportToSpawn(player)
 	SpeedrunHandler.Remotes.RestoredMainPlot:FireClient(player)
 	print(string.format("[Speedrun] %s returned to main plot — snapshot restored", player.Name))
 	return true, "Main plot restored!"
@@ -497,6 +562,7 @@ function SpeedrunHandler.StartRun(player)
 	speedrun.ElapsedOnPause = 0
 	speedrun.AgeSplits      = {}
 
+	teleportToSpawn(player)
 	SpeedrunHandler.Remotes.SpeedrunStarted:FireClient(player)
 	print(string.format("[Speedrun] %s started a new run", player.Name))
 	return true, "Run started!"
@@ -517,6 +583,7 @@ function SpeedrunHandler.ResetRun(player)
 	speedrun.ElapsedOnPause = 0
 	speedrun.AgeSplits      = {}
 
+	teleportToSpawn(player)
 	SpeedrunHandler.Remotes.SpeedrunReset:FireClient(player)
 	print(string.format("[Speedrun] %s reset their run", player.Name))
 	return true
