@@ -93,6 +93,13 @@ end
 local function isAgeCompleted(ageId, completedObjectives)
 	local ageObjectives = ResearchData.GetObjectivesByAge(ageId)
 	if #ageObjectives == 0 then return false end
+	-- If age has a main objective, only require that one
+	for _, obj in pairs(ageObjectives) do
+		if obj.IsMainObjective then
+			return table.find(completedObjectives, obj.Id) ~= nil
+		end
+	end
+	-- No main objective defined: require all (Ages 1 & 4)
 	for _, obj in pairs(ageObjectives) do
 		if not table.find(completedObjectives, obj.Id) then return false end
 	end
@@ -279,7 +286,7 @@ function SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
 
 		local segmentTime   = getSegmentTime(speedrun.AgeSplits, ageId, elapsed)
 		local existingSegPB = speedrun.BestAgeSplits[ageId]
-		local isSegmentPB   = (existingSegPB == nil or segmentTime < existingSegPB)
+		local isSegmentPB   = (existingSegPB == nil or existingSegPB == 0 or segmentTime < existingSegPB)
 		if isSegmentPB then speedrun.BestAgeSplits[ageId] = segmentTime end
 
 		saveToLeaderboard(player, ageId, segmentTime)
