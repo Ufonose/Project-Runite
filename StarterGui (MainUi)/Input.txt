@@ -185,6 +185,14 @@ function module.LOAD(MODULE_INFO)
 			elseif not PLACEMENT.PLACING_ITEMS then
 				Main.OPEN_MENU(script.Parent.Parent.Options)
 			end
+			
+		elseif KEY_INPUT.KeyCode == Enum.KeyCode.V then
+			if not PLACEMENT.PLACING_ITEMS then
+				local SpeedrunGui = PlayerGui:FindFirstChild("SpeedrunGui")
+				if SpeedrunGui then
+					Main.OPEN_MENU(SpeedrunGui)
+				end
+			end
 		end
 	end)
 
