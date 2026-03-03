@@ -288,17 +288,6 @@ for _, hotspot in pairs(hotspotFolder:GetChildren()) do
 	end)
 end
 
-SpeedrunReset.OnClientEvent:Connect(function()
-	task.wait(0.5)
-	local newHotspotFolder = player.SetPlot.Value:FindFirstChild("MinerHotspots")
-	if not newHotspotFolder then return end
-	for _, hotspot in pairs(newHotspotFolder:GetChildren()) do
-		task.spawn(function()
-			pcall(function() setupHotspot(hotspot) end)
-		end)
-	end
-end)
-
 -- ✅ ADD THIS: Start Run also rebuilds hotspot UIs
 local SpeedrunStarted = RepStorage:WaitForChild("Events"):WaitForChild("SpeedrunStarted")
 SpeedrunStarted.OnClientEvent:Connect(function()
