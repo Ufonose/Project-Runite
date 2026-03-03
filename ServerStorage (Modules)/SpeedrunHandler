@@ -209,7 +209,6 @@ local function performReset(player)
 	-- 7. Reset cash
 	plrCash.Value          = 400
 	session["Money"]       = 400
-	session["TotalEarned"] = 0
 
 	-- 8. Reset barriers / hotspots
 	session["UnlockedBarriers"] = {}
@@ -369,6 +368,7 @@ function SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
 			if isTotalPB then speedrun.BestTotalTime = elapsed end
 			speedrun.TotalRuns = speedrun.TotalRuns + 1
 			speedrun.IsActive  = false
+			speedrun.CompletedTime = elapsed
 
 			saveToLeaderboard(player, "Total", elapsed)
 			SpeedrunHandler.Remotes.SpeedrunCompleted:FireClient(player, elapsed, isTotalPB)
@@ -415,7 +415,6 @@ function SpeedrunHandler.EnterSpeedrunMode(player)
 	speedrun.Snapshot = {
 		Money            = session["Money"],
 		ResearchTokens   = session["ResearchTokens"],
-		TotalEarned      = session["TotalEarned"],
 		Items            = deepCopy(session["Items"]),
 		PlotItemPlaced   = currentPlotData,
 		UnlockedBarriers = deepCopy(session["UnlockedBarriers"]),
@@ -460,6 +459,7 @@ function SpeedrunHandler.ReturnToMainPlot(player)
 	speedrun.StartTime      = 0
 	speedrun.ElapsedOnPause = 0
 	speedrun.AgeSplits      = {}
+	speedrun.CompletedTime  = 0
 
 	-- Clear current plot
 	local oresDropped = PLR_PLOT:FindFirstChild("MiscInfo") and PLR_PLOT.MiscInfo:FindFirstChild("OresDropped")
@@ -478,7 +478,6 @@ function SpeedrunHandler.ReturnToMainPlot(player)
 	-- Restore session from snapshot
 	session["Money"]            = snapshot.Money
 	session["ResearchTokens"]   = snapshot.ResearchTokens
-	session["TotalEarned"]      = snapshot.TotalEarned
 	session["Items"]            = deepCopy(snapshot.Items)
 	session["PlotItemPlaced"]   = snapshot.PlotItemPlaced
 	session["UnlockedBarriers"] = deepCopy(snapshot.UnlockedBarriers)
@@ -561,6 +560,7 @@ function SpeedrunHandler.StartRun(player)
 	speedrun.StartTime      = os.time()
 	speedrun.ElapsedOnPause = 0
 	speedrun.AgeSplits      = {}
+	speedrun.CompletedTime  = 0
 
 	teleportToSpawn(player)
 	SpeedrunHandler.Remotes.SpeedrunStarted:FireClient(player)
@@ -582,6 +582,7 @@ function SpeedrunHandler.ResetRun(player)
 	speedrun.StartTime      = 0
 	speedrun.ElapsedOnPause = 0
 	speedrun.AgeSplits      = {}
+	speedrun.CompletedTime  = 0
 
 	teleportToSpawn(player)
 	SpeedrunHandler.Remotes.SpeedrunReset:FireClient(player)
@@ -644,6 +645,7 @@ function SpeedrunHandler.GetData(player)
 		BestAgeSplits  = speedrun.BestAgeSplits,
 		BestTotalTime  = speedrun.BestTotalTime,
 		TotalRuns      = speedrun.TotalRuns,
+		CompletedTime  = speedrun.CompletedTime or 0,
 	}
 end
 
