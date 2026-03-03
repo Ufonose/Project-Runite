@@ -1,0 +1,228 @@
+-- StarterPlayerScripts/SpeedrunHUD
+-- Small HUD overlay showing current speedrun timer (mirrors OreCountDisplay style)
+
+local Players     = game:GetService("Players")
+local RepStorage  = game:GetService("ReplicatedStorage")
+local RunService  = game:GetService("RunService")
+local Camera      = workspace.CurrentCamera
+
+local player    = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+player:WaitForChild("DataLoaded", 30)
+
+local Events           = RepStorage:WaitForChild("Events")
+local SpeedrunStarted  = Events:WaitForChild("SpeedrunStarted")
+local SpeedrunReset    = Events:WaitForChild("SpeedrunReset")
+local SpeedrunCompleted= Events:WaitForChild("SpeedrunCompleted")
+local EnteredSpeedrun  = Events:WaitForChild("EnteredSpeedrunMode")
+local RestoredMain     = Events:WaitForChild("RestoredMainPlot")
+local GetSpeedrunData  = Events:WaitForChild("GetSpeedrunData")
+
+-- ============================================================
+-- STATE
+-- ============================================================
+local isActive      = false   -- run is ticking
+local startTime     = 0       -- os.time() when run started (mirrored from server)
+local elapsedOnPause= 0
+local inSpeedrunMode= false
+
+-- ============================================================
+-- GUI BUILD
+-- ============================================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name          = "SpeedrunHUD"
+screenGui.ResetOnSpawn  = false
+screenGui.ZIndexBehavior= Enum.ZIndexBehavior.Sibling
+screenGui.ScreenInsets  = Enum.ScreenInsets.None
+screenGui.Parent        = playerGui
+
+local frame = Instance.new("Frame")
+frame.Name                  = "HUDFrame"
+frame.AnchorPoint           = Vector2.new(0.5, 0)
+frame.BackgroundColor3      = Color3.fromRGB(25, 25, 30)
+frame.BackgroundTransparency= 0.2
+frame.BorderSizePixel       = 0
+frame.Visible               = false
+frame.ZIndex                = 5
+frame.Parent                = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent       = frame
+
+local stroke = Instance.new("UIStroke")
+stroke.Color            = Color3.fromRGB(60, 60, 80)
+stroke.Thickness        = 1
+stroke.Transparency     = 0.5
+stroke.ApplyStrokeMode  = Enum.ApplyStrokeMode.Border
+stroke.Parent           = frame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size                = UDim2.new(1, 0, 0.42, 0)
+titleLabel.Position            = UDim2.new(0, 0, 0.08, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text                = "🏁 Speedrun:"
+titleLabel.TextColor3          = Color3.fromRGB(200, 200, 200)
+titleLabel.TextScaled          = true
+titleLabel.Font                = Enum.Font.GothamBold
+titleLabel.ZIndex              = 6
+titleLabel.Parent              = frame
+
+local titleConstraint = Instance.new("UITextSizeConstraint")
+titleConstraint.MaxTextSize = 16
+titleConstraint.Parent      = titleLabel
+
+local valueLabel = Instance.new("TextLabel")
+valueLabel.Name                   = "ValueLabel"
+valueLabel.Size                   = UDim2.new(1, 0, 0.47, 0)
+valueLabel.Position               = UDim2.new(0, 0, 0.45, 0)
+valueLabel.BackgroundTransparency = 1
+valueLabel.Text                   = "0:00"
+valueLabel.TextColor3             = Color3.fromRGB(100, 220, 255)
+valueLabel.TextScaled             = true
+valueLabel.Font                   = Enum.Font.GothamBold
+valueLabel.ZIndex                 = 6
+valueLabel.Parent                 = frame
+
+local valueConstraint = Instance.new("UITextSizeConstraint")
+valueConstraint.MaxTextSize = 20
+valueConstraint.Parent      = valueLabel
+
+-- ============================================================
+-- SIZING (matches OreCountDisplay, sits just above it)
+-- ============================================================
+local function updateSize()
+	local sw = Camera.ViewportSize.X
+	if sw < 900 then
+		frame.Size     = UDim2.new(0.1,  0, 0.06, 0)
+		frame.Position = UDim2.new(0.5,  0, 0.05, 0)
+	else
+		frame.Size     = UDim2.new(0.065, 0, 0.035, 0)
+		frame.Position = UDim2.new(0.5,   0, 0.05, 0)
+	end
+end
+
+updateSize()
+Camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateSize)
+
+-- ============================================================
+-- HELPERS
+-- ============================================================
+local function formatTime(s)
+	s = math.floor(s)
+	local h   = math.floor(s / 3600)
+	local m   = math.floor((s % 3600) / 60)
+	local sec = s % 60
+	return h > 0 and string.format("%d:%02d:%02d", h, m, sec)
+		or  string.format("%d:%02d", m, sec)
+end
+
+local function getElapsed()
+	if not isActive then return elapsedOnPause end
+	return os.time() - startTime
+end
+
+local function showIdle()
+	valueLabel.Text       = "Start a run!"
+	valueLabel.TextColor3 = Color3.fromRGB(255, 200, 80)
+	stroke.Color          = Color3.fromRGB(255, 200, 80)
+end
+
+local function showRunning()
+	valueLabel.TextColor3 = Color3.fromRGB(100, 220, 255)
+	stroke.Color          = Color3.fromRGB(60, 60, 80)
+end
+
+local function showCompleted()
+	valueLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
+	stroke.Color          = Color3.fromRGB(100, 255, 150)
+end
+
+-- ============================================================
+-- SETTINGS (must be after screenGui is created)
+-- ============================================================
+local settings = player:WaitForChild("Settings", 10)
+if settings then
+	local hideSetting = settings:WaitForChild("HideSpeedrunHUD", 10)
+	if hideSetting then
+		screenGui.Enabled = not hideSetting.Value
+		hideSetting.Changed:Connect(function(val)
+			screenGui.Enabled = not val
+		end)
+	end
+end
+
+-- ============================================================
+-- REMOTE LISTENERS
+-- ============================================================
+EnteredSpeedrun.OnClientEvent:Connect(function()
+	inSpeedrunMode  = true
+	isActive        = false
+	elapsedOnPause  = 0
+	frame.Visible   = true
+	showIdle()
+end)
+
+SpeedrunStarted.OnClientEvent:Connect(function()
+	isActive       = true
+	startTime      = os.time()
+	elapsedOnPause = 0
+	showRunning()
+end)
+
+SpeedrunReset.OnClientEvent:Connect(function()
+	isActive       = false
+	elapsedOnPause = 0
+	valueLabel.Text= "0:00"
+	showIdle()
+end)
+
+SpeedrunCompleted.OnClientEvent:Connect(function(totalTime)
+	isActive       = false
+	elapsedOnPause = totalTime
+	valueLabel.Text= formatTime(totalTime)
+	showCompleted()
+end)
+
+RestoredMain.OnClientEvent:Connect(function()
+	inSpeedrunMode  = false
+	isActive        = false
+	elapsedOnPause  = 0
+	frame.Visible   = false
+end)
+
+-- ============================================================
+-- ON LOAD: sync with server state (handles rejoins mid-run)
+-- ============================================================
+task.spawn(function()
+	local data = GetSpeedrunData:InvokeServer()
+	if not data then return end
+
+	if data.InSpeedrunMode then
+		inSpeedrunMode = true
+		frame.Visible  = true
+
+		if data.IsActive then
+			-- Reconstruct startTime from elapsed so our local timer matches
+			isActive       = true
+			startTime      = os.time() - (data.ElapsedTime or 0)
+			elapsedOnPause = 0
+			showRunning()
+		else
+			isActive       = false
+			elapsedOnPause = data.ElapsedTime or 0
+			showIdle()
+		end
+	end
+end)
+
+-- ============================================================
+-- TICK
+-- ============================================================
+RunService.Heartbeat:Connect(function()
+	if not inSpeedrunMode or not frame.Visible then return end
+	if isActive then
+		valueLabel.Text = formatTime(getElapsed())
+	end
+end)
