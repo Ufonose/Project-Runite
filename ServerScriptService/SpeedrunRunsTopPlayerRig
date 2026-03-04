@@ -1,0 +1,156 @@
+-- ServerScriptService/SpeedrunRunsTopPlayerRig
+local Players = game:GetService("Players")
+local DataStoreService = game:GetService("DataStoreService")
+local ServerStorage = game:GetService("ServerStorage")
+
+local CHECK_INTERVAL = 30
+local RunsStore    = DataStoreService:GetOrderedDataStore("Speedrun_TotalRuns_v1")
+local spawnPoint   = workspace:WaitForChild("Leaderboards"):WaitForChild("RunsRigSpawnPoint")
+local rigTemplate  = ServerStorage:WaitForChild("TopPlayerRig")
+local danceAnim    = rigTemplate:WaitForChild("DanceAnimation")
+
+local currentRig       = nil
+local currentTopUserId = nil
+
+-- ── NAMETAG ───────────────────────────────────────────────────────────────
+local function createNametag(rig, name, runs)
+	local head = rig:FindFirstChild("Head")
+	if not head then return end
+
+	local existing = head:FindFirstChild("TrophyGui")
+	if existing then existing:Destroy() end
+
+	local humanoid = rig:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.DisplayName = name
+	end
+
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "TrophyGui"
+	gui.Size = UDim2.new(4, 0, 2.5, 0)
+	gui.StudsOffset = Vector3.new(0, 4, 0)
+	gui.AlwaysOnTop = false
+	gui.LightInfluence = 0
+	gui.Parent = head
+
+	local trophy = Instance.new("ImageLabel")
+	trophy.Size = UDim2.new(0.25, 0, 0.6, 0)
+	trophy.AnchorPoint = Vector2.new(0, 0.5)
+	trophy.Position = UDim2.new(0, 0, 0.5, 0)
+	trophy.BackgroundTransparency = 1
+	trophy.Image = "rbxassetid://9722127533"
+	trophy.ScaleType = Enum.ScaleType.Fit
+	trophy.Parent = gui
+
+	local runsLabel = Instance.new("TextLabel")
+	runsLabel.Size = UDim2.new(0.7, 0, 0.6, 0)
+	runsLabel.AnchorPoint = Vector2.new(0, 0.5)
+	runsLabel.Position = UDim2.new(0.28, 0, 0.5, 0)
+	runsLabel.BackgroundTransparency = 1
+	runsLabel.Text = runs .. " runs"
+	runsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	runsLabel.TextScaled = true
+	runsLabel.Font = Enum.Font.GothamBold
+	runsLabel.TextXAlignment = Enum.TextXAlignment.Left
+	runsLabel.Parent = gui
+
+	local tc = Instance.new("UITextSizeConstraint", runsLabel)
+	tc.MaxTextSize = 18
+end
+
+-- ── SPAWN RIG ─────────────────────────────────────────────────────────────
+local function spawnRig(userId, runs)
+	if currentRig then
+		currentRig:Destroy()
+		currentRig = nil
+	end
+
+	local rig = rigTemplate:Clone()
+	rig.Name = "RunsTopPlayerRig_Active"
+	rig.Parent = workspace
+
+	local hrp = rig:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		hrp.CFrame = spawnPoint.CFrame + Vector3.new(0, spawnPoint.Size.Y / 2 + 3, 0)
+		hrp.Anchored = true
+	end
+
+	for _, part in pairs(rig:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CanCollide = false
+		end
+	end
+
+	task.spawn(function()
+		local humanoid = rig:FindFirstChildOfClass("Humanoid")
+		if not humanoid then return end
+
+		local ok, desc = pcall(function()
+			return Players:GetHumanoidDescriptionFromUserIdAsync(userId)
+		end)
+		if ok and desc then
+			pcall(function()
+				humanoid:ApplyDescriptionResetAsync(desc)
+			end)
+		end
+
+		local nameOk, name = pcall(function()
+			return Players:GetNameFromUserIdAsync(userId)
+		end)
+		createNametag(rig, nameOk and name or "Unknown", runs)
+	end)
+
+	task.spawn(function()
+		local humanoid = rig:FindFirstChildOfClass("Humanoid")
+		if not humanoid then return end
+		local animator = humanoid:WaitForChild("Animator", 5)
+		if not animator then return end
+
+		local anim = Instance.new("Animation")
+		anim.AnimationId = danceAnim.AnimationId
+		local track = animator:LoadAnimation(anim)
+		track.Looped = true
+		track:Play()
+	end)
+
+	currentRig = rig
+	currentTopUserId = userId
+end
+
+-- ── FETCH TOP PLAYER ──────────────────────────────────────────────────────
+local function fetchTopPlayer()
+	local topUserId, topRuns = nil, 0
+
+	local ok, pages = pcall(function()
+		return RunsStore:GetSortedAsync(false, 1)
+	end)
+	if ok and pages then
+		local data = pages:GetCurrentPage()
+		if #data > 0 then
+			topUserId = tonumber(data[1].key)
+			topRuns   = data[1].value
+		end
+	end
+
+	-- Override with any online player who has a higher live run count
+	for _, player in pairs(Players:GetPlayers()) do
+		local runs = player:FindFirstChild("SpeedrunTotalRuns")
+		if runs and runs.Value > topRuns then
+			topUserId = player.UserId
+			topRuns   = runs.Value
+		end
+	end
+
+	return topUserId, topRuns
+end
+
+-- ── MAIN LOOP ─────────────────────────────────────────────────────────────
+while true do
+	local topUserId, runs = fetchTopPlayer()
+
+	if topUserId and topUserId ~= currentTopUserId then
+		spawnRig(topUserId, runs)
+	end
+
+	task.wait(CHECK_INTERVAL)
+end
