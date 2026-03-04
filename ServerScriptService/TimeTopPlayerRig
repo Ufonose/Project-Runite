@@ -72,7 +72,6 @@ local function spawnRig(userId)
 		hrp.Anchored = true
 	end
 
-	-- Disable collision so players can't push it
 	for _, part in pairs(rig:GetDescendants()) do
 		if part:IsA("BasePart") then
 			part.CanCollide = false
@@ -117,15 +116,29 @@ end
 
 -- ── FETCH TOP PLAYER ──────────────────────────────────────────────────────
 local function fetchTopPlayer()
+	local topUserId, topTime = nil, 0
+
 	local ok, pages = pcall(function()
 		return TimeStore:GetSortedAsync(false, 1)
 	end)
-	if not ok or not pages then return nil end
+	if ok and pages then
+		local data = pages:GetCurrentPage()
+		if #data > 0 then
+			topUserId = tonumber(data[1].key)
+			topTime   = data[1].value
+		end
+	end
 
-	local data = pages:GetCurrentPage()
-	if #data == 0 then return nil end
+	-- Override with any online player who has a higher live value
+	for _, player in pairs(Players:GetPlayers()) do
+		local te = player:FindFirstChild("TimePlayed")
+		if te and te.Value > topTime then
+			topUserId = player.UserId
+			topTime   = te.Value
+		end
+	end
 
-	return tonumber(data[1].key)
+	return topUserId
 end
 
 -- ── MAIN LOOP ─────────────────────────────────────────────────────────────
@@ -133,7 +146,6 @@ while true do
 	local topUserId = fetchTopPlayer()
 
 	if topUserId and topUserId ~= currentTopUserId then
-		print("New #1 time player, updating rig for userId:", topUserId)
 		spawnRig(topUserId)
 	end
 
