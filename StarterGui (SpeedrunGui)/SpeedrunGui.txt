@@ -198,7 +198,7 @@ local function makeTab(label, order)
 	tab.ZIndex                 = 8
 	makeCorner(tab, 8)
 	local tc = Instance.new("UITextSizeConstraint", tab)
-	tc.MaxTextSize = 15
+	tc.MaxTextSize = 18
 	return tab
 end
 
@@ -884,7 +884,7 @@ returnBtn.BorderSizePixel        = 0
 returnBtn.ZIndex                 = 9
 makeCorner(returnBtn, 10)
 makeStroke(returnBtn, Color3.fromRGB(120, 80, 200), 1, 0.4)
-local rtTc = Instance.new("UITextSizeConstraint", returnBtn); rtTc.MaxTextSize = 16
+local rtTc = Instance.new("UITextSizeConstraint", returnBtn); rtTc.MaxTextSize = 18
 returnBtn.MouseEnter:Connect(function() returnBtn.BackgroundColor3 = Color3.fromRGB(90, 60, 150) end)
 returnBtn.MouseLeave:Connect(function() returnBtn.BackgroundColor3 = Color3.fromRGB(70, 45, 120) end)
 
@@ -923,7 +923,7 @@ for i, name in ipairs(ageTabNames) do
 	tab.LayoutOrder            = i
 	tab.ZIndex                 = 9
 	makeCorner(tab, 8)
-	local tc = Instance.new("UITextSizeConstraint", tab); tc.MaxTextSize = 12
+	local tc = Instance.new("UITextSizeConstraint", tab); tc.MaxTextSize = 14
 	ageTabs[i] = tab
 end
 
