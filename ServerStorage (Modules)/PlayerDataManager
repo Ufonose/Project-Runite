@@ -82,7 +82,7 @@ local DATA_TEMPLATE = {
 	},
 }
 
-local PlayerStore = ProfileStore.New("Runite_s5", DATA_TEMPLATE) -- Runite_v5
+local PlayerStore = ProfileStore.New("Runite_v5", DATA_TEMPLATE) -- Runite_v5
 local ActiveProfiles = {} -- FIXED: now keyed by UserId (number)
 
 -- ============================================================
