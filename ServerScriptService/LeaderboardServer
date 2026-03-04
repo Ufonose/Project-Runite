@@ -10,7 +10,7 @@ local MAX_ENTRIES = 100
 local ROW_HEIGHT  = 36
 local ROW_PADDING = 5
 
-local EarnedStore = DataStoreService:GetOrderedDataStore("TotalEarned_v1")
+local EarnedStore = DataStoreService:GetOrderedDataStore("TotalEarned_v13")
 local cachedData  = {}
 
 -- ── SUFFIX ────────────────────────────────────────────────────────────────
@@ -25,12 +25,16 @@ end
 -- ── SAVE TO ORDERED DS ────────────────────────────────────────────────────
 local saveCooldowns = {} -- tracks last save time per player
 
-local function saveToOrderedStore(player)
+-- Replace saveCooldowns logic and hookPlayer with this:
+
+local function saveToOrderedStore(player, force)
 	local te = player:FindFirstChild("TotalEarned")
 	if not te or te.Value <= 0 then return end
 
 	local now = os.time()
-	if saveCooldowns[player.UserId] and now - saveCooldowns[player.UserId] < 60 then return end
+	if not force then
+		if saveCooldowns[player.UserId] and now - saveCooldowns[player.UserId] < 60 then return end
+	end
 	saveCooldowns[player.UserId] = now
 
 	pcall(function()
@@ -41,8 +45,14 @@ end
 local function hookPlayer(player)
 	local te = player:WaitForChild("TotalEarned", 30)
 	if not te then return end
-	te.Changed:Connect(function() saveToOrderedStore(player) end)
+	te.Changed:Connect(function() saveToOrderedStore(player, false) end)
 end
+
+-- Force-save on leave so the DS always has the final value
+Players.PlayerRemoving:Connect(function(player)
+	saveToOrderedStore(player, true)
+	saveCooldowns[player.UserId] = nil
+end)
 
 Players.PlayerAdded:Connect(hookPlayer)
 for _, p in pairs(Players:GetPlayers()) do task.spawn(hookPlayer, p) end
@@ -66,7 +76,7 @@ local function buildGui(part)
 	bg.Name = "Background"
 	bg.Size = UDim2.new(1, 0, 1, 0)
 	bg.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
-	bg.BackgroundTransparency = 0
+	bg.BackgroundTransparency = 0.3
 	bg.BorderSizePixel = 0
 	bg.Parent = gui
 	Instance.new("UICorner", bg).CornerRadius = UDim.new(0.03, 0)
