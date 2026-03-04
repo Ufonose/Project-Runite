@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local RepStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 local SoundManager = require(RepStorage.Modules.SoundManager)
 local SpeedrunReset = RepStorage:WaitForChild("Events"):WaitForChild("SpeedrunReset")
 
@@ -27,13 +28,25 @@ end
 local function createModernHotspotUI(parent, info)
 	local billboardGui = Instance.new("BillboardGui")
 	billboardGui.Name = "BuyPrompt"
-	billboardGui.Size = UDim2.new(0, 200, 0, 85)
 	billboardGui.StudsOffset = Vector3.new(0, 5, 0)
 	billboardGui.AlwaysOnTop = false
 	billboardGui.MaxDistance = 60
 	billboardGui.Adornee = parent
 	billboardGui.Parent = parent
 
+	local function updateSize()
+		local sw = Camera.ViewportSize.X
+		if sw < 900 then
+			billboardGui.Size = UDim2.new(0, 130, 0, 56)  -- mobile
+		else
+			billboardGui.Size = UDim2.new(0, 180, 0, 78)  -- desktop
+		end
+	end
+
+	updateSize()
+	Camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateSize)
+
+	-- Container fills billboard 100%
 	local container = Instance.new("Frame")
 	container.Size = UDim2.new(1, 0, 1, 0)
 	container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
@@ -65,39 +78,44 @@ local function createModernHotspotUI(parent, info)
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Parent = container
 
+	-- Content: ~4% padding on each side
 	local content = Instance.new("Frame")
-	content.Size = UDim2.new(1, -16, 1, -16)
-	content.Position = UDim2.new(0, 8, 0, 8)
+	content.Size = UDim2.new(0.92, 0, 0.81, 0)
+	content.Position = UDim2.new(0.04, 0, 0.094, 0)
 	content.BackgroundTransparency = 1
 	content.ZIndex = 12
 	content.Parent = container
 
+	-- Title: top 29% of content
 	local titleLabel = Instance.new("TextLabel")
 	titleLabel.Name = "TitleLabel"
-	titleLabel.Size = UDim2.new(1, 0, 0, 20)
+	titleLabel.Size = UDim2.new(1, 0, 0.29, 0)
 	titleLabel.Position = UDim2.new(0, 0, 0, 0)
 	titleLabel.BackgroundTransparency = 1
 	local displayName = info.Config.MinerName:gsub("%s*%d+$", "")
 	titleLabel.Text = displayName
 	titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	titleLabel.TextSize = 14
+	titleLabel.TextScaled = false
+	titleLabel.TextSize = 16  -- change this number
 	titleLabel.Font = Enum.Font.GothamBold
 	titleLabel.TextXAlignment = Enum.TextXAlignment.Center
 	titleLabel.ZIndex = 13
 	titleLabel.Parent = content
 
+	-- Divider: 1.5% tall, sitting at ~35% of content
 	local divider = Instance.new("Frame")
-	divider.Size = UDim2.new(1, -10, 0, 1)
-	divider.Position = UDim2.new(0, 5, 0, 24)
+	divider.Size = UDim2.new(0.95, 0, 0.015, 0)
+	divider.Position = UDim2.new(0.025, 0, 0.35, 0)
 	divider.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
 	divider.BackgroundTransparency = 0.5
 	divider.BorderSizePixel = 0
 	divider.ZIndex = 12
 	divider.Parent = content
 
+	-- Cost box: 46% tall, starting at 43% of content
 	local costContainer = Instance.new("Frame")
-	costContainer.Size = UDim2.new(1, -10, 0, 32)
-	costContainer.Position = UDim2.new(0, 5, 0, 30)
+	costContainer.Size = UDim2.new(0.95, 0, 0.46, 0)
+	costContainer.Position = UDim2.new(0.025, 0, 0.43, 0)
 	costContainer.BackgroundColor3 = Color3.fromRGB(50, 55, 65)
 	costContainer.BorderSizePixel = 0
 	costContainer.ZIndex = 12
@@ -114,14 +132,16 @@ local function createModernHotspotUI(parent, info)
 	costStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	costStroke.Parent = costContainer
 
+	-- Cost label: fills cost box with 4% side padding
 	local costLabel = Instance.new("TextLabel")
 	costLabel.Name = "CostLabel"
-	costLabel.Size = UDim2.new(1, -10, 1, 0)
-	costLabel.Position = UDim2.new(0, 5, 0, 0)
+	costLabel.Size = UDim2.new(0.92, 0, 1, 0)
+	costLabel.Position = UDim2.new(0.04, 0, 0, 0)
 	costLabel.BackgroundTransparency = 1
 	costLabel.ZIndex = 13
 	costLabel.Font = Enum.Font.GothamBold
-	costLabel.TextSize = 14
+	costLabel.TextScaled = false
+	costLabel.TextSize = 15  -- change this number
 	costLabel.TextXAlignment = Enum.TextXAlignment.Center
 	costLabel.Parent = costContainer
 
@@ -162,7 +182,6 @@ local function setupHotspot(hotspot)
 		return
 	end
 
-	-- Get info FIRST before waiting for any UI parts
 	local success, info = pcall(function()
 		return RepStorage.Events.GetHotspotInfo:InvokeServer(hotspotId.Value)
 	end)
@@ -177,17 +196,14 @@ local function setupHotspot(hotspot)
 		return
 	end
 
-	-- Already unlocked — nothing to do
 	if info.IsUnlocked then return end
 
-	-- Only NOW look for BuyButton, since we know the hotspot needs one
 	local buyButton = hotspot:WaitForChild("BuyButton", 10)
 	if not buyButton then
 		warn("No BuyButton in", hotspot.Name, "- hotspot is locked but has no BuyButton part")
 		return
 	end
 
-	-- Ghost miner
 	local ghostMiner = nil
 	local minerModel = RepStorage.Items:FindFirstChild(info.Config.MinerName)
 	if minerModel then
@@ -218,7 +234,7 @@ local function setupHotspot(hotspot)
 	if not proximityPrompt then
 		proximityPrompt = Instance.new("ProximityPrompt")
 		proximityPrompt.Name = "UnlockPrompt"
-		proximityPrompt.ActionText = "Unlock Hotspot"
+		proximityPrompt.ActionText = "Unlock Miner"
 		proximityPrompt.HoldDuration = 0.5
 		proximityPrompt.KeyboardKeyCode = Enum.KeyCode.E
 		proximityPrompt.MaxActivationDistance = 10
@@ -288,7 +304,6 @@ for _, hotspot in pairs(hotspotFolder:GetChildren()) do
 	end)
 end
 
--- ✅ ADD THIS: Start Run also rebuilds hotspot UIs
 local SpeedrunStarted = RepStorage:WaitForChild("Events"):WaitForChild("SpeedrunStarted")
 SpeedrunStarted.OnClientEvent:Connect(function()
 	task.wait(0.5)
@@ -301,12 +316,9 @@ SpeedrunStarted.OnClientEvent:Connect(function()
 	end
 end)
 
--- Add this block alongside the existing SpeedrunReset and SpeedrunStarted listeners
--- at the bottom of MinerHotspotClient
-
 local RestoredMainPlot = RepStorage:WaitForChild("Events"):WaitForChild("RestoredMainPlot")
 RestoredMainPlot.OnClientEvent:Connect(function()
-	task.wait(0.5) -- wait for LOAD_PLOT + ActivateHotspot to finish on server
+	task.wait(0.5)
 	local newHotspotFolder = player.SetPlot.Value:FindFirstChild("MinerHotspots")
 	if not newHotspotFolder then return end
 	for _, hotspot in pairs(newHotspotFolder:GetChildren()) do
