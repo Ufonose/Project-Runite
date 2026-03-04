@@ -187,16 +187,16 @@ local function performReset(player)
 	for _, data in pairs(session["Items"]) do
 		if data then data["Amount"] = 0 end
 	end
-
-	-- 5. Re-lock research-unlocked machines
+	
+	-- 5. Speedrun: unlock all shop items
 	for _, item in pairs(RepStorage.Items:GetChildren()) do
 		local stats = item:FindFirstChild("ItemStats")
 		if stats then
 			local ok, info = pcall(require, stats)
 			if ok and info then
 				local idStr = tostring(info.ItemId)
-				if ResearchData.GetUnlockingResearch(info.ItemId) and session["Items"][idStr] then
-					session["Items"][idStr]["Unlocked"] = false
+				if session["Items"][idStr] then
+					session["Items"][idStr]["Unlocked"] = true
 				end
 			end
 		end
@@ -207,8 +207,8 @@ local function performReset(player)
 	if session["Items"]["7"] then session["Items"]["7"]["Amount"] = 4  end
 
 	-- 7. Reset cash
-	plrCash.Value          = 400
-	session["Money"]       = 400
+	plrCash.Value          = 10000
+	session["Money"]       = 10000
 
 	-- 8. Reset barriers / hotspots
 	session["UnlockedBarriers"] = {}
