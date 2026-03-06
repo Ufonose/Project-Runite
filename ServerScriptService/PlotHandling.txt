@@ -89,6 +89,10 @@ local function PLR_ADDED(Plr)
 
 	PLOT_INFO.Value.Owner.Value = Plr.Name
 
+	-- ⭐ Keep this plot always loaded for this player
+	PLOT_INFO.Value:AddPersistentPlayer(Plr)
+	-- ⭐ end
+
 	Plr.CharacterAdded:Connect(function()
 		SPAWN_PLAYER(Plr)
 	end)
