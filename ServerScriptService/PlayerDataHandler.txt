@@ -49,7 +49,7 @@ local function LOAD_DATA(Plr)
 		end)
 	end
 
-	-- 2. Setup Simple Values (Rebirths, etc)
+	-- 2. Setup Simple Values
 	for val_name, val_data in pairs(PLAYER_DATA_INFO.SIMPLE_VALS) do
 		local v = Instance.new(val_data["VALUE_TYPE"], Plr)
 		v.Name  = val_name
