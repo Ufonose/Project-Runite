@@ -76,7 +76,7 @@ local function createBarrierGUI(barrier)
 	billboardGui.Name = "BarrierInfoGUI"
 	billboardGui.StudsOffset = Vector3.new(0, 5, 0)
 	billboardGui.AlwaysOnTop = true
-	billboardGui.MaxDistance = 60
+	billboardGui.MaxDistance = 50
 	billboardGui.Adornee = buyButton
 	billboardGui.Parent = barrier
 
