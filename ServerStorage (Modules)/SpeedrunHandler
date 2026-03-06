@@ -367,6 +367,8 @@ function SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
 			local isTotalPB = (speedrun.BestTotalTime == 0 or elapsed < speedrun.BestTotalTime)
 			if isTotalPB then speedrun.BestTotalTime = elapsed end
 			speedrun.TotalRuns = speedrun.TotalRuns + 1
+			local srCount = player:FindFirstChild("SpeedrunCount")
+			if srCount then srCount.Value = speedrun.TotalRuns end
 			speedrun.IsActive  = false
 			speedrun.CompletedTime = elapsed
 
