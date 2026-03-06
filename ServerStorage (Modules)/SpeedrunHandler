@@ -55,6 +55,7 @@ SpeedrunHandler.Remotes = {
 	SpeedrunReset          = getOrCreate("SpeedrunReset",          "RemoteEvent"),
 	EnteredSpeedrunMode    = getOrCreate("EnteredSpeedrunMode",    "RemoteEvent"),
 	RestoredMainPlot       = getOrCreate("RestoredMainPlot",       "RemoteEvent"),
+	AllResearchCompleted   = getOrCreate("AllResearchCompleted",   "RemoteEvent"),
 }
 
 -- ============================================================
@@ -333,7 +334,7 @@ end
 -- ============================================================
 function SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
 	local speedrun = getSpeedrun(player)
-	if not speedrun or not speedrun.IsActive then return end
+	if not speedrun then return end
 
 	local research = getResearch(player)
 	if not research then return end
@@ -342,7 +343,20 @@ function SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
 	local objective = ResearchData.GetObjective(objectiveId)
 	if not objective then return end
 
-	local ageId  = objective.Age
+	-- Always check for full research unlock, regardless of whether a run is active
+	if not speedrun.Unlocked and allResearchCompleted(completedObjectives) then
+		speedrun.Unlocked = true
+		print(string.format("[Speedrun] %s unlocked Speedrun mode!", player.Name))
+		RepStorage.Events.MessageClient:FireClient(player, "screen", {
+			["message"] = "🏁 Speedrun Mode Unlocked! You can now race through research!",
+		})
+		SpeedrunHandler.Remotes.AllResearchCompleted:FireClient(player)
+	end
+
+	-- Age split tracking only matters during an active run
+	if not speedrun.IsActive then return end
+
+	local ageId = objective.Age
 	local elapsed = getElapsed(speedrun)
 
 	if not speedrun.AgeSplits[ageId] and isAgeCompleted(ageId, completedObjectives) then
@@ -357,7 +371,6 @@ function SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
 		SpeedrunHandler.Remotes.SpeedrunAgeSplit:FireClient(player, ageId, segmentTime, elapsed, isSegmentPB)
 		print(string.format("[Speedrun] %s — Age %d segment: %ds (cumulative: %ds)", player.Name, ageId, segmentTime, elapsed))
 
-		-- Check if ALL ages done → run complete
 		local allAgesDone = true
 		for i = 1, #ResearchData.Ages do
 			if not speedrun.AgeSplits[i] then allAgesDone = false; break end
@@ -376,15 +389,6 @@ function SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
 			SpeedrunHandler.Remotes.SpeedrunCompleted:FireClient(player, elapsed, isTotalPB)
 			print(string.format("[Speedrun] %s finished in %ds (PB: %s)", player.Name, elapsed, tostring(isTotalPB)))
 		end
-	end
-
-	-- Permanently unlock speedrun mode if all research now complete
-	if not speedrun.Unlocked and allResearchCompleted(completedObjectives) then
-		speedrun.Unlocked = true
-		print(string.format("[Speedrun] %s unlocked Speedrun mode!", player.Name))
-		RepStorage.Events.MessageClient:FireClient(player, "screen", {
-			["message"] = "🏁 Speedrun Mode Unlocked! You can now race through research!",
-		})
 	end
 end
 
