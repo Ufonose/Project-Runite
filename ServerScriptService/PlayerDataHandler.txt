@@ -109,19 +109,23 @@ local function LOAD_DATA(Plr)
 	DATA_FUNCTION_HANDLING.LOAD_PLOT(Plr, plot_table)
 
 	-- 7. Leaderstats Setup
-	local ls    = Instance.new("Folder", Plr); ls.Name = "leaderstats"
-	local cStat = Instance.new("StringValue", ls); cStat.Name = "Cash"
-	local rStat = Instance.new("StringValue", ls); rStat.Name = "Rebirths"
+	local ls     = Instance.new("Folder", Plr); ls.Name = "leaderstats"
+	local cStat  = Instance.new("StringValue", ls); cStat.Name  = "Cash"
+	local srStat = Instance.new("StringValue", ls); srStat.Name = "Speedruns"
+
+	-- IntValue so SpeedrunHandler can poke it to trigger a live update
+	local srCount       = Instance.new("IntValue", Plr)
+	srCount.Name        = "SpeedrunCount"
+	srCount.Value       = (session["Speedrun"] and session["Speedrun"]["TotalRuns"]) or 0
 
 	local function updateVisuals()
 		session["Money"] = plr_cash.Value
-		cStat.Value = "$" .. CASH_LIB.SUFFIX_NUM(plr_cash.Value)
-		local rb = Plr:FindFirstChild("Rebirth")
-		rStat.Value = tostring(rb and (rb.Value + 1) or 1)
+		cStat.Value  = "$" .. CASH_LIB.SUFFIX_NUM(plr_cash.Value)
+		srStat.Value = tostring(srCount.Value)
 	end
 
 	plr_cash.Changed:Connect(updateVisuals)
-	if Plr:FindFirstChild("Rebirth") then Plr.Rebirth.Changed:Connect(updateVisuals) end
+	srCount.Changed:Connect(updateVisuals)
 	updateVisuals()
 
 	-- 8. Final Completion Signal
