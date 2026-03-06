@@ -17,10 +17,11 @@ MinerHotspotHandler.HotspotConfigs = {
 	[6] = {Id = 6, MinerName = "Copper Mine 3", Cost = 200, Description = ""},
 	[7] = {Id = 7, MinerName = "Gold Mine 2", Cost = 90, Description = ""},
 	[8] = {Id = 8, MinerName = "Gold Mine 3", Cost = 220, Description = ""},
-	[9] = {Id = 9, MinerName = "Iron Mine 4", Cost = 0, Description = ""},
+	--[9] = {Id = 9, MinerName = "Iron Mine 4", Cost = 0, Description = ""},
 	[10] = {Id = 10, MinerName = "Iron Mine 5", Cost = 0, Description = ""},
 	[11] = {Id = 11, MinerName = "Copper Mine 4", Cost = 27, Description = ""},
-	[12] = {Id = 12, MinerName = "Gold Mine 1", Cost = 1, Description = ""}
+	[12] = {Id = 12, MinerName = "Gold Mine 1", Cost = 1, Description = ""},
+	[13] = {Id = 13, MinerName = "OP Mine 1", CashCost = 25000, RequiresFullResearch = true, Description = ""}
 }
 
 -- Initialize player's hotspot data in the Module
@@ -53,7 +54,7 @@ function MinerHotspotHandler.UnlockHotspot(player, hotspotId)
 		return false, "Player data not loaded"
 	end
 
-	local session = PlayerSession.Get(player) -- FIXED
+	local session = PlayerSession.Get(player)
 	local config = MinerHotspotHandler.HotspotConfigs[hotspotId]
 	if not config then return false, "Invalid hotspot" end
 
@@ -61,15 +62,37 @@ function MinerHotspotHandler.UnlockHotspot(player, hotspotId)
 		return false, "Already unlocked"
 	end
 
-	if player.ResearchTokens.Value < config.Cost then
-		return false, "Not enough tokens"
+	-- Research gate check
+	-- new:
+	if config.RequiresFullResearch then
+		local speedrun = session["Speedrun"]
+		if not (speedrun and speedrun.Unlocked) then
+			local ResearchData = require(ServerStorage.Modules.ResearchData)
+			local research = session["Research"]
+			if not research then return false, "Research not loaded" end
+			for _, obj in pairs(ResearchData.Objectives) do
+				if not table.find(research.CompletedObjectives, obj.Id) then
+					return false, "Complete all research first"
+				end
+			end
+		end
 	end
 
-	-- Deduct tokens and update module table
-	player.ResearchTokens.Value -= config.Cost
-	table.insert(session["MinerHotspots"].UnlockedHotspots, hotspotId)
+	-- Payment
+	if config.CashCost then
+		local cashValue = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(player.Name)
+		if not cashValue or cashValue.Value < config.CashCost then
+			return false, "Not enough cash"
+		end
+		cashValue.Value -= config.CashCost
+	else
+		if player.ResearchTokens.Value < config.Cost then
+			return false, "Not enough tokens"
+		end
+		player.ResearchTokens.Value -= config.Cost
+	end
 
-	-- Activate the miner
+	table.insert(session["MinerHotspots"].UnlockedHotspots, hotspotId)
 	MinerHotspotHandler.ActivateHotspot(player, hotspotId)
 	return true
 end
