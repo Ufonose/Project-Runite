@@ -34,10 +34,6 @@ PLAYER_DATA.SETTINGS_VALUES = {
 }
 
 PLAYER_DATA.SIMPLE_VALS = {
-	["Rebirth"] = {
-		["VALUE_TYPE"] = "NumberValue",
-		["DEFAULT"] = 0,
-	},
 	["InvSort"] = {
 		["VALUE_TYPE"] = "StringValue",
 		["DEFAULT"] = "Newest",
