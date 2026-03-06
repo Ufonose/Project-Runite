@@ -25,6 +25,10 @@ if not hotspotFolder then
 	return
 end
 
+-- Stores resetCostDisplay callbacks for research-locked hotspots so they can
+-- be refreshed live when the player finishes all research
+local researchLockedResetCallbacks = {}
+
 local function createModernHotspotUI(parent, info)
 	local billboardGui = Instance.new("BillboardGui")
 	billboardGui.Name = "BuyPrompt"
@@ -37,16 +41,15 @@ local function createModernHotspotUI(parent, info)
 	local function updateSize()
 		local sw = Camera.ViewportSize.X
 		if sw < 900 then
-			billboardGui.Size = UDim2.new(0, 130, 0, 56)  -- mobile
+			billboardGui.Size = UDim2.new(0, 130, 0, 56)
 		else
-			billboardGui.Size = UDim2.new(0, 180, 0, 78)  -- desktop
+			billboardGui.Size = UDim2.new(0, 180, 0, 78)
 		end
 	end
 
 	updateSize()
 	Camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateSize)
 
-	-- Container fills billboard 100%
 	local container = Instance.new("Frame")
 	container.Size = UDim2.new(1, 0, 1, 0)
 	container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
@@ -78,7 +81,6 @@ local function createModernHotspotUI(parent, info)
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Parent = container
 
-	-- Content: ~4% padding on each side
 	local content = Instance.new("Frame")
 	content.Size = UDim2.new(0.92, 0, 0.81, 0)
 	content.Position = UDim2.new(0.04, 0, 0.094, 0)
@@ -86,7 +88,6 @@ local function createModernHotspotUI(parent, info)
 	content.ZIndex = 12
 	content.Parent = container
 
-	-- Title: top 29% of content
 	local titleLabel = Instance.new("TextLabel")
 	titleLabel.Name = "TitleLabel"
 	titleLabel.Size = UDim2.new(1, 0, 0.29, 0)
@@ -96,13 +97,12 @@ local function createModernHotspotUI(parent, info)
 	titleLabel.Text = displayName
 	titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	titleLabel.TextScaled = false
-	titleLabel.TextSize = 16  -- change this number
+	titleLabel.TextSize = 16
 	titleLabel.Font = Enum.Font.GothamBold
 	titleLabel.TextXAlignment = Enum.TextXAlignment.Center
 	titleLabel.ZIndex = 13
 	titleLabel.Parent = content
 
-	-- Divider: 1.5% tall, sitting at ~35% of content
 	local divider = Instance.new("Frame")
 	divider.Size = UDim2.new(0.95, 0, 0.015, 0)
 	divider.Position = UDim2.new(0.025, 0, 0.35, 0)
@@ -112,7 +112,6 @@ local function createModernHotspotUI(parent, info)
 	divider.ZIndex = 12
 	divider.Parent = content
 
-	-- Cost box: 46% tall, starting at 43% of content
 	local costContainer = Instance.new("Frame")
 	costContainer.Size = UDim2.new(0.95, 0, 0.46, 0)
 	costContainer.Position = UDim2.new(0.025, 0, 0.43, 0)
@@ -132,7 +131,6 @@ local function createModernHotspotUI(parent, info)
 	costStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	costStroke.Parent = costContainer
 
-	-- Cost label: fills cost box with 4% side padding
 	local costLabel = Instance.new("TextLabel")
 	costLabel.Name = "CostLabel"
 	costLabel.Size = UDim2.new(0.92, 0, 1, 0)
@@ -141,27 +139,29 @@ local function createModernHotspotUI(parent, info)
 	costLabel.ZIndex = 13
 	costLabel.Font = Enum.Font.GothamBold
 	costLabel.TextScaled = false
-	costLabel.TextSize = 15  -- change this number
+	costLabel.TextSize = 15
 	costLabel.TextXAlignment = Enum.TextXAlignment.Center
 	costLabel.Parent = costContainer
 
-	if info.Config.Cost == 0 then
-		costLabel.Text = "FREE!"
-		costLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-	else
-		costLabel.Text = "" .. info.Config.Cost .. " Tokens"
-		costLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
-	end
-
 	local function resetCostDisplay()
-		if info.Config.Cost == 0 then
+		if info.IsResearchLocked then
+			costLabel.Text = "🔒 Complete All Research"
+			costLabel.TextColor3 = Color3.fromRGB(200, 150, 80)
+			costLabel.TextSize = Camera.ViewportSize.X < 900 and 9 or 13
+		elseif info.Config.CashCost then
+			costLabel.Text = "$" .. string.format("%d", info.Config.CashCost / 1000) .. "K"
+			costLabel.TextColor3 = Color3.fromRGB(100, 220, 100)
+			costLabel.TextSize = 15 
+		elseif info.Config.Cost == 0 then
 			costLabel.Text = "FREE!"
 			costLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 		else
-			costLabel.Text = "" .. info.Config.Cost .. " Tokens"
+			costLabel.Text = info.Config.Cost .. " Tokens"
 			costLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
+			costLabel.TextSize = 15 
 		end
 	end
+	resetCostDisplay()
 
 	local pulseInfo = TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
 	local pulseTween = TweenService:Create(costStroke, pulseInfo, { Transparency = 0.4 })
@@ -230,6 +230,14 @@ local function setupHotspot(hotspot)
 
 	local billboardGui, costLabel, costContainer, pulseTween, resetCostDisplay = createModernHotspotUI(buyButton, info)
 
+	-- Register callback so AllResearchCompleted can refresh this label live
+	if info.IsResearchLocked then
+		researchLockedResetCallbacks[hotspotId.Value] = function()
+			info.IsResearchLocked = false
+			resetCostDisplay()
+		end
+	end
+
 	local proximityPrompt = buyButton:FindFirstChild("UnlockPrompt")
 	if not proximityPrompt then
 		proximityPrompt = Instance.new("ProximityPrompt")
@@ -274,9 +282,14 @@ local function setupHotspot(hotspot)
 				ghostMiner:Destroy()
 			end
 		else
-			if errorMsg == "Not enough tokens" then
+			if errorMsg == "Not enough tokens" or errorMsg == "Not enough cash" then
 				SoundManager.Error()
-				costLabel.Text = "Not enough tokens!"
+				costLabel.Text = errorMsg == "Not enough cash" and "Not enough cash!" or "Not enough tokens!"
+				costLabel.TextSize = Camera.ViewportSize.X < 900 and 12 or 15
+			elseif errorMsg == "Complete all research first" then
+				SoundManager.Error()
+				costLabel.Text = "🔒 Complete all research first!"
+				costLabel.TextSize = Camera.ViewportSize.X < 900 and 8 or 11
 			elseif errorMsg == "Already unlocked" then
 				costLabel.Text = "✓ Already unlocked!"
 			elseif errorMsg then
@@ -325,5 +338,13 @@ RestoredMainPlot.OnClientEvent:Connect(function()
 		task.spawn(function()
 			pcall(function() setupHotspot(hotspot) end)
 		end)
+	end
+end)
+
+local AllResearchCompleted = RepStorage:WaitForChild("Events"):WaitForChild("AllResearchCompleted")
+AllResearchCompleted.OnClientEvent:Connect(function()
+	for hotspotId, refreshFn in pairs(researchLockedResetCallbacks) do
+		refreshFn()
+		researchLockedResetCallbacks[hotspotId] = nil
 	end
 end)
