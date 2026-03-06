@@ -10,7 +10,6 @@ local DATA_TEMPLATE = {
 	Items = {},
 	PlotItemPlaced = {},
 
-	Rebirth = 0,
 	InvSort = "Newest",
 
 	UnlockedBarriers = {},
@@ -82,7 +81,7 @@ local DATA_TEMPLATE = {
 	},
 }
 
-local PlayerStore = ProfileStore.New("Runite_v5", DATA_TEMPLATE) -- Runite_v5
+local PlayerStore = ProfileStore.New("Runite_nor5", DATA_TEMPLATE) -- Runite_v5
 local ActiveProfiles = {} -- FIXED: now keyed by UserId (number)
 
 -- ============================================================
