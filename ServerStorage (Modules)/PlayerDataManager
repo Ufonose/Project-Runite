@@ -24,7 +24,6 @@ local DATA_TEMPLATE = {
 
 	settingHideResearch = false,
 	settingMinesActive = true,
-	settingNotificationSounds = true,
 	settingOreLimit = 250,
 	settingUISounds = true,
 
