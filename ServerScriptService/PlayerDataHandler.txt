@@ -141,7 +141,9 @@ Plrs.PlayerRemoving:Connect(function(Plr)
 	-- ⭐ Remove persistent streaming for this player's plot
 	local setPlot = Plr:FindFirstChild("SetPlot")
 	if setPlot and setPlot.Value then
-		setPlot.Value:RemovePersistentPlayer(Plr)
+		pcall(function()
+			setPlot.Value:RemovePersistentPlayer(Plr)
+		end)
 	end
 	-- ⭐ end (ReplicationFocus cleans itself up since it's parented to Plr)
 
