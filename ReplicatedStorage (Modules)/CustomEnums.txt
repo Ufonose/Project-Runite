@@ -9,7 +9,6 @@ module.Arrays = {
 
 module.Nums = {
 	-- Plot Info
-	["SPAWN_REG_HEIGHT"] = 30,
 	["PLACEMENT_GRID_SIZE"] = 6,
 }
 
