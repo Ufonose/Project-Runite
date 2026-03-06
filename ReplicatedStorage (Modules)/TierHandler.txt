@@ -2,17 +2,17 @@
 local module = {}
 
 module.ITEM_TIERS = {
-	["Regular"] = {
+	["First Age"] = {
 		["TIER_ID"] = 1,
-		["TIER_COLOR"] = Color3.fromRGB(88, 99, 107),
+		["TIER_COLOR"] = Color3.fromRGB(141, 158, 171),
 	},
-	["Irregular"] = {
+	["Second Age"] = {
 		["TIER_ID"] = 2,
-		["TIER_COLOR"] = Color3.fromRGB(154, 141, 91),
+		["TIER_COLOR"] = Color3.fromRGB(171, 163, 46),
 	},
-	["Rare"] = {
+	["Third Age"] = {
 		["TIER_ID"] = 3,
-		["TIER_COLOR"] = Color3.fromRGB(107, 154, 103),
+		["TIER_COLOR"] = Color3.fromRGB(154, 1, 154),
 	},
 	["Distinctive"] = {
 		["TIER_ID"] = 4,
@@ -29,13 +29,6 @@ module.ITEM_TIERS = {
 	["Mythical"] = {
 		["TIER_ID"] = 7,
 		["TIER_COLOR"] = Color3.fromRGB(154, 0, 0),
-	},
-
-	-- Non-Shop items
-	["Reborn"] = {
-		["TIER_ID"] = 50,
-		["TIER_COLOR"] = Color3.fromRGB(87, 198, 165),
-		["RebornProof"] = true,
 	},
 }
 
