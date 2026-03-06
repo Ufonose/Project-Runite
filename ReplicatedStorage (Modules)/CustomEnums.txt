@@ -8,11 +8,9 @@ module.Arrays = {
 }
 
 module.Nums = {
-	-- Rebirth Info
-	["STARTER_REBIRTH_COST"] = 500000,	-- $5S
 	-- Plot Info
 	["SPAWN_REG_HEIGHT"] = 30,
-	["PLACEMENT_GRID_SIZE"] = 3,
+	["PLACEMENT_GRID_SIZE"] = 6,
 }
 
 return module
