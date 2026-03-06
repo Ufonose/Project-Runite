@@ -14,9 +14,9 @@ module.ITEM_TIERS = {
 		["TIER_ID"] = 3,
 		["TIER_COLOR"] = Color3.fromRGB(154, 1, 154),
 	},
-	["Distinctive"] = {
+	["Fourth Age"] = {
 		["TIER_ID"] = 4,
-		["TIER_COLOR"] = Color3.fromRGB(62, 111, 108),
+		["TIER_COLOR"] = Color3.fromRGB(0, 0, 0),
 	},
 	["Epic"] = {
 		["TIER_ID"] = 5,
