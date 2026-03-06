@@ -9,7 +9,7 @@ local PLAYER_DATA_INFO       = require(ServerStorage.Modules.PlayerDataInfo)
 local CASH_LIB               = require(RepStorage.Modules.CashLib)
 local MainLib                = require(RepStorage.Modules.MainLib)
 local PlayerSession          = require(ServerStorage.Modules.PlayerDataManager)
-local SpeedrunHandler        = require(ServerStorage.Modules.SpeedrunHandler) -- ⭐ NEW
+local SpeedrunHandler        = require(ServerStorage.Modules.SpeedrunHandler)
 
 -- Stores OnSave connections so we can disconnect them before the plot gets cleared
 local onSaveConnections = {} -- [UserId] = connection
@@ -19,7 +19,7 @@ local function PREPARE_FINAL_SAVE(Plr)
 	local session = PlayerSession.Get(Plr)
 	if not session then return end
 
-	-- ⭐ Pause any active speedrun BEFORE the session is destroyed
+	-- Pause any active speedrun BEFORE the session is destroyed
 	SpeedrunHandler.PauseRun(Plr)
 
 	-- Disconnect OnSave hook FIRST so it can't fire during EndSession
@@ -135,8 +135,15 @@ end
 
 -- Events
 Plrs.PlayerRemoving:Connect(function(Plr)
-	PREPARE_FINAL_SAVE(Plr)  -- PauseRun happens here, before session is destroyed
+	PREPARE_FINAL_SAVE(Plr)
 	MainLib.CLEAR_PLOT(Plr)
+
+	-- ⭐ Remove persistent streaming for this player's plot
+	local setPlot = Plr:FindFirstChild("SetPlot")
+	if setPlot and setPlot.Value then
+		setPlot.Value:RemovePersistentPlayer(Plr)
+	end
+	-- ⭐ end (ReplicationFocus cleans itself up since it's parented to Plr)
 
 	local c = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
 	if c then c:Destroy() end
