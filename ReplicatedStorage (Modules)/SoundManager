@@ -22,7 +22,7 @@ local SOUNDS = {
 	-- Notification Sounds
 	Success = "rbxassetid://17692186009",
 	Error = "rbxassetid://91660275693179",
-	Purchase = "rbxassetid://93927627634818",
+	Purchase = "rbxassetid://110441308561715",
 }
 
 -- Volume settings
