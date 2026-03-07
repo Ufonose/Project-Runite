@@ -171,3 +171,46 @@ game:BindToClose(function()
 		repeat task.wait() until coroutine.status(thread) == "dead"
 	end
 end)
+
+-- ============================================================================
+-- TUTORIAL REMOTES
+-- ============================================================================
+local Events = RepStorage:WaitForChild("Events")
+
+Events:WaitForChild("IsTutorialDone").OnServerInvoke = function(player)
+	local session = PlayerSession.Get(player)
+	if not session then return false end
+	return session["TutorialCompleted"] == true
+end
+
+Events:WaitForChild("GetTutorialStep").OnServerInvoke = function(player)
+	local session = PlayerSession.Get(player)
+	if not session then return 1 end
+	return session["TutorialStep"] or 1
+end
+
+Events:WaitForChild("SetTutorialStep").OnServerEvent:Connect(function(player, step)
+	local session = PlayerSession.Get(player)
+	if not session then return end
+	session["TutorialStep"] = step
+end)
+
+-- Returns which conveyor slots were already filled (table of booleans, e.g. {[1]=true,[2]=true})
+Events:WaitForChild("GetTutorialSlots").OnServerInvoke = function(player)
+	local session = PlayerSession.Get(player)
+	if not session then return {} end
+	return session["TutorialConveyorsFilled"] or {}
+end
+
+-- Saves which slots are filled after each placement
+Events:WaitForChild("SetTutorialSlots").OnServerEvent:Connect(function(player, filledTable)
+	local session = PlayerSession.Get(player)
+	if not session then return end
+	session["TutorialConveyorsFilled"] = filledTable
+end)
+
+Events:WaitForChild("SetTutorialDone").OnServerEvent:Connect(function(player)
+	local session = PlayerSession.Get(player)
+	if not session then return end
+	session["TutorialCompleted"] = true
+end)
