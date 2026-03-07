@@ -1,0 +1,610 @@
+-- TutorialHandler — LocalScript inside StarterGui
+-- Step 1: Buy the free mining hotspot
+-- Step 2: Place Basic Conveyors (progress saved per slot)
+-- Step 3: Place a Corner Conveyor
+
+local Players      = game:GetService("Players")
+local RepStorage   = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local RunService   = game:GetService("RunService")
+
+local player    = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- ============================================================================
+-- WAIT FOR DATA & CHECK IF ALREADY DONE
+-- ============================================================================
+player:WaitForChild("DataLoaded", 30)
+
+local Events = RepStorage:WaitForChild("Events")
+
+local ok, done = pcall(function()
+	return Events:WaitForChild("IsTutorialDone"):InvokeServer()
+end)
+if ok and done then return end
+
+-- ============================================================================
+-- FIND STEP 1 TARGETS
+-- ============================================================================
+local plot = player:WaitForChild("SetPlot", 10).Value
+if not plot then warn("[Tutorial] No plot found"); return end
+
+local hotspotFolder = plot:WaitForChild("MinerHotspots", 10)
+if not hotspotFolder then warn("[Tutorial] No MinerHotspots folder"); return end
+
+local hotspot = hotspotFolder:WaitForChild("Hotspot10", 10)
+if not hotspot then warn("[Tutorial] Hotspot10 not found"); return end
+
+local buyButton = hotspot:FindFirstChild("BuyButton") -- nil = already purchased
+
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp  = char:WaitForChild("HumanoidRootPart", 10)
+if not hrp then warn("[Tutorial] No HumanoidRootPart"); return end
+
+-- ============================================================================
+-- LOAD SAVED PROGRESS FROM SERVER
+-- ============================================================================
+local savedStep = 1
+local okStep, stepResult = pcall(function()
+	return Events:WaitForChild("GetTutorialStep"):InvokeServer()
+end)
+if okStep and stepResult then savedStep = stepResult end
+
+local savedSlots = {}
+local okSlots, slotsResult = pcall(function()
+	return Events:WaitForChild("GetTutorialSlots"):InvokeServer()
+end)
+if okSlots and slotsResult then
+	-- ProfileStore converts integer keys to strings, so convert back to numbers
+	for k, v in pairs(slotsResult) do
+		local idx = tonumber(k)
+		if idx and v then savedSlots[idx] = true end
+	end
+end
+
+-- ============================================================================
+-- GHOST POSITIONS
+-- ============================================================================
+local GHOST_CONVEYOR_POSITIONS = {
+	{ offset = Vector3.new(-105, 2.7, 114), rotation = 0 },
+	{ offset = Vector3.new(-105, 2.7, 108), rotation = 0 },
+	{ offset = Vector3.new(-105, 2.7, 102), rotation = 0 },
+	{ offset = Vector3.new(-105, 2.7,  96), rotation = 0 },
+	{ offset = Vector3.new(-105, 2.7,  90), rotation = 0 },
+}
+
+local GHOST_CORNER_POSITIONS = {
+	{ offset = Vector3.new(-105, 2.7, 84), rotation = -90 },
+}
+
+-- ============================================================================
+-- BUILD GUI
+-- ============================================================================
+local tutGui = Instance.new("ScreenGui")
+tutGui.Name           = "TutorialGui"
+tutGui.ResetOnSpawn   = false
+tutGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+tutGui.ScreenInsets   = Enum.ScreenInsets.None
+tutGui.Parent         = playerGui
+
+-- ── Instruction panel ──────────────────────────────────────────────────────
+local panel = Instance.new("Frame")
+panel.Name                   = "TutPanel"
+panel.Size                   = UDim2.new(0.32, 0, 0.12, 0)
+panel.Position               = UDim2.new(0.5, 0, -0.15, 0)  -- starts off-screen above
+panel.AnchorPoint            = Vector2.new(0.5, 0)           -- anchor at top center
+panel.BackgroundColor3       = Color3.fromRGB(18, 18, 24)
+panel.BackgroundTransparency = 0.08
+panel.BorderSizePixel        = 0
+panel.ZIndex                 = 60
+panel.Parent                 = tutGui
+do
+	local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0.07, 0); c.Parent = panel
+	local s = Instance.new("UIStroke")
+	s.Color = Color3.fromRGB(80, 160, 255); s.Thickness = 2; s.Transparency = 0.3; s.Parent = panel
+end
+
+local titleBar = Instance.new("Frame")
+titleBar.Size                   = UDim2.new(1, 0, 0.36, 0)
+titleBar.BackgroundColor3       = Color3.fromRGB(80, 160, 255)
+titleBar.BackgroundTransparency = 0.5
+titleBar.BorderSizePixel        = 0
+titleBar.ZIndex                 = 61
+titleBar.Parent                 = panel
+do local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0.1, 0); c.Parent = titleBar end
+
+local function makeLbl(parent, txt, maxSize, font, xalign, zidx, color)
+	local l = Instance.new("TextLabel")
+	l.BackgroundTransparency = 1
+	l.Text = txt; l.TextColor3 = color or Color3.fromRGB(255, 255, 255)
+	l.TextScaled = true; l.Font = font
+	l.TextXAlignment = xalign or Enum.TextXAlignment.Left
+	l.ZIndex = zidx or 62; l.Parent = parent
+	local con = Instance.new("UITextSizeConstraint"); con.MaxTextSize = maxSize; con.Parent = l
+	return l
+end
+
+local titleLbl = makeLbl(titleBar, "🎓  Tutorial — Step 1/6", 20, Enum.Font.GothamBold)
+titleLbl.Size = UDim2.new(0.96, 0, 1, 0); titleLbl.Position = UDim2.new(0.02, 0, 0, 0)
+
+local descLbl = makeLbl(panel,
+	"Walk up to the glowing hotspot and press E (or tap) to buy your FREE Starter Miner!",
+	18, Enum.Font.Gotham, Enum.TextXAlignment.Left, 62, Color3.fromRGB(210, 215, 230))
+descLbl.Size = UDim2.new(0.82, 0, 0.56, 0); descLbl.Position = UDim2.new(0.04, 0, 0.39, 0)
+descLbl.TextWrapped = true; descLbl.TextYAlignment = Enum.TextYAlignment.Center
+
+-- Dismiss button (only shown on the final note)
+local dismissBtn = Instance.new("TextButton")
+dismissBtn.Size = UDim2.new(0.18, 0, 0.8, 0); dismissBtn.Position = UDim2.new(0.805, 0, 0.1, 0)
+dismissBtn.BackgroundColor3 = Color3.fromRGB(28, 55, 28); dismissBtn.BackgroundTransparency = 0.2
+dismissBtn.Text = "Dismiss"; dismissBtn.TextColor3 = Color3.fromRGB(120, 200, 120)
+dismissBtn.TextScaled = true; dismissBtn.Font = Enum.Font.Gotham; dismissBtn.ZIndex = 63
+dismissBtn.Visible = false; dismissBtn.Parent = titleBar
+do
+	local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0.2, 0); c.Parent = dismissBtn
+	local con = Instance.new("UITextSizeConstraint"); con.MaxTextSize = 11; con.Parent = dismissBtn
+end
+
+-- ── 2D screen arrow (for UI button targeting) ──────────────────────────────
+local screenArrow = Instance.new("TextLabel")
+screenArrow.Name                   = "ScreenArrow"
+screenArrow.Size                   = UDim2.new(0.04, 0, 0.07, 0)
+screenArrow.AnchorPoint            = Vector2.new(0.5, 0.5)
+screenArrow.BackgroundTransparency = 1
+screenArrow.Text                   = "◄"
+screenArrow.TextColor3             = Color3.fromRGB(82, 255, 255)
+screenArrow.TextScaled             = true
+screenArrow.Font                   = Enum.Font.GothamBold
+screenArrow.ZIndex                 = 70
+screenArrow.Visible                = false
+screenArrow.Parent                 = tutGui
+do local con = Instance.new("UITextSizeConstraint"); con.MaxTextSize = 42; con.Parent = screenArrow end
+
+-- ============================================================================
+-- GHOST HELPERS
+-- ============================================================================
+local ghostConveyors = {}
+local ghostCorners   = {}
+
+local function spawnGhosts(positions, itemName, ghostTable)
+	local basePlot = plot:FindFirstChild("BasePlot")
+	if not basePlot then warn("[Tutorial] No BasePlot found"); return end
+
+	local model = RepStorage.Items:FindFirstChild(itemName)
+	if not model then warn("[Tutorial] " .. itemName .. " not found in ReplicatedStorage.Items"); return end
+
+	for _, entry in ipairs(positions) do
+		local ghost = model:Clone()
+		ghost.Name = "TutorialGhost"
+		for _, desc in ipairs(ghost:GetDescendants()) do
+			if desc:IsA("BasePart") then
+				desc.Transparency = desc.Name == "Hitbox" and 1 or 0.4
+				desc.CanCollide   = false
+				desc.Anchored     = true
+				desc.CastShadow   = false
+			end
+			if desc:IsA("Script") or desc:IsA("LocalScript") then
+				desc.Disabled = true
+			end
+		end
+		local cf = basePlot.CFrame * CFrame.new(entry.offset) * CFrame.Angles(0, math.rad(entry.rotation), 0)
+		if ghost.PrimaryPart then ghost:PivotTo(cf) end
+		ghost.Parent = plot
+		table.insert(ghostTable, ghost)
+	end
+end
+
+local function destroyGhosts(ghostTable)
+	for _, g in ipairs(ghostTable) do
+		if g and g.Parent then g:Destroy() end
+	end
+	table.clear(ghostTable)
+end
+
+local function hideGhostSlot(ghostTable, idx)
+	if ghostTable[idx] and ghostTable[idx].Parent then
+		for _, desc in ipairs(ghostTable[idx]:GetDescendants()) do
+			if desc:IsA("BasePart") and desc.Name ~= "Hitbox" then
+				desc.Transparency = 1
+			end
+		end
+	end
+end
+
+-- ============================================================================
+-- BEAM HELPER
+-- ============================================================================
+local function makeBeam(a0, a1)
+	local beam = Instance.new("Beam")
+	beam.Attachment0    = a0
+	beam.Attachment1    = a1
+	beam.Texture        = "rbxassetid://9632171388"
+	beam.TextureMode    = Enum.TextureMode.Stretch
+	beam.TextureSpeed   = -0.5
+	beam.TextureLength  = 2
+	beam.Color          = ColorSequence.new({
+		ColorSequenceKeypoint.new(0,   Color3.fromRGB(255, 255, 255)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(82,  255, 255)),
+		ColorSequenceKeypoint.new(1,   Color3.fromRGB(255, 255, 255)),
+	})
+	beam.Transparency   = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.4),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	beam.Width0         = 3
+	beam.Width1         = 5
+	beam.Segments       = 8
+	beam.CurveSize0     = 0
+	beam.CurveSize1     = 0
+	beam.FaceCamera     = true
+	beam.LightInfluence = 0
+	beam.Brightness     = 2
+	beam.Parent         = hrp
+	return beam
+end
+
+-- ============================================================================
+-- STEP SYSTEM
+-- ============================================================================
+local currentStep = 0
+local stepConns   = {}
+local finished    = false
+
+local function cleanStepConns()
+	for _, c in ipairs(stepConns) do pcall(function() c:Disconnect() end) end
+	stepConns = {}
+end
+
+local function completeTutorial()
+	if finished then return end
+	finished = true
+	cleanStepConns()
+	screenArrow.Visible = false
+	destroyGhosts(ghostConveyors)
+	destroyGhosts(ghostCorners)
+	pcall(function() Events:WaitForChild("SetTutorialDone"):FireServer() end)
+	TweenService:Create(panel,
+		TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+		{ Position = UDim2.new(0.5, 0, 1.1, 0) }):Play()
+	task.delay(0.5, function() tutGui:Destroy() end)
+end
+
+-- Checks if a placed item is close enough to an unfilled ghost slot.
+-- Fills the slot, hides the ghost, saves progress, and returns true if all slots done.
+local function checkGhostSlot(filled, ghostTable, positions, hitboxPos, snapDist)
+	local basePlot = plot:FindFirstChild("BasePlot")
+	if not basePlot then return false end
+
+	for i, entry in ipairs(positions) do
+		if not filled[i] then
+			local ghostPos = (basePlot.CFrame * CFrame.new(entry.offset)).Position
+			if (hitboxPos - ghostPos).Magnitude <= snapDist then
+				filled[i] = true
+				hideGhostSlot(ghostTable, i)
+				break
+			end
+		end
+	end
+
+	for i = 1, #positions do
+		if not filled[i] then return false end
+	end
+	return true
+end
+
+-- Forward declarations
+local startStep1, startStep2, startStep3, startStep4, startStep5, startStep6
+
+-- ============================================================================
+-- STEP 1 — Buy the free mining hotspot
+-- ============================================================================
+startStep1 = function()
+	currentStep = 1
+	titleLbl.Text = "🎓  Tutorial — Step 1/6"
+	descLbl.Text  = "Walk up to the glowing hotspot and press E (or tap) to buy your FREE Starter Miner!"
+
+	local attA = Instance.new("Attachment"); attA.Position = Vector3.new(0, 0.5, -1); attA.Parent = hrp
+	local attB = Instance.new("Attachment"); attB.Position = Vector3.new(0, 0, 0);    attB.Parent = buyButton
+	local beam = makeBeam(attB, attA)
+
+	local conn = buyButton.AncestryChanged:Connect(function(_, parent)
+		if parent == nil then
+			beam:Destroy(); attA:Destroy(); attB:Destroy()
+			cleanStepConns()
+			pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(2) end)
+			task.wait(0.4)
+			startStep2()
+		end
+	end)
+	table.insert(stepConns, conn)
+end
+
+-- ============================================================================
+-- STEP 2 — Place Basic Conveyors
+-- ============================================================================
+startStep2 = function()
+	currentStep = 2
+	titleLbl.Text = "🎓  Tutorial — Step 2/6"
+	descLbl.Text  = "Open your Inventory and place Basic Conveyors on the glowing guides. Rotate 180° or press F to flip the belt direction so ores flow toward the furnace!"
+
+	spawnGhosts(GHOST_CONVEYOR_POSITIONS, "Tutorial Basic Conveyor", ghostConveyors)
+
+	-- Restore previously filled slots and hide their ghosts immediately
+	local filled = {}
+	for idx, wasFilled in pairs(savedSlots) do
+		if wasFilled then
+			filled[idx] = true
+			hideGhostSlot(ghostConveyors, idx)
+		end
+	end
+
+	-- Screen arrow pointing at the Inventory button
+	local mainUi = playerGui:WaitForChild("MainUi", 10)
+	local invBtn = mainUi
+		and mainUi:FindFirstChild("LeftUi")
+		and mainUi.LeftUi:FindFirstChild("PlotButtons")
+		and mainUi.LeftUi.PlotButtons:FindFirstChild("Inv")
+
+	if invBtn then
+		task.wait(0.1)
+		local bob, bobDir = 0, 1
+		local arrowConn = RunService.RenderStepped:Connect(function(dt)
+			if not invBtn or not invBtn.Parent then return end
+			local absP = invBtn.AbsolutePosition
+			local absS = invBtn.AbsoluteSize
+			if absS.X == 0 then return end
+			bob = bob + bobDir * dt * 45
+			if bob > 10 then bobDir = -1 end
+			if bob < -2 then bobDir =  1 end
+			screenArrow.Position = UDim2.new(0, absP.X + absS.X + 28 + bob, 0, absP.Y + absS.Y * 0.95)
+		end)
+		screenArrow.Visible = true
+		table.insert(stepConns, arrowConn)
+	else
+		warn("[Tutorial] Could not find Inv button for step 2 arrow")
+	end
+
+	local placedFolder = plot:FindFirstChild("PlacedItems") or plot:FindFirstChild("Items")
+	if not placedFolder then warn("[Tutorial] Could not find PlacedItems folder"); return end
+
+	local conn = placedFolder.ChildAdded:Connect(function(child)
+		local isConveyor = child.Name:lower():find("conveyor") or child.Name:lower():find("basic")
+		if not isConveyor and child:FindFirstChild("ItemStats") then
+			local ok2, stats = pcall(require, child.ItemStats)
+			if ok2 and stats and (stats.ItemType == "ConveyorTab" or stats.ItemType == "Conveyor") then
+				isConveyor = true
+			end
+		end
+		if not isConveyor then return end
+
+		local hitbox = child:FindFirstChild("Hitbox") or child.PrimaryPart
+		if not hitbox then return end
+
+		local allFilled = checkGhostSlot(filled, ghostConveyors, GHOST_CONVEYOR_POSITIONS, hitbox.Position, 3)
+
+		-- Save slot progress after every placement
+		pcall(function() Events:WaitForChild("SetTutorialSlots"):FireServer(filled) end)
+
+		if allFilled then
+			cleanStepConns()
+			screenArrow.Visible = false
+			destroyGhosts(ghostConveyors)
+			pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(3) end)
+			pcall(function() Events:WaitForChild("SetTutorialSlots"):FireServer({}) end)
+			startStep3()
+		end
+	end)
+	table.insert(stepConns, conn)
+end
+
+-- ============================================================================
+-- STEP 6 — Collect 5 Raw Iron Ore to complete research
+-- ============================================================================
+startStep6 = function()
+	currentStep = 6
+	titleLbl.Text = "🎓  Tutorial — Step 6/6"
+	descLbl.Text  = "Mine and deposit 5 Raw Iron Ore into the Deposit Hopper to complete your first research!"
+
+	pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(6) end)
+
+	-- Poll until CompletedObjectives is non-empty (first research done)
+	local function pollForCompletion()
+		if finished then return end
+		local okR, data = pcall(function()
+			return Events:WaitForChild("GetResearchData"):InvokeServer()
+		end)
+		if okR and data and data.CompletedObjectives and #data.CompletedObjectives > 0 then
+			cleanStepConns()
+			showFinalNote()
+		else
+			local t = task.delay(1, pollForCompletion)
+			table.insert(stepConns, { Disconnect = function() task.cancel(t) end })
+		end
+	end
+
+	pollForCompletion()
+end
+
+-- ============================================================================
+-- FINAL NOTE — Tutorial complete
+-- ============================================================================
+function showFinalNote()
+	if finished then return end
+	cleanStepConns()
+
+	titleLbl.Text = "🎉  You're Ready!"
+	descLbl.Text  = "Keep doing research to progress through the Ages, earn Research Tokens to unlock more miners, cave expansions and new items. Good luck, miner!"
+
+	-- Show dismiss button now that tutorial is complete
+	dismissBtn.Visible = true
+
+	pcall(function() Events:WaitForChild("SetTutorialDone"):FireServer() end)
+
+	local function closePanel()
+		if finished then return end
+		finished = true
+		TweenService:Create(panel,
+			TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+			{ Position = UDim2.new(0.5, 0, -0.15, 0) }):Play()
+		task.delay(0.5, function() tutGui:Destroy() end)
+	end
+
+	-- Auto-close after 30 seconds
+	local t = task.delay(30, closePanel)
+
+	-- Dismiss button closes immediately
+	dismissBtn.MouseButton1Click:Connect(function()
+		task.cancel(t)
+		closePanel()
+	end)
+end
+
+-- ============================================================================
+-- STEP 5 — Start first research objective
+-- ============================================================================
+startStep5 = function()
+	currentStep = 5
+	titleLbl.Text = "🎓  Tutorial — Step 5/6"
+	descLbl.Text  = "Click 'Start Research' on your first objective to begin! Completing research unlocks new machines, miners and Ages."
+
+	pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(5) end)
+
+	-- Poll GetResearchData every second until ActiveObjectives is non-empty.
+	-- We can't hook the StartObjective RemoteFunction directly from another LocalScript,
+	-- so polling is the cleanest client-side option here.
+	local pollConn
+	pollConn = RunService.Heartbeat:Connect(function()
+		-- Throttle to once per second
+		if not pollConn then return end
+	end)
+	pollConn:Disconnect()
+	pollConn = nil
+
+	local function pollForResearch()
+		if finished then return end
+		local okR, data = pcall(function()
+			return Events:WaitForChild("GetResearchData"):InvokeServer()
+		end)
+		if okR and data and data.ActiveObjectives and #data.ActiveObjectives > 0 then
+			cleanStepConns()
+			pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(6) end)
+			startStep6()
+		else
+			-- Check again in 1 second
+			local t = task.delay(1, pollForResearch)
+			table.insert(stepConns, { Disconnect = function() task.cancel(t) end })
+		end
+	end
+
+	pollForResearch()
+end
+
+-- ============================================================================
+-- STEP 4 — Deposit Hopper explanation + open Research
+-- ============================================================================
+startStep4 = function()
+	currentStep = 4
+	titleLbl.Text = "🎓  Tutorial — Step 4/6"
+	descLbl.Text  = "All ores must flow into the Deposit Hopper to earn cash! Now open Research to unlock new content and progress through the Ages."
+
+	pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(4) end)
+
+	-- Screen arrow pointing at the Research button
+	local mainUi     = playerGui:WaitForChild("MainUi", 10)
+	local researchBtn = mainUi
+		and mainUi:FindFirstChild("LeftUi")
+		and mainUi.LeftUi:FindFirstChild("PlotButtons")
+		and mainUi.LeftUi.PlotButtons:FindFirstChild("Research")
+
+	if researchBtn then
+		task.wait(0.1)
+		local bob, bobDir = 0, 1
+		local arrowConn = RunService.RenderStepped:Connect(function(dt)
+			if not researchBtn or not researchBtn.Parent then return end
+			local absP = researchBtn.AbsolutePosition
+			local absS = researchBtn.AbsoluteSize
+			if absS.X == 0 then return end
+			bob = bob + bobDir * dt * 45
+			if bob > 10 then bobDir = -1 end
+			if bob < -2 then bobDir =  1 end
+			screenArrow.Position = UDim2.new(0, absP.X + absS.X + 28 + bob, 0, absP.Y + absS.Y * 0.95)
+		end)
+		screenArrow.Visible = true
+		table.insert(stepConns, arrowConn)
+	else
+		warn("[Tutorial] Could not find Research button for step 4 arrow")
+	end
+
+	-- Detect Research GUI opening via its MenuObject
+	local function tryConnectResearch()
+		local researchGui = playerGui:FindFirstChild("ResearchGui")
+		local mo = researchGui and researchGui:FindFirstChild("MenuObject")
+		if not mo then
+			task.delay(1, tryConnectResearch)
+			return
+		end
+		local conn = mo.Changed:Connect(function()
+			if mo.Value then
+				cleanStepConns()
+				screenArrow.Visible = false
+				pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(5) end)
+				startStep5()
+			end
+		end)
+		table.insert(stepConns, conn)
+	end
+	tryConnectResearch()
+end
+
+-- ============================================================================
+-- STEP 3 — Place a Corner Conveyor
+-- ============================================================================
+startStep3 = function()
+	currentStep = 3
+	titleLbl.Text = "🎓  Tutorial — Step 3/6"
+	descLbl.Text  = "Now place a Corner Conveyor on the glowing guide to bend your pipeline. Rotate it with R and flip the belt with F!"
+
+	spawnGhosts(GHOST_CORNER_POSITIONS, "Tutorial Corner Conveyor", ghostCorners)
+
+	local placedFolder = plot:FindFirstChild("PlacedItems") or plot:FindFirstChild("Items")
+	if not placedFolder then warn("[Tutorial] Could not find PlacedItems folder"); return end
+
+	local filled = {}
+	local conn = placedFolder.ChildAdded:Connect(function(child)
+		local isCorner = child.Name:lower():find("corner")
+		if not isCorner then return end
+
+		local hitbox = child:FindFirstChild("Hitbox") or child.PrimaryPart
+		if not hitbox then return end
+
+		local allFilled = checkGhostSlot(filled, ghostCorners, GHOST_CORNER_POSITIONS, hitbox.Position, 3)
+		if allFilled then
+			cleanStepConns()
+			destroyGhosts(ghostCorners)
+			startStep4()
+		end
+	end)
+	table.insert(stepConns, conn)
+end
+
+-- ============================================================================
+-- START — resume from saved step
+-- ============================================================================
+task.wait(2.5)
+TweenService:Create(panel,
+	TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+	{ Position = UDim2.new(0.5, 0, 0.05, 0) }):Play()
+
+if savedStep >= 6 then
+	startStep6()
+elseif savedStep >= 5 then
+	startStep5()
+elseif savedStep >= 4 then
+	startStep4()
+elseif savedStep >= 3 then
+	startStep3()
+elseif savedStep >= 2 or buyButton == nil then
+	startStep2()
+else
+	startStep1()
+end
