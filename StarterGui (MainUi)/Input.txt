@@ -210,9 +210,7 @@ function module.LOAD(MODULE_INFO)
 		-- Place button (left click when placing)
 		modernMenu.PlaceButton.MouseButton1Click:Connect(function()
 			if PLACEMENT.PLACING_ITEMS then
-				if PLACEMENT.PLACE_ITEM() then
-					PLACEMENT.DESTROY_PLACING()
-				end
+				PLACEMENT.PLACE_ITEM()
 			end
 		end)
 
