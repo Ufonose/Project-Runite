@@ -75,7 +75,8 @@ function ResearchHandler.StartObjective(player, objectiveId)
 	for _, requirement in pairs(objective.Requirements) do
 		research.ObjectiveProgress[tostring(objectiveId)][requirement.ItemName] = 0
 	end
-
+	-- ✅ Notify speedrun of objective start (for age timer tracking)
+	SpeedrunHandler.OnObjectiveStarted(player, objectiveId)
 	return true
 end
 
