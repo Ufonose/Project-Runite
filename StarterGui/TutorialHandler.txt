@@ -2,6 +2,9 @@
 -- Step 1: Buy the free mining hotspot
 -- Step 2: Place Basic Conveyors (progress saved per slot)
 -- Step 3: Place a Corner Conveyor
+-- Step 4: Deposit Hopper explanation + open Research
+-- Step 5: Start first research objective
+-- Step 6: Collect 5 Raw Iron Ore to complete research
 
 local Players      = game:GetService("Players")
 local RepStorage   = game:GetService("ReplicatedStorage")
@@ -10,6 +13,7 @@ local RunService   = game:GetService("RunService")
 
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local cam       = workspace.CurrentCamera
 
 -- ============================================================================
 -- WAIT FOR DATA & CHECK IF ALREADY DONE
@@ -24,7 +28,7 @@ end)
 if ok and done then return end
 
 -- ============================================================================
--- FIND STEP 1 TARGETS
+-- FIND TARGETS
 -- ============================================================================
 local plot = player:WaitForChild("SetPlot", 10).Value
 if not plot then warn("[Tutorial] No plot found"); return end
@@ -35,7 +39,7 @@ if not hotspotFolder then warn("[Tutorial] No MinerHotspots folder"); return end
 local hotspot = hotspotFolder:WaitForChild("Hotspot10", 10)
 if not hotspot then warn("[Tutorial] Hotspot10 not found"); return end
 
-local buyButton = hotspot:FindFirstChild("BuyButton") -- nil = already purchased
+local buyButton = hotspot:FindFirstChild("BuyButton")
 
 local char = player.Character or player.CharacterAdded:Wait()
 local hrp  = char:WaitForChild("HumanoidRootPart", 10)
@@ -55,7 +59,6 @@ local okSlots, slotsResult = pcall(function()
 	return Events:WaitForChild("GetTutorialSlots"):InvokeServer()
 end)
 if okSlots and slotsResult then
-	-- ProfileStore converts integer keys to strings, so convert back to numbers
 	for k, v in pairs(slotsResult) do
 		local idx = tonumber(k)
 		if idx and v then savedSlots[idx] = true end
@@ -78,6 +81,13 @@ local GHOST_CORNER_POSITIONS = {
 }
 
 -- ============================================================================
+-- MOBILE DETECTION
+-- ============================================================================
+local function isMobile()
+	return cam.ViewportSize.X < 900
+end
+
+-- ============================================================================
 -- BUILD GUI
 -- ============================================================================
 local tutGui = Instance.new("ScreenGui")
@@ -87,12 +97,11 @@ tutGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 tutGui.ScreenInsets   = Enum.ScreenInsets.None
 tutGui.Parent         = playerGui
 
--- ── Instruction panel ──────────────────────────────────────────────────────
 local panel = Instance.new("Frame")
 panel.Name                   = "TutPanel"
 panel.Size                   = UDim2.new(0.32, 0, 0.12, 0)
-panel.Position               = UDim2.new(0.5, 0, -0.15, 0)  -- starts off-screen above
-panel.AnchorPoint            = Vector2.new(0.5, 0)           -- anchor at top center
+panel.Position               = UDim2.new(0.5, 0, -0.15, 0)
+panel.AnchorPoint            = Vector2.new(0.5, 0)
 panel.BackgroundColor3       = Color3.fromRGB(18, 18, 24)
 panel.BackgroundTransparency = 0.08
 panel.BorderSizePixel        = 0
@@ -133,7 +142,6 @@ local descLbl = makeLbl(panel,
 descLbl.Size = UDim2.new(0.82, 0, 0.56, 0); descLbl.Position = UDim2.new(0.04, 0, 0.39, 0)
 descLbl.TextWrapped = true; descLbl.TextYAlignment = Enum.TextYAlignment.Center
 
--- Dismiss button (only shown on the final note)
 local dismissBtn = Instance.new("TextButton")
 dismissBtn.Size = UDim2.new(0.18, 0, 0.8, 0); dismissBtn.Position = UDim2.new(0.805, 0, 0.1, 0)
 dismissBtn.BackgroundColor3 = Color3.fromRGB(28, 55, 28); dismissBtn.BackgroundTransparency = 0.2
@@ -145,20 +153,56 @@ do
 	local con = Instance.new("UITextSizeConstraint"); con.MaxTextSize = 11; con.Parent = dismissBtn
 end
 
--- ── 2D screen arrow (for UI button targeting) ──────────────────────────────
-local screenArrow = Instance.new("TextLabel")
-screenArrow.Name                   = "ScreenArrow"
-screenArrow.Size                   = UDim2.new(0.04, 0, 0.07, 0)
-screenArrow.AnchorPoint            = Vector2.new(0.5, 0.5)
-screenArrow.BackgroundTransparency = 1
-screenArrow.Text                   = "◄"
-screenArrow.TextColor3             = Color3.fromRGB(82, 255, 255)
-screenArrow.TextScaled             = true
-screenArrow.Font                   = Enum.Font.GothamBold
-screenArrow.ZIndex                 = 70
-screenArrow.Visible                = false
-screenArrow.Parent                 = tutGui
-do local con = Instance.new("UITextSizeConstraint"); con.MaxTextSize = 42; con.Parent = screenArrow end
+-- ============================================================================
+-- PANEL SIZE — defined after panel exists, called immediately + on resize
+-- ============================================================================
+local function applyPanelSize()
+	if isMobile() then
+		panel.Size = UDim2.new(0.44, 0, 0.19, 0)
+	else
+		panel.Size = UDim2.new(0.32, 0, 0.12, 0)
+	end
+end
+
+applyPanelSize()
+cam:GetPropertyChangedSignal("ViewportSize"):Connect(applyPanelSize)
+
+-- ============================================================================
+-- ARROW HELPER
+-- ============================================================================
+local function spawnButtonArrow(targetBtn)
+	if not targetBtn or not targetBtn.Parent then return function() end end
+
+	local arrow = Instance.new("TextLabel")
+	arrow.Name                   = "TutArrow"
+	arrow.BackgroundTransparency = 1
+	arrow.Text                   = "←"
+	arrow.TextColor3             = Color3.fromRGB(67, 211, 255)
+	arrow.Font                   = Enum.Font.GothamBold
+	arrow.TextScaled             = true
+	arrow.TextXAlignment         = Enum.TextXAlignment.Left
+	arrow.Size                   = UDim2.new(0.7, 0, 1, 0)
+	arrow.Position               = UDim2.new(1, 6, 0, 0)
+	arrow.ZIndex                 = (targetBtn.ZIndex or 1) + 5
+	arrow.Parent                 = targetBtn
+	do
+		local con = Instance.new("UITextSizeConstraint")
+		con.MaxTextSize = 60
+		con.Parent      = arrow
+	end
+
+	local tween = TweenService:Create(
+		arrow,
+		TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ Position = UDim2.new(1, 18, 0, 0) }
+	)
+	tween:Play()
+
+	return function()
+		tween:Cancel()
+		if arrow and arrow.Parent then arrow:Destroy() end
+	end
+end
 
 -- ============================================================================
 -- GHOST HELPERS
@@ -250,27 +294,14 @@ local currentStep = 0
 local stepConns   = {}
 local finished    = false
 
+-- Pre-declare all step functions so they can reference each other freely
+local startStep1, startStep2, startStep3, startStep4, startStep5, startStep6, showFinalNote
+
 local function cleanStepConns()
 	for _, c in ipairs(stepConns) do pcall(function() c:Disconnect() end) end
 	stepConns = {}
 end
 
-local function completeTutorial()
-	if finished then return end
-	finished = true
-	cleanStepConns()
-	screenArrow.Visible = false
-	destroyGhosts(ghostConveyors)
-	destroyGhosts(ghostCorners)
-	pcall(function() Events:WaitForChild("SetTutorialDone"):FireServer() end)
-	TweenService:Create(panel,
-		TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-		{ Position = UDim2.new(0.5, 0, 1.1, 0) }):Play()
-	task.delay(0.5, function() tutGui:Destroy() end)
-end
-
--- Checks if a placed item is close enough to an unfilled ghost slot.
--- Fills the slot, hides the ghost, saves progress, and returns true if all slots done.
 local function checkGhostSlot(filled, ghostTable, positions, hitboxPos, snapDist)
 	local basePlot = plot:FindFirstChild("BasePlot")
 	if not basePlot then return false end
@@ -291,9 +322,6 @@ local function checkGhostSlot(filled, ghostTable, positions, hitboxPos, snapDist
 	end
 	return true
 end
-
--- Forward declarations
-local startStep1, startStep2, startStep3, startStep4, startStep5, startStep6
 
 -- ============================================================================
 -- STEP 1 — Buy the free mining hotspot
@@ -329,7 +357,6 @@ startStep2 = function()
 
 	spawnGhosts(GHOST_CONVEYOR_POSITIONS, "Tutorial Basic Conveyor", ghostConveyors)
 
-	-- Restore previously filled slots and hide their ghosts immediately
 	local filled = {}
 	for idx, wasFilled in pairs(savedSlots) do
 		if wasFilled then
@@ -338,31 +365,15 @@ startStep2 = function()
 		end
 	end
 
-	-- Screen arrow pointing at the Inventory button
 	local mainUi = playerGui:WaitForChild("MainUi", 10)
 	local invBtn = mainUi
 		and mainUi:FindFirstChild("LeftUi")
 		and mainUi.LeftUi:FindFirstChild("PlotButtons")
 		and mainUi.LeftUi.PlotButtons:FindFirstChild("Inv")
 
-	if invBtn then
-		task.wait(0.1)
-		local bob, bobDir = 0, 1
-		local arrowConn = RunService.RenderStepped:Connect(function(dt)
-			if not invBtn or not invBtn.Parent then return end
-			local absP = invBtn.AbsolutePosition
-			local absS = invBtn.AbsoluteSize
-			if absS.X == 0 then return end
-			bob = bob + bobDir * dt * 45
-			if bob > 10 then bobDir = -1 end
-			if bob < -2 then bobDir =  1 end
-			screenArrow.Position = UDim2.new(0, absP.X + absS.X + 28 + bob, 0, absP.Y + absS.Y * 0.95)
-		end)
-		screenArrow.Visible = true
-		table.insert(stepConns, arrowConn)
-	else
-		warn("[Tutorial] Could not find Inv button for step 2 arrow")
-	end
+	local cleanupArrow = spawnButtonArrow(invBtn)
+	if not invBtn then warn("[Tutorial] Could not find Inv button for step 2 arrow") end
+	table.insert(stepConns, { Disconnect = cleanupArrow })
 
 	local placedFolder = plot:FindFirstChild("PlacedItems") or plot:FindFirstChild("Items")
 	if not placedFolder then warn("[Tutorial] Could not find PlacedItems folder"); return end
@@ -381,13 +392,10 @@ startStep2 = function()
 		if not hitbox then return end
 
 		local allFilled = checkGhostSlot(filled, ghostConveyors, GHOST_CONVEYOR_POSITIONS, hitbox.Position, 3)
-
-		-- Save slot progress after every placement
 		pcall(function() Events:WaitForChild("SetTutorialSlots"):FireServer(filled) end)
 
 		if allFilled then
 			cleanStepConns()
-			screenArrow.Visible = false
 			destroyGhosts(ghostConveyors)
 			pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(3) end)
 			pcall(function() Events:WaitForChild("SetTutorialSlots"):FireServer({}) end)
@@ -395,165 +403,6 @@ startStep2 = function()
 		end
 	end)
 	table.insert(stepConns, conn)
-end
-
--- ============================================================================
--- STEP 6 — Collect 5 Raw Iron Ore to complete research
--- ============================================================================
-startStep6 = function()
-	currentStep = 6
-	titleLbl.Text = "🎓  Tutorial — Step 6/6"
-	descLbl.Text  = "Your miner automatically mines raw Iron Ore. Let 5 pieces flow into the Deposit Hopper to complete your first Research!"
-
-	pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(6) end)
-
-	-- Poll until CompletedObjectives is non-empty (first research done)
-	local function pollForCompletion()
-		if finished then return end
-		local okR, data = pcall(function()
-			return Events:WaitForChild("GetResearchData"):InvokeServer()
-		end)
-		if okR and data and data.CompletedObjectives and #data.CompletedObjectives > 0 then
-			cleanStepConns()
-			showFinalNote()
-		else
-			local t = task.delay(1, pollForCompletion)
-			table.insert(stepConns, { Disconnect = function() task.cancel(t) end })
-		end
-	end
-
-	pollForCompletion()
-end
-
--- ============================================================================
--- FINAL NOTE — Tutorial complete
--- ============================================================================
-function showFinalNote()
-	if finished then return end
-	cleanStepConns()
-
-	titleLbl.Text = "🎉  You're Ready!"
-	descLbl.Text  = "You're all set! Keep completing Research to progress through the Ages, earn Research Tokens to buy more miners and cave expansions, and unlock new items in the Shop. Don't forget to check the Upgrades tab in the Shop to improve your mining operation! Good luck, miner!"
-
-	-- Show dismiss button now that tutorial is complete
-	dismissBtn.Visible = true
-
-	pcall(function() Events:WaitForChild("SetTutorialDone"):FireServer() end)
-
-	local function closePanel()
-		if finished then return end
-		finished = true
-		TweenService:Create(panel,
-			TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-			{ Position = UDim2.new(0.5, 0, -0.15, 0) }):Play()
-		task.delay(0.5, function() tutGui:Destroy() end)
-	end
-
-	-- Auto-close after 30 seconds
-	local t = task.delay(30, closePanel)
-
-	-- Dismiss button closes immediately
-	dismissBtn.MouseButton1Click:Connect(function()
-		task.cancel(t)
-		closePanel()
-	end)
-end
-
--- ============================================================================
--- STEP 5 — Start first research objective
--- ============================================================================
-startStep5 = function()
-	currentStep = 5
-	titleLbl.Text = "🎓  Tutorial — Step 5/6"
-	descLbl.Text  = "Click 'Start Research' on your first objective to begin! Completing it earns Research Tokens for miners and cave expansions, and unlocks new items in the Shop."
-
-	pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(5) end)
-
-	-- Poll GetResearchData every second until ActiveObjectives is non-empty.
-	-- We can't hook the StartObjective RemoteFunction directly from another LocalScript,
-	-- so polling is the cleanest client-side option here.
-	local pollConn
-	pollConn = RunService.Heartbeat:Connect(function()
-		-- Throttle to once per second
-		if not pollConn then return end
-	end)
-	pollConn:Disconnect()
-	pollConn = nil
-
-	local function pollForResearch()
-		if finished then return end
-		local okR, data = pcall(function()
-			return Events:WaitForChild("GetResearchData"):InvokeServer()
-		end)
-		if okR and data and data.ActiveObjectives and #data.ActiveObjectives > 0 then
-			cleanStepConns()
-			pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(6) end)
-			startStep6()
-		else
-			-- Check again in 1 second
-			local t = task.delay(1, pollForResearch)
-			table.insert(stepConns, { Disconnect = function() task.cancel(t) end })
-		end
-	end
-
-	pollForResearch()
-end
-
--- ============================================================================
--- STEP 4 — Deposit Hopper explanation + open Research
--- ============================================================================
-startStep4 = function()
-	currentStep = 4
-	titleLbl.Text = "🎓  Tutorial — Step 4/6"
-	descLbl.Text  = "All items must flow into the Deposit Hopper to earn Cash and Research Tokens! Now open the Research menu to see what you can unlock."
-
-	pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(4) end)
-
-	-- Screen arrow pointing at the Research button
-	local mainUi     = playerGui:WaitForChild("MainUi", 10)
-	local researchBtn = mainUi
-		and mainUi:FindFirstChild("LeftUi")
-		and mainUi.LeftUi:FindFirstChild("PlotButtons")
-		and mainUi.LeftUi.PlotButtons:FindFirstChild("Research")
-
-	if researchBtn then
-		task.wait(0.1)
-		local bob, bobDir = 0, 1
-		local arrowConn = RunService.RenderStepped:Connect(function(dt)
-			if not researchBtn or not researchBtn.Parent then return end
-			local absP = researchBtn.AbsolutePosition
-			local absS = researchBtn.AbsoluteSize
-			if absS.X == 0 then return end
-			bob = bob + bobDir * dt * 45
-			if bob > 10 then bobDir = -1 end
-			if bob < -2 then bobDir =  1 end
-			screenArrow.Position = UDim2.new(0, absP.X + absS.X + 28 + bob, 0, absP.Y + absS.Y * 0.95)
-		end)
-		screenArrow.Visible = true
-		table.insert(stepConns, arrowConn)
-	else
-		warn("[Tutorial] Could not find Research button for step 4 arrow")
-	end
-
-	-- Detect Research GUI opening via its MenuObject
-	local function tryConnectResearch()
-		local researchGui = playerGui:FindFirstChild("ResearchGui")
-		local mo = researchGui and researchGui:FindFirstChild("MenuObject")
-		if not mo then
-			task.delay(1, tryConnectResearch)
-			return
-		end
-		local conn = mo.Changed:Connect(function()
-			if mo.Value then
-				cleanStepConns()
-				screenArrow.Visible = false
-				pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(5) end)
-				startStep5()
-			end
-		end)
-		table.insert(stepConns, conn)
-	end
-	tryConnectResearch()
 end
 
 -- ============================================================================
@@ -588,23 +437,141 @@ startStep3 = function()
 end
 
 -- ============================================================================
--- START — resume from saved step
+-- STEP 4 — Deposit Hopper explanation + open Research
+-- ============================================================================
+startStep4 = function()
+	currentStep = 4
+	titleLbl.Text = "🎓  Tutorial — Step 4/6"
+	descLbl.Text  = "All items must flow into the Deposit Hopper to earn Cash and Research Tokens! Now open the Research menu to see what you can unlock."
+
+	pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(4) end)
+
+	local mainUi      = playerGui:WaitForChild("MainUi", 10)
+	local researchBtn = mainUi
+		and mainUi:FindFirstChild("LeftUi")
+		and mainUi.LeftUi:FindFirstChild("PlotButtons")
+		and mainUi.LeftUi.PlotButtons:FindFirstChild("Research")
+
+	local cleanupArrow = spawnButtonArrow(researchBtn)
+	if not researchBtn then warn("[Tutorial] Could not find Research button for step 4 arrow") end
+	table.insert(stepConns, { Disconnect = cleanupArrow })
+
+	local function tryConnectResearch()
+		local researchGui = playerGui:FindFirstChild("ResearchGui")
+		local mo = researchGui and researchGui:FindFirstChild("MenuObject")
+		if not mo then
+			task.delay(1, tryConnectResearch)
+			return
+		end
+		local conn = mo.Changed:Connect(function()
+			if mo.Value then
+				cleanStepConns()
+				pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(5) end)
+				startStep5()
+			end
+		end)
+		table.insert(stepConns, conn)
+	end
+	tryConnectResearch()
+end
+
+-- ============================================================================
+-- STEP 5 — Start first research objective
+-- ============================================================================
+startStep5 = function()
+	currentStep = 5
+	titleLbl.Text = "🎓  Tutorial — Step 5/6"
+	descLbl.Text  = "Click 'Start Research' on your first objective to begin! Completing it earns Research Tokens for miners and cave expansions, and unlocks new items in the Shop."
+
+	pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(5) end)
+
+	local function pollForResearch()
+		if finished then return end
+		local okR, data = pcall(function()
+			return Events:WaitForChild("GetResearchData"):InvokeServer()
+		end)
+		if okR and data and data.ActiveObjectives and #data.ActiveObjectives > 0 then
+			cleanStepConns()
+			pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(6) end)
+			startStep6()
+		else
+			local t = task.delay(1, pollForResearch)
+			table.insert(stepConns, { Disconnect = function() task.cancel(t) end })
+		end
+	end
+
+	pollForResearch()
+end
+
+-- ============================================================================
+-- FINAL NOTE — Tutorial complete
+-- ============================================================================
+showFinalNote = function()
+	if finished then return end
+	finished = true
+	cleanStepConns()
+	destroyGhosts(ghostConveyors)
+	destroyGhosts(ghostCorners)
+
+	titleLbl.Text = "🎉  You're Ready!"
+	descLbl.Text  = "You're all set! Keep completing Research to progress through the Ages, earn Research Tokens to buy more miners and cave expansions, and unlock new items in the Shop. Don't forget to check the Upgrades tab in the Shop to improve your mining operation! Good luck, miner!"
+
+	dismissBtn.Visible = true
+	pcall(function() Events:WaitForChild("SetTutorialDone"):FireServer() end)
+
+	local function closePanel()
+		TweenService:Create(panel,
+			TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+			{ Position = UDim2.new(0.5, 0, -0.15, 0) }):Play()
+		task.delay(0.5, function() tutGui:Destroy() end)
+	end
+
+	local t = task.delay(30, closePanel)
+	dismissBtn.MouseButton1Click:Connect(function()
+		task.cancel(t)
+		closePanel()
+	end)
+end
+
+-- ============================================================================
+-- STEP 6 — Collect 5 Raw Iron Ore to complete research
+-- ============================================================================
+startStep6 = function()
+	currentStep = 6
+	titleLbl.Text = "🎓  Tutorial — Step 6/6"
+	descLbl.Text  = "Your miner automatically mines raw Iron Ore. Let 5 pieces flow into the Deposit Hopper to complete your first Research!"
+
+	pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(6) end)
+
+	local function pollForCompletion()
+		if finished then return end
+		local okR, data = pcall(function()
+			return Events:WaitForChild("GetResearchData"):InvokeServer()
+		end)
+		if okR and data and data.CompletedObjectives and #data.CompletedObjectives > 0 then
+			cleanStepConns()
+			showFinalNote()
+		else
+			local t = task.delay(1, pollForCompletion)
+			table.insert(stepConns, { Disconnect = function() task.cancel(t) end })
+		end
+	end
+
+	pollForCompletion()
+end
+
+-- ============================================================================
+-- START — slide panel in, then resume from saved step
 -- ============================================================================
 task.wait(2.5)
 TweenService:Create(panel,
 	TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 	{ Position = UDim2.new(0.5, 0, 0.05, 0) }):Play()
 
-if savedStep >= 6 then
-	startStep6()
-elseif savedStep >= 5 then
-	startStep5()
-elseif savedStep >= 4 then
-	startStep4()
-elseif savedStep >= 3 then
-	startStep3()
-elseif savedStep >= 2 or buyButton == nil then
-	startStep2()
-else
-	startStep1()
+if     savedStep >= 6 then startStep6()
+elseif savedStep >= 5 then startStep5()
+elseif savedStep >= 4 then startStep4()
+elseif savedStep >= 3 then startStep3()
+elseif savedStep >= 2 or buyButton == nil then startStep2()
+else   startStep1()
 end
