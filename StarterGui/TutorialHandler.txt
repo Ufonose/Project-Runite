@@ -301,7 +301,7 @@ local startStep1, startStep2, startStep3, startStep4, startStep5, startStep6
 startStep1 = function()
 	currentStep = 1
 	titleLbl.Text = "🎓  Tutorial — Step 1/6"
-	descLbl.Text  = "Walk up to the glowing hotspot and press E (or tap) to buy your FREE Starter Miner!"
+	descLbl.Text  = "Follow the beam and press E (or tap) to buy your FREE Starter Mine!"
 
 	local attA = Instance.new("Attachment"); attA.Position = Vector3.new(0, 0.5, -1); attA.Parent = hrp
 	local attB = Instance.new("Attachment"); attB.Position = Vector3.new(0, 0, 0);    attB.Parent = buyButton
@@ -325,7 +325,7 @@ end
 startStep2 = function()
 	currentStep = 2
 	titleLbl.Text = "🎓  Tutorial — Step 2/6"
-	descLbl.Text  = "Open your Inventory and place Basic Conveyors on the glowing guides. Rotate 180° or press F to flip the belt direction so ores flow toward the furnace!"
+	descLbl.Text  = "Open your Inventory and place Basic Conveyors on the transparent outlines. Press R to rotate or F to flip the belt direction. You can also use the placement menu at the bottom!"
 
 	spawnGhosts(GHOST_CONVEYOR_POSITIONS, "Tutorial Basic Conveyor", ghostConveyors)
 
@@ -403,7 +403,7 @@ end
 startStep6 = function()
 	currentStep = 6
 	titleLbl.Text = "🎓  Tutorial — Step 6/6"
-	descLbl.Text  = "Mine and deposit 5 Raw Iron Ore into the Deposit Hopper to complete your first research!"
+	descLbl.Text  = "Your miner automatically mines raw Iron Ore. Let 5 pieces flow into the Deposit Hopper to complete your first Research!"
 
 	pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(6) end)
 
@@ -433,7 +433,7 @@ function showFinalNote()
 	cleanStepConns()
 
 	titleLbl.Text = "🎉  You're Ready!"
-	descLbl.Text  = "Keep doing research to progress through the Ages, earn Research Tokens to unlock more miners, cave expansions and new items. Good luck, miner!"
+	descLbl.Text  = "You're all set! Keep completing Research to progress through the Ages, earn Research Tokens to buy more miners and cave expansions, and unlock new items in the Shop. Don't forget to check the Upgrades tab in the Shop to improve your mining operation! Good luck, miner!"
 
 	-- Show dismiss button now that tutorial is complete
 	dismissBtn.Visible = true
@@ -465,7 +465,7 @@ end
 startStep5 = function()
 	currentStep = 5
 	titleLbl.Text = "🎓  Tutorial — Step 5/6"
-	descLbl.Text  = "Click 'Start Research' on your first objective to begin! Completing research unlocks new machines, miners and Ages."
+	descLbl.Text  = "Click 'Start Research' on your first objective to begin! Completing it earns Research Tokens for miners and cave expansions, and unlocks new items in the Shop."
 
 	pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(5) end)
 
@@ -505,7 +505,7 @@ end
 startStep4 = function()
 	currentStep = 4
 	titleLbl.Text = "🎓  Tutorial — Step 4/6"
-	descLbl.Text  = "All ores must flow into the Deposit Hopper to earn cash! Now open Research to unlock new content and progress through the Ages."
+	descLbl.Text  = "All items must flow into the Deposit Hopper to earn Cash and Research Tokens! Now open the Research menu to see what you can unlock."
 
 	pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(4) end)
 
@@ -562,7 +562,7 @@ end
 startStep3 = function()
 	currentStep = 3
 	titleLbl.Text = "🎓  Tutorial — Step 3/6"
-	descLbl.Text  = "Now place a Corner Conveyor on the glowing guide to bend your pipeline. Rotate it with R and flip the belt with F!"
+	descLbl.Text  = "Now place a Corner Conveyor on the transparent outline to redirect your item flow so it drops into the Deposit Hopper. Rotate with R and flip the belt direction with F!"
 
 	spawnGhosts(GHOST_CORNER_POSITIONS, "Tutorial Corner Conveyor", ghostCorners)
 
