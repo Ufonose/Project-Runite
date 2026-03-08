@@ -1,23 +1,31 @@
 -- ServerScriptService/TimeLeaderboardServer
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
+local ServerStorage = game:GetService("ServerStorage")
 
-local leaderboardPart = workspace:WaitForChild("Leaderboards"):WaitForChild("TimeLeaderboard") -- adjust path
+local leaderboardPart = workspace:WaitForChild("Leaderboards"):WaitForChild("TimeLeaderboard")
+local spawnPoint      = workspace:WaitForChild("Leaderboards"):WaitForChild("TimeRigSpawnPoint")
+local rigTemplate     = ServerStorage:WaitForChild("TopPlayerRig")
+local danceAnim       = rigTemplate:WaitForChild("DanceAnimation")
 
 local DS_FETCH_INTERVAL    = 120
-local LIVE_UPDATE_INTERVAL = 5
-local TIME_SAVE_INTERVAL   = 60  -- save time played every 60 seconds
+local LIVE_UPDATE_INTERVAL = 10
+local TIME_SAVE_INTERVAL   = 120 -- increased from 60 to match DS fetch interval
 local MAX_ENTRIES          = 100
 local ROW_HEIGHT            = 36
 local ROW_PADDING           = 5
 
-local TimeStore = DataStoreService:GetOrderedDataStore("TimePlayed_v1")
+local TimeStore  = DataStoreService:GetOrderedDataStore("TimePlayed_v1lol")
 local cachedData = {}
+local nameCache  = {}
 local saveCooldowns = {}
 
+local currentRig        = nil
+local currentTopUserId  = nil
+local currentTopSeconds = 0
+
 -- ── TIME TRACKING ─────────────────────────────────────────────────────────
--- Each player gets a session start time and a NumberValue for total seconds
-local sessionStart = {} -- [userId] = tick()
+local sessionStart = {}
 
 local function getSessionSeconds(player)
 	local start = sessionStart[player.UserId]
@@ -32,7 +40,7 @@ end
 
 local function saveTimeToStore(player)
 	local now = os.time()
-	if saveCooldowns[player.UserId] and now - saveCooldowns[player.UserId] < 60 then return end
+	if saveCooldowns[player.UserId] and now - saveCooldowns[player.UserId] < TIME_SAVE_INTERVAL then return end
 	saveCooldowns[player.UserId] = now
 
 	local total = getTotalSeconds(player)
@@ -42,45 +50,44 @@ local function saveTimeToStore(player)
 	end)
 end
 
+-- ── PLAYER HOOKS ──────────────────────────────────────────────────────────
+local activeLoops = {}
+
 local function hookPlayer(player)
-	-- Wait for data to load
+	local uid = player.UserId
+	local loopId = (activeLoops[uid] and activeLoops[uid].id or 0) + 1
+	activeLoops[uid] = { id = loopId }
+
 	player:WaitForChild("DataLoaded", 30)
 
-	-- Create TimePlayed value from session data
 	local stored = Instance.new("NumberValue")
 	stored.Name = "TimePlayed"
 	stored.Value = 0
 	stored.Parent = player
 
-	-- Load saved time from DataStore
 	local ok, saved = pcall(function()
 		return TimeStore:GetAsync(tostring(player.UserId))
 	end)
-	if ok and saved then
-		stored.Value = saved
-	end
+	if ok and saved then stored.Value = saved end
 
-	sessionStart[player.UserId] = tick()
+	sessionStart[uid] = tick()
+	nameCache[uid] = player.Name
 
-	-- Periodically save time
 	task.spawn(function()
-		while player.Parent do
+		while player.Parent and activeLoops[uid] and activeLoops[uid].id == loopId do
 			task.wait(TIME_SAVE_INTERVAL)
 			if not player.Parent then break end
-			-- Update stored value with session time
 			stored.Value = stored.Value + getSessionSeconds(player)
-			sessionStart[player.UserId] = tick() -- reset session timer
+			sessionStart[uid] = tick()
 			saveTimeToStore(player)
 		end
 	end)
 end
 
-Players.PlayerAdded:Connect(function(player)
-	task.spawn(hookPlayer, player)
-end)
+Players.PlayerAdded:Connect(function(player) task.spawn(hookPlayer, player) end)
 
 Players.PlayerRemoving:Connect(function(player)
-	-- Final save on leave
+	activeLoops[player.UserId] = nil
 	local stored = player:FindFirstChild("TimePlayed")
 	if stored then
 		stored.Value = stored.Value + getSessionSeconds(player)
@@ -95,22 +102,16 @@ Players.PlayerRemoving:Connect(function(player)
 	saveCooldowns[player.UserId] = nil
 end)
 
-for _, p in pairs(Players:GetPlayers()) do
-	task.spawn(hookPlayer, p)
-end
+for _, p in pairs(Players:GetPlayers()) do task.spawn(hookPlayer, p) end
 
 -- ── FORMAT TIME ───────────────────────────────────────────────────────────
 local function formatTime(seconds)
 	local d = math.floor(seconds / 86400)
 	local h = math.floor((seconds % 86400) / 3600)
 	local m = math.floor((seconds % 3600) / 60)
-	if d > 0 then
-		return string.format("%dd %dh %dm", d, h, m)
-	elseif h > 0 then
-		return string.format("%dh %dm", h, m)
-	else
-		return string.format("%dm", m)
-	end
+	if d > 0 then return string.format("%dd %dh %dm", d, h, m)
+	elseif h > 0 then return string.format("%dh %dm", h, m)
+	else return string.format("%dm", m) end
 end
 
 -- ── BUILD GUI ─────────────────────────────────────────────────────────────
@@ -302,12 +303,13 @@ local function fetchFromDataStore()
 	while true do
 		for _, entry in pairs(pages:GetCurrentPage()) do
 			local uid = tonumber(entry.key)
-			local name = "[Unknown]"
-			local nameOk, res = pcall(function()
-				return Players:GetNameFromUserIdAsync(uid)
-			end)
-			if nameOk then name = res end
-			results[uid] = {name = name, seconds = entry.value, userId = uid}
+			if not nameCache[uid] then
+				local nameOk, res = pcall(function()
+					return Players:GetNameFromUserIdAsync(uid)
+				end)
+				nameCache[uid] = nameOk and res or "[Unknown]"
+			end
+			results[uid] = { name = nameCache[uid], seconds = entry.value, userId = uid }
 		end
 		if pages.IsFinished then break end
 		pages:AdvanceToNextPageAsync()
@@ -321,10 +323,11 @@ local function getMergedData()
 	local merged = {}
 
 	for uid, entry in pairs(cachedData) do
-		merged[uid] = {name = entry.name, seconds = entry.seconds, online = false, userId = uid}
+		merged[uid] = { name = entry.name, seconds = entry.seconds, online = false, userId = uid }
 	end
 
 	for _, player in pairs(Players:GetPlayers()) do
+		nameCache[player.UserId] = player.Name
 		merged[player.UserId] = {
 			name = player.Name,
 			seconds = getTotalSeconds(player),
@@ -339,7 +342,7 @@ local function getMergedData()
 	return arr
 end
 
--- ── POPULATE ──────────────────────────────────────────────────────────────
+-- ── POPULATE GUI ──────────────────────────────────────────────────────────
 local function populateGui(gui, data)
 	local scroll = gui.Background:FindFirstChild("EntryList")
 	if not scroll then return end
@@ -361,7 +364,100 @@ local function populateGui(gui, data)
 	scroll.CanvasSize = UDim2.new(0, 0, 0, #data * (ROW_HEIGHT + ROW_PADDING))
 end
 
--- ── MAIN LOOP ─────────────────────────────────────────────────────────────
+-- ── RIG NAMETAG ───────────────────────────────────────────────────────────
+local function createNametag(rig, name)
+	local head = rig:FindFirstChild("Head")
+	if not head then return end
+
+	local existing = head:FindFirstChild("TrophyGui")
+	if existing then existing:Destroy() end
+
+	local humanoid = rig:FindFirstChildOfClass("Humanoid")
+	if humanoid then humanoid.DisplayName = name end
+
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "TrophyGui"
+	gui.Size = UDim2.new(1.5, 0, 1.6, 0)
+	gui.StudsOffset = Vector3.new(0, 4, 0)
+	gui.AlwaysOnTop = false
+	gui.LightInfluence = 0
+	gui.Parent = head
+
+	local trophy = Instance.new("ImageLabel")
+	trophy.Size = UDim2.new(1, 0, 1, 0)
+	trophy.BackgroundTransparency = 1
+	trophy.Image = "rbxassetid://9722127533"
+	trophy.ScaleType = Enum.ScaleType.Fit
+	trophy.Parent = gui
+end
+
+-- ── SPAWN RIG ─────────────────────────────────────────────────────────────
+local function spawnRig(userId)
+	if currentRig then
+		currentRig:Destroy()
+		currentRig = nil
+	end
+
+	local rig = rigTemplate:Clone()
+	rig.Name = "TimeTopPlayerRig_Active"
+	rig.Parent = workspace
+
+	local hrp = rig:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		hrp.CFrame = spawnPoint.CFrame + Vector3.new(0, spawnPoint.Size.Y / 2 + 3, 0)
+		hrp.Anchored = true
+	end
+
+	for _, part in pairs(rig:GetDescendants()) do
+		if part:IsA("BasePart") then part.CanCollide = false end
+	end
+
+	task.spawn(function()
+		local humanoid = rig:FindFirstChildOfClass("Humanoid")
+		if not humanoid then return end
+
+		local ok, desc = pcall(function()
+			return Players:GetHumanoidDescriptionFromUserIdAsync(userId)
+		end)
+		if ok and desc then
+			pcall(function() humanoid:ApplyDescriptionResetAsync(desc) end)
+		end
+
+		local name = nameCache[userId] or "Unknown"
+		createNametag(rig, name)
+	end)
+
+	task.spawn(function()
+		local humanoid = rig:FindFirstChildOfClass("Humanoid")
+		if not humanoid then return end
+		local animator = humanoid:WaitForChild("Animator", 5)
+		if not animator then return end
+
+		local anim = Instance.new("Animation")
+		anim.AnimationId = danceAnim.AnimationId
+		local track = animator:LoadAnimation(anim)
+		track.Looped = true
+		track:Play()
+	end)
+
+	currentRig = rig
+	currentTopUserId = userId
+end
+
+-- ── UPDATE RIG ────────────────────────────────────────────────────────────
+local function updateRig(data)
+	if #data == 0 then return end
+	local top = data[1]
+	if top.seconds <= 0 then return end
+
+	if top.userId ~= currentTopUserId then
+		spawnRig(top.userId)
+		currentTopSeconds = top.seconds
+	end
+	-- Note: no nametag cash update needed here since time rig only shows name/trophy
+end
+
+-- ── MAIN ──────────────────────────────────────────────────────────────────
 local gui = buildGui(leaderboardPart)
 local lastDsFetch = 0
 
@@ -371,6 +467,10 @@ while true do
 		cachedData = fetchFromDataStore()
 		lastDsFetch = now
 	end
-	pcall(populateGui, gui, getMergedData())
+
+	local merged = getMergedData()
+	pcall(populateGui, gui, merged)
+	pcall(updateRig, merged)
+
 	task.wait(LIVE_UPDATE_INTERVAL)
 end
