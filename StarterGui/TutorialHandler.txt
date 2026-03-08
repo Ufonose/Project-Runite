@@ -144,10 +144,12 @@ descLbl.TextWrapped = true; descLbl.TextYAlignment = Enum.TextYAlignment.Center
 
 local dismissBtn = Instance.new("TextButton")
 dismissBtn.Size = UDim2.new(0.18, 0, 0.8, 0); dismissBtn.Position = UDim2.new(0.805, 0, 0.1, 0)
-dismissBtn.BackgroundColor3 = Color3.fromRGB(28, 55, 28); dismissBtn.BackgroundTransparency = 0.2
-dismissBtn.Text = "Dismiss"; dismissBtn.TextColor3 = Color3.fromRGB(120, 200, 120)
+dismissBtn.BackgroundColor3 = Color3.fromRGB(55, 18, 18)   -- red background during skip mode
+dismissBtn.BackgroundTransparency = 0.2
+dismissBtn.Text = "Skip"; dismissBtn.TextColor3 = Color3.fromRGB(220, 90, 90)   -- red text
 dismissBtn.TextScaled = true; dismissBtn.Font = Enum.Font.Gotham; dismissBtn.ZIndex = 63
-dismissBtn.Visible = false; dismissBtn.Parent = titleBar
+dismissBtn.Visible = true   -- visible from the very first step
+dismissBtn.Parent = titleBar
 do
 	local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0.2, 0); c.Parent = dismissBtn
 	local con = Instance.new("UITextSizeConstraint"); con.MaxTextSize = 11; con.Parent = dismissBtn
@@ -324,6 +326,14 @@ local function checkGhostSlot(filled, ghostTable, positions, hitboxPos, snapDist
 end
 
 -- ============================================================================
+-- SKIP BUTTON — connected once, active on steps 1-5
+-- ============================================================================
+local skipConn
+skipConn = dismissBtn.MouseButton1Click:Connect(function()
+	showFinalNote()
+end)
+
+-- ============================================================================
 -- STEP 1 — Buy the free mining hotspot
 -- ============================================================================
 startStep1 = function()
@@ -374,6 +384,20 @@ startStep2 = function()
 	local cleanupArrow = spawnButtonArrow(invBtn)
 	if not invBtn then warn("[Tutorial] Could not find Inv button for step 2 arrow") end
 	table.insert(stepConns, { Disconnect = cleanupArrow })
+
+	-- Remove the arrow as soon as the player clicks the Inv button
+	if invBtn then
+		local arrowRemoved = false
+		local invClickConn
+		invClickConn = invBtn.MouseButton1Click:Connect(function()
+			if not arrowRemoved then
+				arrowRemoved = true
+				cleanupArrow()
+				invClickConn:Disconnect()
+			end
+		end)
+		table.insert(stepConns, invClickConn)
+	end
 
 	local placedFolder = plot:FindFirstChild("PlacedItems") or plot:FindFirstChild("Items")
 	if not placedFolder then warn("[Tutorial] Could not find PlacedItems folder"); return end
@@ -513,10 +537,15 @@ showFinalNote = function()
 	destroyGhosts(ghostConveyors)
 	destroyGhosts(ghostCorners)
 
+	-- Disconnect the skip handler and swap button to green Dismiss style
+	if skipConn then skipConn:Disconnect(); skipConn = nil end
+	dismissBtn.BackgroundColor3 = Color3.fromRGB(28, 55, 28)
+	dismissBtn.TextColor3       = Color3.fromRGB(120, 200, 120)
+	dismissBtn.Text             = "Dismiss"
+
 	titleLbl.Text = "🎉  You're Ready!"
 	descLbl.Text  = "You're all set! Keep completing Research to progress through the Ages, earn Research Tokens to buy more miners and cave expansions, and unlock new items in the Shop. Don't forget to check the Upgrades tab in the Shop to improve your mining operation! Good luck, miner!"
 
-	dismissBtn.Visible = true
 	pcall(function() Events:WaitForChild("SetTutorialDone"):FireServer() end)
 
 	local function closePanel()
