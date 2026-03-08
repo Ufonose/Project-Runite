@@ -571,7 +571,7 @@ function SpeedrunHandler.StartRun(player)
 	speedrun.StartTime       = os.time()
 	speedrun.ElapsedOnPause  = 0
 	speedrun.AgeSplits       = {}
-	speedrun.AgeStartTimes   = { [1] = 0 }  -- Age 1 always starts at t=0
+	speedrun.AgeStartTimes   = {}  -- Age 1 always starts at t=0
 	speedrun.CompletedTime   = 0
 
 	teleportToSpawn(player)
