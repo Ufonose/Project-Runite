@@ -1,8 +1,12 @@
 -- ServerScriptService/SpeedrunLeaderboardServer
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
+local ServerStorage = game:GetService("ServerStorage")
 
-local leaderboardPart = workspace:WaitForChild("Leaderboards"):WaitForChild("SpeedrunLeaderboard") -- adjust path
+local leaderboardPart = workspace:WaitForChild("Leaderboards"):WaitForChild("SpeedrunLeaderboard")
+local spawnPoint      = workspace:WaitForChild("Leaderboards"):WaitForChild("SpeedrunRigSpawnPoint")
+local rigTemplate     = ServerStorage:WaitForChild("TopPlayerRig")
+local danceAnim       = rigTemplate:WaitForChild("DanceAnimation")
 
 local DS_FETCH_INTERVAL   = 120
 local LIVE_UPDATE_INTERVAL = 5
@@ -10,8 +14,13 @@ local MAX_ENTRIES = 100
 local ROW_HEIGHT  = 36
 local ROW_PADDING = 5
 
-local SpeedrunStore = DataStoreService:GetOrderedDataStore("Speedrun_Total_v1")
+local SpeedrunStore = DataStoreService:GetOrderedDataStore("Speedrun_Total_v4")
 local cachedData    = {}
+local nameCache     = {}
+
+local currentRig         = nil
+local currentTopUserId   = nil
+local currentTopSeconds  = 0
 
 -- ── TIME FORMAT ───────────────────────────────────────────────────────────
 local function formatTime(s)
@@ -103,7 +112,7 @@ end
 local TOP3_BG   = {Color3.fromRGB(45,38,10), Color3.fromRGB(35,35,40), Color3.fromRGB(42,28,10)}
 local TOP3_TEXT = {Color3.fromRGB(255,215,0), Color3.fromRGB(200,200,210), Color3.fromRGB(210,130,60)}
 
-local function createRow(parent, rank, name, seconds, userId)
+local function createRow(parent, rank, name, seconds, isOnline, userId)
 	local isTop3 = rank <= 3
 
 	local row = Instance.new("Frame")
@@ -122,7 +131,6 @@ local function createRow(parent, rank, name, seconds, userId)
 	stroke.Transparency = isTop3 and 0.4 or 0.2
 	stroke.Parent = row
 
-	-- Rank
 	local rankLabel = Instance.new("TextLabel")
 	rankLabel.Size = UDim2.new(0.13, 0, 1, 0)
 	rankLabel.Position = UDim2.new(0.01, 0, 0, 0)
@@ -133,7 +141,6 @@ local function createRow(parent, rank, name, seconds, userId)
 	rankLabel.Font = Enum.Font.GothamBold
 	rankLabel.Parent = row
 
-	-- Avatar
 	local avatar = Instance.new("ImageLabel")
 	avatar.Size = UDim2.new(0, ROW_HEIGHT - 8, 0, ROW_HEIGHT - 8)
 	avatar.Position = UDim2.new(0.155, 0, 0.5, -(ROW_HEIGHT - 8) / 2)
@@ -158,7 +165,22 @@ local function createRow(parent, rank, name, seconds, userId)
 		end)
 	end
 
-	-- Name
+	if isOnline then
+		local dot = Instance.new("Frame")
+		dot.Size = UDim2.new(0, 8, 0, 8)
+		dot.Position = UDim2.new(0.155, ROW_HEIGHT - 14, 0.5, (ROW_HEIGHT - 8) / 2 - 4)
+		dot.BackgroundColor3 = Color3.fromRGB(80, 255, 120)
+		dot.BorderSizePixel = 0
+		dot.ZIndex = 2
+		dot.Parent = row
+		Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+
+		local dotStroke = Instance.new("UIStroke")
+		dotStroke.Color = Color3.fromRGB(12, 12, 18)
+		dotStroke.Thickness = 1.5
+		dotStroke.Parent = dot
+	end
+
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Size = UDim2.new(0.42, 0, 1, 0)
 	nameLabel.Position = UDim2.new(0.32, 0, 0, 0)
@@ -170,7 +192,6 @@ local function createRow(parent, rank, name, seconds, userId)
 	nameLabel.Font = isTop3 and Enum.Font.GothamBold or Enum.Font.Gotham
 	nameLabel.Parent = row
 
-	-- Time
 	local timeLabel = Instance.new("TextLabel")
 	timeLabel.Size = UDim2.new(0.30, 0, 1, 0)
 	timeLabel.Position = UDim2.new(0.685, 0, 0, 0)
@@ -184,8 +205,6 @@ local function createRow(parent, rank, name, seconds, userId)
 end
 
 -- ── FETCH DS ──────────────────────────────────────────────────────────────
--- Values are stored as negative integers (faster = more negative = higher rank)
--- GetSortedAsync(false) = descending, so most negative (fastest) comes first
 local function fetchFromDataStore()
 	local results = {}
 	local ok, pages = pcall(function()
@@ -196,13 +215,13 @@ local function fetchFromDataStore()
 	while true do
 		for _, entry in pairs(pages:GetCurrentPage()) do
 			local uid = tonumber(entry.key)
-			local name = "[Unknown]"
-			local nameOk, res = pcall(function()
-				return Players:GetNameFromUserIdAsync(uid)
-			end)
-			if nameOk then name = res end
-			-- Negate back to positive seconds for display
-			results[uid] = { name = name, seconds = math.abs(entry.value), userId = uid }
+			if not nameCache[uid] then
+				local nameOk, res = pcall(function()
+					return Players:GetNameFromUserIdAsync(uid)
+				end)
+				nameCache[uid] = nameOk and res or "[Unknown]"
+			end
+			results[uid] = { name = nameCache[uid], seconds = math.abs(entry.value), userId = uid }
 		end
 		if pages.IsFinished then break end
 		pages:AdvanceToNextPageAsync()
@@ -212,32 +231,39 @@ local function fetchFromDataStore()
 end
 
 -- ── MERGE DATA ────────────────────────────────────────────────────────────
--- Overlays live online PBs onto the DS cache so new runs show immediately
 local function getMergedData()
 	local merged = {}
 
 	for uid, entry in pairs(cachedData) do
-		merged[uid] = { name = entry.name, seconds = entry.seconds, userId = uid }
+		merged[uid] = { name = entry.name, seconds = entry.seconds, online = false, userId = uid }
 	end
 
 	for _, player in pairs(Players:GetPlayers()) do
-		local pb = player:FindFirstChild("SpeedrunPB") -- adjust to match SpeedrunHandler
+		local pb = player:FindFirstChild("SpeedrunPB")
 		if pb and pb.Value > 0 then
+			nameCache[player.UserId] = player.Name
 			local existing = merged[player.UserId]
 			if not existing or pb.Value < existing.seconds then
 				merged[player.UserId] = {
 					name    = player.Name,
 					seconds = pb.Value,
+					online  = true,
 					userId  = player.UserId,
 				}
+			else
+				-- player is online but not top, still mark them online if they appear
+				merged[player.UserId].online = true
 			end
 		end
 	end
 
-	return merged
+	local arr = {}
+	for _, v in pairs(merged) do table.insert(arr, v) end
+	table.sort(arr, function(a, b) return a.seconds < b.seconds end)
+	return arr
 end
 
--- ── POPULATE ──────────────────────────────────────────────────────────────
+-- ── POPULATE GUI ──────────────────────────────────────────────────────────
 local function populateGui(gui, data)
 	local scroll = gui.Background:FindFirstChild("EntryList")
 	if not scroll then return end
@@ -246,22 +272,141 @@ local function populateGui(gui, data)
 		if c:IsA("Frame") then c:Destroy() end
 	end
 
-	-- Sort by fastest time (ascending seconds)
-	local arr = {}
-	for _, v in pairs(data) do table.insert(arr, v) end
-	table.sort(arr, function(a, b) return a.seconds < b.seconds end)
-
-	if #arr == 0 then
-		createRow(scroll, 1, "No runs completed yet!", 0, nil)
+	if #data == 0 then
+		createRow(scroll, 1, "No runs completed yet!", 0, false, nil)
 		scroll.CanvasSize = UDim2.new(0, 0, 0, ROW_HEIGHT)
 		return
 	end
 
-	for i, entry in ipairs(arr) do
-		createRow(scroll, i, entry.name, entry.seconds, entry.userId)
+	for i, entry in ipairs(data) do
+		createRow(scroll, i, entry.name, entry.seconds, entry.online, entry.userId)
 	end
 
-	scroll.CanvasSize = UDim2.new(0, 0, 0, #arr * (ROW_HEIGHT + ROW_PADDING))
+	scroll.CanvasSize = UDim2.new(0, 0, 0, #data * (ROW_HEIGHT + ROW_PADDING))
+end
+
+-- ── RIG NAMETAG ───────────────────────────────────────────────────────────
+local function createNametag(rig, name, timeSeconds)
+	local head = rig:FindFirstChild("Head")
+	if not head then return end
+
+	local existing = head:FindFirstChild("TrophyGui")
+	if existing then existing:Destroy() end
+
+	local humanoid = rig:FindFirstChildOfClass("Humanoid")
+	if humanoid then humanoid.DisplayName = name end
+
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "TrophyGui"
+	gui.Size = UDim2.new(4, 0, 2.5, 0)
+	gui.StudsOffset = Vector3.new(0, 4, 0)
+	gui.AlwaysOnTop = false
+	gui.LightInfluence = 0
+	gui.Parent = head
+
+	local trophy = Instance.new("ImageLabel")
+	trophy.Size = UDim2.new(0.25, 0, 0.6, 0)
+	trophy.AnchorPoint = Vector2.new(0, 0.5)
+	trophy.Position = UDim2.new(0, 0, 0.5, 0)
+	trophy.BackgroundTransparency = 1
+	trophy.Image = "rbxassetid://9722127533"
+	trophy.ScaleType = Enum.ScaleType.Fit
+	trophy.Parent = gui
+
+	local timeLabel = Instance.new("TextLabel")
+	timeLabel.Name = "TimeLabel"
+	timeLabel.Size = UDim2.new(0.7, 0, 0.6, 0)
+	timeLabel.AnchorPoint = Vector2.new(0, 0.5)
+	timeLabel.Position = UDim2.new(0.28, 0, 0.5, 0)
+	timeLabel.BackgroundTransparency = 1
+	timeLabel.Text = formatTime(timeSeconds)
+	timeLabel.TextColor3 = Color3.fromRGB(80, 220, 120)
+	timeLabel.TextScaled = true
+	timeLabel.Font = Enum.Font.GothamBold
+	timeLabel.TextXAlignment = Enum.TextXAlignment.Left
+	timeLabel.Parent = gui
+
+	local tc = Instance.new("UITextSizeConstraint", timeLabel)
+	tc.MaxTextSize = 18
+end
+
+-- ── SPAWN RIG ─────────────────────────────────────────────────────────────
+local function spawnRig(userId, timeSeconds)
+	if currentRig then
+		currentRig:Destroy()
+		currentRig = nil
+	end
+
+	local rig = rigTemplate:Clone()
+	rig.Name = "SpeedrunTopPlayerRig_Active"
+	rig.Parent = workspace
+
+	local hrp = rig:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		hrp.CFrame = spawnPoint.CFrame + Vector3.new(0, spawnPoint.Size.Y / 2 + 3, 0)
+		hrp.Anchored = true
+	end
+
+	for _, part in pairs(rig:GetDescendants()) do
+		if part:IsA("BasePart") then part.CanCollide = false end
+	end
+
+	task.spawn(function()
+		local humanoid = rig:FindFirstChildOfClass("Humanoid")
+		if not humanoid then return end
+
+		local ok, desc = pcall(function()
+			return Players:GetHumanoidDescriptionFromUserIdAsync(userId)
+		end)
+		if ok and desc then
+			pcall(function() humanoid:ApplyDescriptionResetAsync(desc) end)
+		end
+
+		local name = nameCache[userId] or "Unknown"
+		createNametag(rig, name, timeSeconds)
+	end)
+
+	task.spawn(function()
+		local humanoid = rig:FindFirstChildOfClass("Humanoid")
+		if not humanoid then return end
+		local animator = humanoid:WaitForChild("Animator", 5)
+		if not animator then return end
+
+		local anim = Instance.new("Animation")
+		anim.AnimationId = danceAnim.AnimationId
+		local track = animator:LoadAnimation(anim)
+		track.Looped = true
+		track:Play()
+	end)
+
+	currentRig = rig
+	currentTopUserId = userId
+	currentTopSeconds = timeSeconds
+end
+
+-- ── UPDATE RIG NAMETAG IN PLACE ───────────────────────────────────────────
+local function updateRigTime(timeSeconds)
+	if not currentRig then return end
+	local head = currentRig:FindFirstChild("Head")
+	if not head then return end
+	local trophyGui = head:FindFirstChild("TrophyGui")
+	if not trophyGui then return end
+	local label = trophyGui:FindFirstChild("TimeLabel")
+	if label then label.Text = formatTime(timeSeconds) end
+end
+
+-- ── UPDATE RIG ────────────────────────────────────────────────────────────
+local function updateRig(data)
+	if #data == 0 then return end
+	local top = data[1] -- already sorted ascending by seconds, first = fastest
+	if top.seconds <= 0 then return end
+
+	if top.userId ~= currentTopUserId then
+		spawnRig(top.userId, top.seconds)
+	elseif top.seconds ~= currentTopSeconds then
+		updateRigTime(top.seconds)
+		currentTopSeconds = top.seconds
+	end
 end
 
 -- ── MAIN ──────────────────────────────────────────────────────────────────
@@ -274,6 +419,10 @@ while true do
 		cachedData = fetchFromDataStore()
 		lastDsFetch = now
 	end
-	pcall(populateGui, gui, getMergedData())
+
+	local merged = getMergedData()
+	pcall(populateGui, gui, merged)
+	pcall(updateRig, merged)
+
 	task.wait(LIVE_UPDATE_INTERVAL)
 end
