@@ -199,8 +199,8 @@ local function performReset(player)
 	if session["Items"]["7"] then session["Items"]["7"]["Amount"] = 4  end
 
 	-- 7. Reset cash
-	plrCash.Value    = 10000
-	session["Money"] = 10000
+	plrCash.Value    = 50000
+	session["Money"] = 50000
 
 	-- 8. Reset barriers / hotspots
 	session["UnlockedBarriers"] = {}
