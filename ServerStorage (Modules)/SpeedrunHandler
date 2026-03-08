@@ -51,6 +51,7 @@ SpeedrunHandler.Remotes = {
 	EnteredSpeedrunMode    = getOrCreate("EnteredSpeedrunMode",    "RemoteEvent"),
 	RestoredMainPlot       = getOrCreate("RestoredMainPlot",       "RemoteEvent"),
 	AllResearchCompleted   = getOrCreate("AllResearchCompleted",   "RemoteEvent"),
+	SpeedrunAgeStarted     = getOrCreate("SpeedrunAgeStarted",     "RemoteEvent"),
 }
 
 -- ============================================================
@@ -332,6 +333,7 @@ function SpeedrunHandler.OnObjectiveStarted(player, objectiveId)
 	if not speedrun.AgeStartTimes[ageId] then
 		speedrun.AgeStartTimes[ageId] = getElapsed(speedrun)
 		print(string.format("[Speedrun] %s — Age %d timer started at %ds", player.Name, ageId, speedrun.AgeStartTimes[ageId]))
+		SpeedrunHandler.Remotes.SpeedrunAgeStarted:FireClient(player, ageId, speedrun.AgeStartTimes[ageId])  -- ← add this
 	end
 end
 
