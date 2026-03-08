@@ -1,0 +1,673 @@
+-- ServerStorage/Modules/SpeedrunHandler
+-- Handles all speedrun logic: start, reset, age splits, leaderboard saves, snapshot/restore
+
+local ServerStorage    = game:GetService("ServerStorage")
+local RepStorage       = game:GetService("ReplicatedStorage")
+local DataStoreService = game:GetService("DataStoreService")
+local Players          = game:GetService("Players")
+
+local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
+local ResearchData  = require(ServerStorage.Modules.ResearchData)
+
+local SpeedrunHandler = {}
+
+-- ============================================================
+-- LEADERBOARD DATA STORES
+-- ============================================================
+local LeaderboardStores = {
+	[1]       = DataStoreService:GetOrderedDataStore("Speedrun_Age1_v1"),
+	[2]       = DataStoreService:GetOrderedDataStore("Speedrun_Age2_v1"),
+	[3]       = DataStoreService:GetOrderedDataStore("Speedrun_Age3_v1"),
+	[4]       = DataStoreService:GetOrderedDataStore("Speedrun_Age4_v1"),
+	["Total"] = DataStoreService:GetOrderedDataStore("Speedrun_Total_v1"),
+}
+
+-- ============================================================
+-- REMOTES
+-- ============================================================
+local Events = RepStorage:WaitForChild("Events")
+
+local function getOrCreate(name, class)
+	local existing = Events:FindFirstChild(name)
+	if existing then return existing end
+	local obj = Instance.new(class)
+	obj.Name   = name
+	obj.Parent = Events
+	return obj
+end
+
+SpeedrunHandler.Remotes = {
+	StartSpeedrun          = getOrCreate("StartSpeedrun",          "RemoteFunction"),
+	ResetSpeedrun          = getOrCreate("ResetSpeedrun",          "RemoteFunction"),
+	GetSpeedrunData        = getOrCreate("GetSpeedrunData",        "RemoteFunction"),
+	GetSpeedrunLeaderboard = getOrCreate("GetSpeedrunLeaderboard", "RemoteFunction"),
+	EnterSpeedrunMode      = getOrCreate("EnterSpeedrunMode",      "RemoteFunction"),
+	ReturnToMainPlot       = getOrCreate("ReturnToMainPlot",       "RemoteFunction"),
+
+	SpeedrunStarted        = getOrCreate("SpeedrunStarted",        "RemoteEvent"),
+	SpeedrunAgeSplit       = getOrCreate("SpeedrunAgeSplit",       "RemoteEvent"),
+	SpeedrunCompleted      = getOrCreate("SpeedrunCompleted",      "RemoteEvent"),
+	SpeedrunReset          = getOrCreate("SpeedrunReset",          "RemoteEvent"),
+	EnteredSpeedrunMode    = getOrCreate("EnteredSpeedrunMode",    "RemoteEvent"),
+	RestoredMainPlot       = getOrCreate("RestoredMainPlot",       "RemoteEvent"),
+	AllResearchCompleted   = getOrCreate("AllResearchCompleted",   "RemoteEvent"),
+}
+
+-- ============================================================
+-- HELPERS
+-- ============================================================
+local function getSpeedrun(player)
+	local session = PlayerSession.Get(player)
+	return session and session["Speedrun"]
+end
+
+local function getResearch(player)
+	local session = PlayerSession.Get(player)
+	return session and session["Research"]
+end
+
+local function getElapsed(speedrun)
+	if not speedrun.IsActive then return 0 end
+	if speedrun.StartTime == 0 then return speedrun.ElapsedOnPause or 0 end
+	return os.time() - speedrun.StartTime
+end
+
+-- Segment time is now independent: end time minus when that age's timer started
+local function getSegmentTime(ageSplits, ageId, currentElapsed, ageStartTimes)
+	local endTime = currentElapsed or ageSplits[ageId]
+	if not endTime then return nil end
+	local startTime = (ageStartTimes and ageStartTimes[ageId]) or 0
+	return endTime - startTime
+end
+
+local function allResearchCompleted(completedObjectives)
+	for _, obj in pairs(ResearchData.Objectives) do
+		if not table.find(completedObjectives, obj.Id) then return false end
+	end
+	return true
+end
+
+-- Requires ALL objectives in the age to be completed
+local function isAgeCompleted(ageId, completedObjectives)
+	local ageObjectives = ResearchData.GetObjectivesByAge(ageId)
+	if #ageObjectives == 0 then return false end
+	for _, obj in pairs(ageObjectives) do
+		if not table.find(completedObjectives, obj.Id) then return false end
+	end
+	return true
+end
+
+-- Deep copy helper
+local function deepCopy(t)
+	if type(t) ~= "table" then return t end
+	local copy = {}
+	for k, v in pairs(t) do copy[k] = deepCopy(v) end
+	return copy
+end
+
+-- ============================================================
+-- TELEPORT TO SPAWN
+-- ============================================================
+local SPAWN_HEIGHT = 5
+
+local function teleportToSpawn(player)
+	local setPlot = player:FindFirstChild("SetPlot")
+	local plot    = setPlot and setPlot.Value
+	if not plot then return end
+
+	local spawnPart = plot:FindFirstChild("SpawnLocation")
+	if not spawnPart then
+		warn("[Speedrun] SpawnLocation not found in plot for", player.Name)
+		return
+	end
+
+	local char = player.Character
+	local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	hrp.CFrame = CFrame.new(spawnPart.Position + Vector3.new(0, SPAWN_HEIGHT, 0))
+end
+
+-- ============================================================
+-- RESET (used by StartRun and ResetRun)
+-- ============================================================
+local function performReset(player)
+	local session = PlayerSession.Get(player)
+	if not session then return false end
+
+	local PLR_PLOT = player.SetPlot and player.SetPlot.Value
+	if not PLR_PLOT then return false end
+
+	local plrCash = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(player.Name)
+	if not plrCash then return false end
+
+	-- 1. Clear ores
+	local oresDropped = PLR_PLOT:FindFirstChild("MiscInfo") and PLR_PLOT.MiscInfo:FindFirstChild("OresDropped")
+	if oresDropped then oresDropped:ClearAllChildren() end
+
+	-- 2. Clear placed items (preserve HotspotFurnace / item id 3)
+	for _, item in pairs(PLR_PLOT.PlacedItems:GetChildren()) do
+		if item:GetAttribute("HotspotFurnace") then continue end
+		local statsModule = item:FindFirstChild("ItemStats")
+		if statsModule and statsModule:IsA("ModuleScript") then
+			local ok, info = pcall(require, statsModule)
+			if ok and info and info.ItemId == 3 then continue end
+		end
+		item:Destroy()
+	end
+
+	-- 3. Restore CaveUnlocks / MinerHotspots from PlotTemplates
+	local plotTemplates = ServerStorage:FindFirstChild("PlotTemplates")
+	if plotTemplates then
+		local template = plotTemplates:FindFirstChild(PLR_PLOT.Name)
+		if template then
+			local function restoreChild(name)
+				local src = template:FindFirstChild(name)
+				if src then
+					local ex = PLR_PLOT:FindFirstChild(name)
+					if ex then ex:Destroy() end
+					src:Clone().Parent = PLR_PLOT
+				end
+			end
+			restoreChild("CaveUnlocks")
+			restoreChild("MinerHotspots")
+		end
+	end
+
+	-- 4. Wipe inventory amounts (keep table structure)
+	for _, data in pairs(session["Items"]) do
+		if data then data["Amount"] = 0 end
+	end
+
+	-- 5. Speedrun: unlock all shop items
+	for _, item in pairs(RepStorage.Items:GetChildren()) do
+		local stats = item:FindFirstChild("ItemStats")
+		if stats then
+			local ok, info = pcall(require, stats)
+			if ok and info then
+				local idStr = tostring(info.ItemId)
+				if session["Items"][idStr] then
+					session["Items"][idStr]["Unlocked"] = true
+				end
+			end
+		end
+	end
+
+	-- 6. Restore starter items
+	if session["Items"]["2"] then session["Items"]["2"]["Amount"] = 18 end
+	if session["Items"]["7"] then session["Items"]["7"]["Amount"] = 4  end
+
+	-- 7. Reset cash
+	plrCash.Value    = 10000
+	session["Money"] = 10000
+
+	-- 8. Reset barriers / hotspots
+	session["UnlockedBarriers"] = {}
+	session["MinerHotspots"]    = { UnlockedHotspots = {} }
+
+	-- 9. Reset research (preserve ItemsCollected)
+	local savedCollected = session["Research"] and session["Research"]["ItemsCollected"] or {}
+	session["Research"] = {
+		CompletedObjectives = {},
+		ActiveObjectives    = {},
+		ObjectiveProgress   = {},
+		ItemsCollected      = savedCollected,
+	}
+
+	-- 10. Reset research tokens
+	session["ResearchTokens"] = 0
+	local rtVal = player:FindFirstChild("ResearchTokens")
+	if rtVal then rtVal.Value = 0 end
+
+	-- 11. Tell client to refresh inventory
+	RepStorage.Events.InventoryUpdate:FireClient(player)
+	session["PlotItemPlaced"] = {}
+
+	return true
+end
+
+-- ============================================================
+-- LEADERBOARD SAVE
+-- Store times as NEGATIVE integers so OrderedDataStore descending = fastest first
+-- ============================================================
+local saveCooldowns = {}
+
+local function saveToLeaderboard(player, ageId, timeSeconds)
+	local key = tostring(player.UserId) .. "_" .. tostring(ageId)
+	local now = os.time()
+	if saveCooldowns[key] and now - saveCooldowns[key] < 30 then
+		warn("[Speedrun LB] Cooldown blocked save for", player.Name, "ageId:", ageId)
+		return
+	end
+	saveCooldowns[key] = now
+
+	local store = LeaderboardStores[ageId]
+	if not store then
+		warn("[Speedrun LB] No store found for ageId:", ageId)
+		return
+	end
+
+	local negTime = -math.floor(timeSeconds)
+	local ok, err = pcall(function()
+		store:UpdateAsync(tostring(player.UserId), function(existing)
+			if existing == nil or negTime > existing then return negTime end
+			return existing
+		end)
+	end)
+
+	if ok then
+		print(string.format("[Speedrun LB] ✅ Saved %s | Age %s | %ds", player.Name, tostring(ageId), timeSeconds))
+	else
+		warn(string.format("[Speedrun LB] ❌ UpdateAsync failed | Age %s | %s", tostring(ageId), tostring(err)))
+	end
+end
+
+-- ============================================================
+-- FETCH LEADERBOARD
+-- ============================================================
+local nameCache = {}
+
+local function fetchLeaderboard(ageId)
+	local store = LeaderboardStores[ageId]
+	if not store then return {} end
+
+	local success, pages = pcall(function() return store:GetSortedAsync(false, 100) end)
+	if not success then return {} end
+
+	local ok, pageData = pcall(function() return pages:GetCurrentPage() end)
+	if not ok then return {} end
+
+	local results = {}
+	for rank, entry in ipairs(pageData) do
+		results[rank] = {
+			rank   = rank,
+			name   = "[Unknown]",
+			time   = math.abs(entry.value),
+			userId = tonumber(entry.key),
+		}
+	end
+
+	-- Fetch all names in parallel
+	local pending = #results
+	local done    = Instance.new("BindableEvent")
+
+	for _, result in ipairs(results) do
+		task.spawn(function()
+			local uid = result.userId
+			if nameCache[uid] then
+				result.name = nameCache[uid]
+			else
+				local nameOk, name = pcall(function()
+					return Players:GetNameFromUserIdAsync(uid)
+				end)
+				if nameOk and name then
+					nameCache[uid] = name
+					result.name = name
+				end
+			end
+			pending -= 1
+			if pending == 0 then done:Fire() end
+		end)
+	end
+
+	if pending > 0 then done.Event:Wait() end
+	done:Destroy()
+
+	return results
+end
+
+-- ============================================================
+-- PUBLIC: Called from ResearchHandler when an objective is STARTED
+-- Records the start time for an age's timer (first objective started in that age)
+-- ============================================================
+function SpeedrunHandler.OnObjectiveStarted(player, objectiveId)
+	local speedrun = getSpeedrun(player)
+	if not speedrun or not speedrun.IsActive then return end
+
+	local objective = ResearchData.GetObjective(objectiveId)
+	if not objective then return end
+
+	local ageId = objective.Age
+	-- Only record once — the moment the player starts their first objective in this age
+	if not speedrun.AgeStartTimes[ageId] then
+		speedrun.AgeStartTimes[ageId] = getElapsed(speedrun)
+		print(string.format("[Speedrun] %s — Age %d timer started at %ds", player.Name, ageId, speedrun.AgeStartTimes[ageId]))
+	end
+end
+
+-- ============================================================
+-- PUBLIC: Called from ResearchHandler.CompleteObjective
+-- ============================================================
+function SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
+	local speedrun = getSpeedrun(player)
+	if not speedrun then return end
+
+	local research = getResearch(player)
+	if not research then return end
+
+	local completedObjectives = research.CompletedObjectives
+	local objective = ResearchData.GetObjective(objectiveId)
+	if not objective then return end
+
+	-- Always check for full research unlock, regardless of whether a run is active
+	if not speedrun.Unlocked and allResearchCompleted(completedObjectives) then
+		speedrun.Unlocked = true
+		print(string.format("[Speedrun] %s unlocked Speedrun mode!", player.Name))
+		RepStorage.Events.MessageClient:FireClient(player, "screen", {
+			["message"] = "🏁 Speedrun Mode Unlocked! You can now race through research!",
+		})
+		SpeedrunHandler.Remotes.AllResearchCompleted:FireClient(player)
+	end
+
+	-- Age split tracking only matters during an active run
+	if not speedrun.IsActive then return end
+
+	local ageId  = objective.Age
+	local elapsed = getElapsed(speedrun)
+
+	if not speedrun.AgeSplits[ageId] and isAgeCompleted(ageId, completedObjectives) then
+		speedrun.AgeSplits[ageId] = elapsed
+
+		local segmentTime   = getSegmentTime(speedrun.AgeSplits, ageId, elapsed, speedrun.AgeStartTimes)
+		local existingSegPB = speedrun.BestAgeSplits[ageId]
+		local isSegmentPB   = (existingSegPB == nil or existingSegPB == 0 or segmentTime < existingSegPB)
+		if isSegmentPB then speedrun.BestAgeSplits[ageId] = segmentTime end
+
+		saveToLeaderboard(player, ageId, segmentTime)
+		SpeedrunHandler.Remotes.SpeedrunAgeSplit:FireClient(player, ageId, segmentTime, elapsed, isSegmentPB)
+		print(string.format("[Speedrun] %s — Age %d segment: %ds (cumulative: %ds)", player.Name, ageId, segmentTime, elapsed))
+
+		local allAgesDone = true
+		for i = 1, #ResearchData.Ages do
+			if not speedrun.AgeSplits[i] then allAgesDone = false; break end
+		end
+
+		if allAgesDone then
+			local isTotalPB = (speedrun.BestTotalTime == 0 or elapsed < speedrun.BestTotalTime)
+			if isTotalPB then speedrun.BestTotalTime = elapsed end
+			speedrun.TotalRuns = speedrun.TotalRuns + 1
+			local srCount = player:FindFirstChild("SpeedrunCount")
+			if srCount then srCount.Value = speedrun.TotalRuns end
+			speedrun.IsActive     = false
+			speedrun.CompletedTime = elapsed
+
+			saveToLeaderboard(player, "Total", elapsed)
+			SpeedrunHandler.Remotes.SpeedrunCompleted:FireClient(player, elapsed, isTotalPB)
+			print(string.format("[Speedrun] %s finished in %ds (PB: %s)", player.Name, elapsed, tostring(isTotalPB)))
+		end
+	end
+end
+
+-- ============================================================
+-- PUBLIC: Enter Speedrun Mode — snapshot plot, show run controls
+-- ============================================================
+function SpeedrunHandler.EnterSpeedrunMode(player)
+	local DataHandling = require(ServerStorage.Modules.DataHandling)
+
+	local session = PlayerSession.Get(player)
+	if not session then return false, "Data not loaded" end
+
+	local speedrun = session["Speedrun"]
+	if not speedrun then return false, "Data error" end
+
+	if not speedrun.Unlocked then
+		local research = getResearch(player)
+		if research and allResearchCompleted(research.CompletedObjectives) then
+			speedrun.Unlocked = true
+		else
+			return false, "Complete all research objectives first!"
+		end
+	end
+
+	if speedrun.InSpeedrunMode then return false, "Already in speedrun mode" end
+
+	local currentPlotData = DataHandling.UNLOAD_PLOT(player) or {}
+
+	speedrun.Snapshot = {
+		Money            = session["Money"],
+		ResearchTokens   = session["ResearchTokens"],
+		Items            = deepCopy(session["Items"]),
+		PlotItemPlaced   = currentPlotData,
+		UnlockedBarriers = deepCopy(session["UnlockedBarriers"]),
+		MinerHotspots    = deepCopy(session["MinerHotspots"]),
+		Research         = deepCopy(session["Research"]),
+		Upgrades         = deepCopy(session["Upgrades"]),
+	}
+	speedrun.InSpeedrunMode = true
+
+	performReset(player)
+	teleportToSpawn(player)
+	SpeedrunHandler.Remotes.EnteredSpeedrunMode:FireClient(player)
+	print(string.format("[Speedrun] %s entered speedrun mode — snapshot saved", player.Name))
+	return true, "Entered speedrun mode"
+end
+
+-- ============================================================
+-- PUBLIC: Return to Main Plot — restore snapshot
+-- ============================================================
+function SpeedrunHandler.ReturnToMainPlot(player)
+	local DataHandling        = require(ServerStorage.Modules.DataHandling)
+	local MinerHotspotHandler = require(ServerStorage.Modules.MinerHotspotHandler)
+
+	local session = PlayerSession.Get(player)
+	if not session then return false, "Data not loaded" end
+
+	local speedrun = session["Speedrun"]
+	if not speedrun then return false, "Data error" end
+
+	local snapshot = speedrun.Snapshot
+	if not snapshot or snapshot == false then return false, "No snapshot found" end
+
+	local PLR_PLOT = player:FindFirstChild("SetPlot") and player.SetPlot.Value
+	if not PLR_PLOT then return false, "Plot not found" end
+
+	local plrCash = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(player.Name)
+	if not plrCash then return false, "Cash value not found" end
+
+	-- Stop any active run silently
+	speedrun.IsActive        = false
+	speedrun.StartTime       = 0
+	speedrun.ElapsedOnPause  = 0
+	speedrun.AgeSplits       = {}
+	speedrun.AgeStartTimes   = {}
+	speedrun.CompletedTime   = 0
+
+	-- Clear current plot
+	local oresDropped = PLR_PLOT:FindFirstChild("MiscInfo") and PLR_PLOT.MiscInfo:FindFirstChild("OresDropped")
+	if oresDropped then oresDropped:ClearAllChildren() end
+
+	for _, item in pairs(PLR_PLOT.PlacedItems:GetChildren()) do
+		if item:GetAttribute("HotspotFurnace") then continue end
+		local statsModule = item:FindFirstChild("ItemStats")
+		if statsModule and statsModule:IsA("ModuleScript") then
+			local ok, info = pcall(require, statsModule)
+			if ok and info and info.ItemId == 3 then continue end
+		end
+		item:Destroy()
+	end
+
+	-- Restore session from snapshot
+	session["Money"]            = snapshot.Money
+	session["ResearchTokens"]   = snapshot.ResearchTokens
+	session["Items"]            = deepCopy(snapshot.Items)
+	session["PlotItemPlaced"]   = snapshot.PlotItemPlaced
+	session["UnlockedBarriers"] = deepCopy(snapshot.UnlockedBarriers)
+	session["MinerHotspots"]    = deepCopy(snapshot.MinerHotspots)
+	session["Research"]         = deepCopy(snapshot.Research)
+	session["Upgrades"]         = deepCopy(snapshot.Upgrades)
+
+	-- Sync cash/tokens IntValues
+	plrCash.Value = snapshot.Money
+	local rtVal = player:FindFirstChild("ResearchTokens")
+	if rtVal then rtVal.Value = snapshot.ResearchTokens or 0 end
+
+	-- Reload the plot
+	DataHandling.LOAD_PLOT(player, session["PlotItemPlaced"] or {})
+
+	-- Re-activate hotspot miners
+	local unlockedHotspots = session["MinerHotspots"] and session["MinerHotspots"].UnlockedHotspots or {}
+	for _, hotspotId in ipairs(unlockedHotspots) do
+		pcall(function() MinerHotspotHandler.ActivateHotspot(player, hotspotId) end)
+	end
+
+	-- Remove barriers already unlocked in main plot
+	local unlockedBarriers = session["UnlockedBarriers"] or {}
+	local caveUnlocks = PLR_PLOT:FindFirstChild("CaveUnlocks")
+	if caveUnlocks then
+		for _, barrier in ipairs(caveUnlocks:GetChildren()) do
+			if barrier:IsA("Model") then
+				local barrierID = barrier:GetAttribute("BarrierID")
+				if not barrierID then
+					local v = barrier:FindFirstChild("BarrierID")
+					if v then barrierID = v.Value end
+				end
+				if barrierID and unlockedBarriers[barrierID] == true then
+					barrier:Destroy()
+				end
+			end
+		end
+	end
+
+	-- Clear speedrun mode flags
+	speedrun.InSpeedrunMode = false
+	speedrun.Snapshot       = false
+
+	teleportToSpawn(player)
+	SpeedrunHandler.Remotes.RestoredMainPlot:FireClient(player)
+	print(string.format("[Speedrun] %s returned to main plot — snapshot restored", player.Name))
+	return true, "Main plot restored!"
+end
+
+-- ============================================================
+-- PUBLIC: Start a new run
+-- ============================================================
+function SpeedrunHandler.StartRun(player)
+	local speedrun = getSpeedrun(player)
+	if not speedrun then return false, "Data not loaded" end
+
+	if not speedrun.Unlocked then
+		local research = getResearch(player)
+		if research and allResearchCompleted(research.CompletedObjectives) then
+			speedrun.Unlocked = true
+		end
+	end
+
+	if not speedrun.Unlocked then
+		return false, "Complete all research objectives first to unlock Speedrun mode!"
+	end
+
+	if not speedrun.InSpeedrunMode then
+		return false, "Enter Speedrun Mode first."
+	end
+
+	if speedrun.IsActive then
+		return false, "A run is already in progress. Reset it first."
+	end
+
+	local ok = performReset(player)
+	if not ok then return false, "Failed to reset data. Try again." end
+
+	speedrun.IsActive        = true
+	speedrun.StartTime       = os.time()
+	speedrun.ElapsedOnPause  = 0
+	speedrun.AgeSplits       = {}
+	speedrun.AgeStartTimes   = { [1] = 0 }  -- Age 1 always starts at t=0
+	speedrun.CompletedTime   = 0
+
+	teleportToSpawn(player)
+	SpeedrunHandler.Remotes.SpeedrunStarted:FireClient(player)
+	print(string.format("[Speedrun] %s started a new run", player.Name))
+	return true, "Run started!"
+end
+
+-- ============================================================
+-- PUBLIC: Reset/abandon a run
+-- ============================================================
+function SpeedrunHandler.ResetRun(player)
+	local speedrun = getSpeedrun(player)
+	if not speedrun or not speedrun.Unlocked then return false end
+
+	local ok = performReset(player)
+	if not ok then return false end
+
+	speedrun.IsActive        = false
+	speedrun.StartTime       = 0
+	speedrun.ElapsedOnPause  = 0
+	speedrun.AgeSplits       = {}
+	speedrun.AgeStartTimes   = {}
+	speedrun.CompletedTime   = 0
+
+	teleportToSpawn(player)
+	SpeedrunHandler.Remotes.SpeedrunReset:FireClient(player)
+	print(string.format("[Speedrun] %s reset their run", player.Name))
+	return true
+end
+
+-- ============================================================
+-- PUBLIC: Pause run on player leave
+-- ============================================================
+function SpeedrunHandler.PauseRun(player)
+	local speedrun = getSpeedrun(player)
+	if not speedrun or not speedrun.IsActive then return end
+	speedrun.ElapsedOnPause = getElapsed(speedrun)
+	speedrun.StartTime      = 0
+	print(string.format("[Speedrun] %s left — paused at %ds", player.Name, speedrun.ElapsedOnPause))
+end
+
+-- ============================================================
+-- PUBLIC: Resume run on player rejoin
+-- ============================================================
+function SpeedrunHandler.ResumeRun(player)
+	local speedrun = getSpeedrun(player)
+	if not speedrun or not speedrun.IsActive then return end
+	if speedrun.StartTime ~= 0 then return end
+	speedrun.StartTime      = os.time() - (speedrun.ElapsedOnPause or 0)
+	speedrun.ElapsedOnPause = 0
+	print(string.format("[Speedrun] %s rejoined — resumed from %ds", player.Name, getElapsed(speedrun)))
+end
+
+-- ============================================================
+-- PUBLIC: Return current state to client
+-- ============================================================
+function SpeedrunHandler.GetData(player)
+	local speedrun = getSpeedrun(player)
+	if not speedrun then return nil end
+
+	if not speedrun.Unlocked then
+		local research = getResearch(player)
+		if research and allResearchCompleted(research.CompletedObjectives) then
+			speedrun.Unlocked = true
+		end
+	end
+
+	local segmentSplits = {}
+	for i = 1, 4 do
+		if speedrun.AgeSplits[i] then
+			segmentSplits[i] = getSegmentTime(speedrun.AgeSplits, i, nil, speedrun.AgeStartTimes)
+		end
+	end
+
+	return {
+		Unlocked       = speedrun.Unlocked,
+		IsActive       = speedrun.IsActive,
+		InSpeedrunMode = speedrun.InSpeedrunMode or false,
+		HasSnapshot    = speedrun.Snapshot ~= false and speedrun.Snapshot ~= nil,
+		ElapsedTime    = getElapsed(speedrun),
+		AgeSplits      = speedrun.AgeSplits,
+		AgeStartTimes  = speedrun.AgeStartTimes,
+		SegmentSplits  = segmentSplits,
+		BestAgeSplits  = speedrun.BestAgeSplits,
+		BestTotalTime  = speedrun.BestTotalTime,
+		TotalRuns      = speedrun.TotalRuns,
+		CompletedTime  = speedrun.CompletedTime or 0,
+	}
+end
+
+-- ============================================================
+-- PUBLIC: Leaderboard
+-- ============================================================
+function SpeedrunHandler.GetLeaderboard(ageId)
+	return fetchLeaderboard(ageId)
+end
+
+return SpeedrunHandler
