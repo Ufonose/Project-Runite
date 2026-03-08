@@ -23,6 +23,7 @@ local SpeedrunCompleted    = Events:WaitForChild("SpeedrunCompleted")
 local SpeedrunReset        = Events:WaitForChild("SpeedrunReset")
 local EnteredSpeedrunMode  = Events:WaitForChild("EnteredSpeedrunMode")
 local RestoredMainPlot     = Events:WaitForChild("RestoredMainPlot")
+local SpeedrunAgeStarted   = Events:WaitForChild("SpeedrunAgeStarted")
 
 local speedrunGui = script.Parent
 
@@ -34,6 +35,7 @@ local runData               = nil
 local timerConnection       = nil
 local activeTab             = "speedrun"
 local speedrunSubPanel      = "enter"
+local activeAgeTickers = {}
 
 -- ============================================================
 -- HELPERS
@@ -254,7 +256,7 @@ local heroDesc = Instance.new("TextLabel", heroFrame)
 heroDesc.Size            = UDim2.new(0.9, 0, 0.35, 0)
 heroDesc.Position        = UDim2.new(0.05, 0, 0.62, 0)
 heroDesc.BackgroundTransparency = 1
-heroDesc.Text            = "Race through all research as fast as possible!"
+heroDesc.Text            = "Build the most efficient mining factory you can and complete Research as fast as possible to compete for the top of the leaderboards!"
 heroDesc.TextColor3      = Color3.fromRGB(160, 160, 190)
 heroDesc.TextScaled      = true
 heroDesc.Font            = Enum.Font.Gotham
@@ -386,7 +388,7 @@ modalIcon.TextScaled      = true
 modalIcon.ZIndex          = 22
 
 local modalTitle = Instance.new("TextLabel", modal)
-modalTitle.Size            = UDim2.new(0.9, 0, 0.13, 0)
+modalTitle.Size            = UDim2.new(0.9, 0, 0.08, 0)
 modalTitle.Position        = UDim2.new(0.05, 0, 0.26, 0)
 modalTitle.BackgroundTransparency = 1
 modalTitle.Text            = "Enter Speedrun Mode?"
@@ -400,7 +402,7 @@ local modalBody = Instance.new("TextLabel", modal)
 modalBody.Size            = UDim2.new(0.86, 0, 0.45, 0)
 modalBody.Position        = UDim2.new(0.07, 0, 0.35, 0)
 modalBody.BackgroundTransparency = 1
-modalBody.Text = "Your current main plot will be saved exactly as it is now. Return at any time using \"Return to Main Plot\".\n\n• You start each run with 10,000 Cash\n• The full shop is unlocked from the start\n• Your purchased upgrades carry over (only from main plot)\n\n⏱  Each age tier timer starts when you begin your first research in that age, so plan ahead if you want to compete on the individual age leaderboards!\nThe total run timer starts the moment you click Start Run."
+modalBody.Text = "Your current main plot will be saved exactly as it is now. Return at any time using \"Return to Main Plot\".\n\n• You start each run with 50,000 Cash\n• The full Shop is unlocked from the start\n• Your purchased Upgrades carry over (only from main plot)\n• Leaving mid-run is safe, your run is saved and the timer resumes when you rejoin\n\n⏱  Each age tier timer starts when you begin your first research in that age, so plan ahead if you want to compete on the individual age leaderboards!\nThe total run timer starts the moment you click Start Run and stops when all Research is completed."
 modalBody.TextColor3      = Color3.fromRGB(170, 170, 200)
 modalBody.TextScaled      = true
 modalBody.Font            = Enum.Font.Gotham
@@ -590,7 +592,7 @@ local resetModalBody = Instance.new("TextLabel", resetModal)
 resetModalBody.Size            = UDim2.new(0.86, 0, 0.3, 0)
 resetModalBody.Position        = UDim2.new(0.07, 0, 0.38, 0)
 resetModalBody.BackgroundTransparency = 1
-resetModalBody.Text            = "Your current run will be abandoned and the timer will restart from zero.\n\nAny personal best times you set for completed ages this run will be kept."
+resetModalBody.Text            = "Your current run will be abandoned.\n\nAny personal best times you set for completed ages this run will be kept."
 resetModalBody.TextColor3      = Color3.fromRGB(170, 170, 200)
 resetModalBody.TextScaled      = true
 resetModalBody.Font            = Enum.Font.Gotham
@@ -1150,6 +1152,15 @@ local function startTimerLoop()
 		if runData and runData.IsActive then
 			local elapsed = (os.clock() - runData._fetchedAt) + (runData.ElapsedTime or 0)
 			timerLabel.Text = formatTime(elapsed)
+
+			-- Live age timers for ages that have started but not yet completed
+			for i = 1, 4 do
+				if activeAgeTickers[i] and splitRows[i] then
+					local ageStart = runData.AgeStartTimes and (runData.AgeStartTimes[i] or runData.AgeStartTimes[tostring(i)]) or 0
+					splitRows[i].splitTime.Text       = formatTime(elapsed - ageStart)
+					splitRows[i].splitTime.TextColor3 = Color3.fromRGB(255, 255, 255)
+				end
+			end
 		end
 	end)
 end
@@ -1179,7 +1190,18 @@ local function onOpen()
 			end
 		end
 	end
-
+	-- Restore white live timer for any age that has started but not yet split
+	activeAgeTickers = {}
+	if data.IsActive and data.AgeStartTimes then
+		for i = 1, 4 do
+			local hasStart = data.AgeStartTimes[i] ~= nil or data.AgeStartTimes[tostring(i)] ~= nil
+			local hasSplit = data.SegmentSplits and (data.SegmentSplits[i] ~= nil or data.SegmentSplits[tostring(i)] ~= nil)
+			if hasStart and not hasSplit then
+				activeAgeTickers[i] = true
+				splitRows[i].splitTime.TextColor3 = Color3.fromRGB(255, 255, 255)
+			end
+		end
+	end
 	if data.InSpeedrunMode then
 		speedrunSubPanel = "run"
 
@@ -1331,17 +1353,30 @@ end)
 -- SERVER EVENTS
 -- ============================================================
 SpeedrunStarted.OnClientEvent:Connect(function()
+	activeAgeTickers = {}
 	runData = refreshRunData()
 	if runData then
 		runData._fetchedAt = os.clock()
 		setStartBtnActive(false)
-		startBtn.Text = "▶  Running..."
-		timerStatus.Text = "Run in progress..." 
+		startBtn.Text    = "▶  Running..."
+		timerStatus.Text = "Run in progress..."
 		startTimerLoop()
 	end
 end)
 
+SpeedrunAgeStarted.OnClientEvent:Connect(function(ageId, ageStartTime)
+	if runData then
+		runData.AgeStartTimes         = runData.AgeStartTimes or {}
+		runData.AgeStartTimes[ageId]  = ageStartTime
+	end
+	activeAgeTickers[ageId] = true
+	if splitRows[ageId] then
+		splitRows[ageId].splitTime.TextColor3 = Color3.fromRGB(255, 255, 255)
+	end
+end)
+
 SpeedrunAgeSplit.OnClientEvent:Connect(function(ageId, segmentTime, cumulativeTime, isSegmentPB)
+	activeAgeTickers[ageId] = nil
 	if splitRows[ageId] then
 		splitRows[ageId].splitTime.Text       = formatTime(segmentTime)
 		splitRows[ageId].splitTime.TextColor3 = isSegmentPB
@@ -1360,12 +1395,13 @@ SpeedrunAgeSplit.OnClientEvent:Connect(function(ageId, segmentTime, cumulativeTi
 end)
 
 SpeedrunCompleted.OnClientEvent:Connect(function(totalTime, isPersonalBest)
+	activeAgeTickers = {}
 	stopTimerLoop()
 	timerLabel.Text       = formatTime(totalTime)
 	timerLabel.TextColor3 = isPersonalBest and Color3.fromRGB(255, 210, 50) or Color3.fromRGB(80, 220, 120)
 	timerStatus.Text      = isPersonalBest and "🏅  New Personal Best!" or "Run Complete!"
 	setStartBtnActive(true)
-	startBtn.Text         = "▶  Start New Run"
+	startBtn.Text               = "▶  Start New Run"
 	totalTimeDisplay.Text       = formatTime(totalTime)
 	totalTimeDisplay.TextColor3 = isPersonalBest and Color3.fromRGB(255, 210, 50) or Color3.fromRGB(80, 220, 120)
 	runData = refreshRunData()
@@ -1374,6 +1410,7 @@ SpeedrunCompleted.OnClientEvent:Connect(function(totalTime, isPersonalBest)
 end)
 
 SpeedrunReset.OnClientEvent:Connect(function()
+	activeAgeTickers = {}
 	stopTimerLoop()
 	timerLabel.Text       = "0:00"
 	timerLabel.TextColor3 = Color3.fromRGB(80, 220, 120)
@@ -1386,6 +1423,7 @@ SpeedrunReset.OnClientEvent:Connect(function()
 end)
 
 EnteredSpeedrunMode.OnClientEvent:Connect(function()
+	activeAgeTickers = {}
 	runData = refreshRunData()
 	if runData then
 		runData._fetchedAt = os.clock()
@@ -1401,6 +1439,7 @@ EnteredSpeedrunMode.OnClientEvent:Connect(function()
 end)
 
 RestoredMainPlot.OnClientEvent:Connect(function()
+	activeAgeTickers = {}
 	stopTimerLoop()
 	returnBtn.Active = true
 	returnBtn.Text   = "🏠  Return to Main Plot"
