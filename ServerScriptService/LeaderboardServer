@@ -1,8 +1,12 @@
 -- ServerScriptService/LeaderboardServer
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
+local ServerStorage = game:GetService("ServerStorage")
 
-local leaderboardPart = workspace:WaitForChild("Leaderboards"):WaitForChild("Leaderboard") -- adjust path
+local leaderboardPart = workspace:WaitForChild("Leaderboards"):WaitForChild("Leaderboard")
+local spawnPoint      = workspace:WaitForChild("Leaderboards"):WaitForChild("RigSpawnPoint")
+local rigTemplate     = ServerStorage:WaitForChild("TopPlayerRig")
+local danceAnim       = rigTemplate:WaitForChild("DanceAnimation")
 
 local DS_FETCH_INTERVAL  = 120
 local LIVE_UPDATE_INTERVAL = 5
@@ -10,8 +14,13 @@ local MAX_ENTRIES = 100
 local ROW_HEIGHT  = 36
 local ROW_PADDING = 5
 
-local EarnedStore = DataStoreService:GetOrderedDataStore("TotalEarned_v13")
+local EarnedStore = DataStoreService:GetOrderedDataStore("TotalEarned_v1301")
 local cachedData  = {}
+local nameCache   = {}
+
+local currentRig       = nil
+local currentTopUserId = nil
+local currentTopCash   = 0
 
 -- ── SUFFIX ────────────────────────────────────────────────────────────────
 local function suffixNum(n)
@@ -23,9 +32,7 @@ local function suffixNum(n)
 end
 
 -- ── SAVE TO ORDERED DS ────────────────────────────────────────────────────
-local saveCooldowns = {} -- tracks last save time per player
-
--- Replace saveCooldowns logic and hookPlayer with this:
+local saveCooldowns = {}
 
 local function saveToOrderedStore(player, force)
 	local te = player:FindFirstChild("TotalEarned")
@@ -42,14 +49,26 @@ local function saveToOrderedStore(player, force)
 	end)
 end
 
+local activeLoops = {}
+
 local function hookPlayer(player)
+	local uid = player.UserId
+	local loopId = (activeLoops[uid] and activeLoops[uid].id or 0) + 1
+	activeLoops[uid] = { id = loopId }
+
 	local te = player:WaitForChild("TotalEarned", 30)
 	if not te then return end
-	te.Changed:Connect(function() saveToOrderedStore(player, false) end)
+
+	task.spawn(function()
+		while player.Parent and activeLoops[uid] and activeLoops[uid].id == loopId do
+			saveToOrderedStore(player, false)
+			task.wait(60)
+		end
+	end)
 end
 
--- Force-save on leave so the DS always has the final value
 Players.PlayerRemoving:Connect(function(player)
+	activeLoops[player.UserId] = nil
 	saveToOrderedStore(player, true)
 	saveCooldowns[player.UserId] = nil
 end)
@@ -71,7 +90,6 @@ local function buildGui(part)
 	gui.LightInfluence = 0
 	gui.Parent = part
 
-	-- Background
 	local bg = Instance.new("Frame")
 	bg.Name = "Background"
 	bg.Size = UDim2.new(1, 0, 1, 0)
@@ -88,7 +106,6 @@ local function buildGui(part)
 	bgPadding.PaddingRight  = UDim.new(0.02, 0)
 	bgPadding.Parent = bg
 
-	-- Title
 	local title = Instance.new("TextLabel")
 	title.Size = UDim2.new(0.92, 0, 0.1, 0)
 	title.Position = UDim2.new(0.04, 0, 0.012, 0)
@@ -100,7 +117,6 @@ local function buildGui(part)
 	title.TextXAlignment = Enum.TextXAlignment.Center
 	title.Parent = bg
 
-	-- ScrollingFrame
 	local scroll = Instance.new("ScrollingFrame")
 	scroll.Name = "EntryList"
 	scroll.Size = UDim2.new(0.92, 0, 0.865, 0)
@@ -110,15 +126,15 @@ local function buildGui(part)
 	scroll.ScrollBarThickness = 3
 	scroll.ScrollBarImageColor3 = Color3.fromRGB(150, 150, 150)
 	scroll.ScrollBarImageTransparency = 0.3
+	scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	scroll.ElasticBehavior = Enum.ElasticBehavior.Never
+	scroll.Parent = bg
 
 	local scrollStroke = Instance.new("UIStroke")
 	scrollStroke.Color = Color3.fromRGB(255, 255, 255)
 	scrollStroke.Thickness = 1
 	scrollStroke.Transparency = 0.7
 	scrollStroke.Parent = scroll
-	scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-	scroll.ElasticBehavior = Enum.ElasticBehavior.Never
-	scroll.Parent = bg
 
 	local list = Instance.new("UIListLayout")
 	list.Padding = UDim.new(0, ROW_PADDING)
@@ -158,7 +174,6 @@ local function createRow(parent, rank, name, amount, isOnline, userId)
 	stroke.Transparency = isTop3 and 0.4 or 0.2
 	stroke.Parent = row
 
-	-- Rank number
 	local rankLabel = Instance.new("TextLabel")
 	rankLabel.Size = UDim2.new(0.13, 0, 1, 0)
 	rankLabel.Position = UDim2.new(0.01, 0, 0, 0)
@@ -169,7 +184,6 @@ local function createRow(parent, rank, name, amount, isOnline, userId)
 	rankLabel.Font = Enum.Font.GothamBold
 	rankLabel.Parent = row
 
-	-- Avatar
 	local avatar = Instance.new("ImageLabel")
 	avatar.Size = UDim2.new(0, ROW_HEIGHT - 8, 0, ROW_HEIGHT - 8)
 	avatar.Position = UDim2.new(0.155, 0, 0.5, -(ROW_HEIGHT - 8) / 2)
@@ -194,7 +208,6 @@ local function createRow(parent, rank, name, amount, isOnline, userId)
 		end)
 	end
 
-	-- Online dot (bottom right of avatar)
 	if isOnline then
 		local dot = Instance.new("Frame")
 		dot.Size = UDim2.new(0, 8, 0, 8)
@@ -205,14 +218,12 @@ local function createRow(parent, rank, name, amount, isOnline, userId)
 		dot.Parent = row
 		Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
 
-		-- White border around dot so it pops against the avatar
 		local dotStroke = Instance.new("UIStroke")
 		dotStroke.Color = Color3.fromRGB(12, 12, 18)
 		dotStroke.Thickness = 1.5
 		dotStroke.Parent = dot
 	end
 
-	-- Player name
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Size = UDim2.new(0.42, 0, 1, 0)
 	nameLabel.Position = UDim2.new(0.32, 0, 0, 0)
@@ -224,7 +235,6 @@ local function createRow(parent, rank, name, amount, isOnline, userId)
 	nameLabel.Font = isTop3 and Enum.Font.GothamBold or Enum.Font.Gotham
 	nameLabel.Parent = row
 
-	-- Cash
 	local cashLabel = Instance.new("TextLabel")
 	cashLabel.Size = UDim2.new(0.30, 0, 1, 0)
 	cashLabel.Position = UDim2.new(0.685, 0, 0, 0)
@@ -248,12 +258,14 @@ local function fetchFromDataStore()
 	while true do
 		for _, entry in pairs(pages:GetCurrentPage()) do
 			local uid = tonumber(entry.key)
-			local name = "[Unknown]"
-			local nameOk, res = pcall(function()
-				return Players:GetNameFromUserIdAsync(uid)
-			end)
-			if nameOk then name = res end
-			results[uid] = {name = name, amount = entry.value, userId = uid}
+			-- Use cache, only fetch name if not already known
+			if not nameCache[uid] then
+				local nameOk, res = pcall(function()
+					return Players:GetNameFromUserIdAsync(uid)
+				end)
+				nameCache[uid] = nameOk and res or "[Unknown]"
+			end
+			results[uid] = { name = nameCache[uid], amount = entry.value, userId = uid }
 		end
 		if pages.IsFinished then break end
 		pages:AdvanceToNextPageAsync()
@@ -267,12 +279,13 @@ local function getMergedData()
 	local merged = {}
 
 	for uid, entry in pairs(cachedData) do
-		merged[uid] = {name = entry.name, amount = entry.amount, online = false, userId = uid}
+		merged[uid] = { name = entry.name, amount = entry.amount, online = false, userId = uid }
 	end
 
 	for _, player in pairs(Players:GetPlayers()) do
 		local te = player:FindFirstChild("TotalEarned")
 		if te then
+			nameCache[player.UserId] = player.Name -- keep cache fresh for online players
 			merged[player.UserId] = {
 				name = player.Name,
 				amount = te.Value,
@@ -288,7 +301,7 @@ local function getMergedData()
 	return arr
 end
 
--- ── POPULATE ──────────────────────────────────────────────────────────────
+-- ── POPULATE GUI ──────────────────────────────────────────────────────────
 local function populateGui(gui, data)
 	local scroll = gui.Background:FindFirstChild("EntryList")
 	if not scroll then return end
@@ -310,6 +323,136 @@ local function populateGui(gui, data)
 	scroll.CanvasSize = UDim2.new(0, 0, 0, #data * (ROW_HEIGHT + ROW_PADDING))
 end
 
+-- ── RIG NAMETAG ───────────────────────────────────────────────────────────
+local function createNametag(rig, name, cash)
+	local head = rig:FindFirstChild("Head")
+	if not head then return end
+
+	local existing = head:FindFirstChild("TrophyGui")
+	if existing then existing:Destroy() end
+
+	local humanoid = rig:FindFirstChildOfClass("Humanoid")
+	if humanoid then humanoid.DisplayName = name end
+
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "TrophyGui"
+	gui.Size = UDim2.new(4, 0, 2.5, 0)
+	gui.StudsOffset = Vector3.new(0, 4, 0)
+	gui.AlwaysOnTop = false
+	gui.LightInfluence = 0
+	gui.Parent = head
+
+	local trophy = Instance.new("ImageLabel")
+	trophy.Size = UDim2.new(0.25, 0, 0.6, 0)
+	trophy.AnchorPoint = Vector2.new(0, 0.5)
+	trophy.Position = UDim2.new(0, 0, 0.5, 0)
+	trophy.BackgroundTransparency = 1
+	trophy.Image = "rbxassetid://9722127533"
+	trophy.ScaleType = Enum.ScaleType.Fit
+	trophy.Parent = gui
+
+	local cashLabel = Instance.new("TextLabel")
+	cashLabel.Size = UDim2.new(0.7, 0, 0.6, 0)
+	cashLabel.AnchorPoint = Vector2.new(0, 0.5)
+	cashLabel.Position = UDim2.new(0.28, 0, 0.5, 0)
+	cashLabel.BackgroundTransparency = 1
+	cashLabel.Text = suffixNum(cash)
+	cashLabel.TextColor3 = Color3.fromRGB(80, 220, 120)
+	cashLabel.TextScaled = true
+	cashLabel.Font = Enum.Font.GothamBold
+	cashLabel.TextXAlignment = Enum.TextXAlignment.Left
+	cashLabel.Parent = gui
+
+	local tc = Instance.new("UITextSizeConstraint", cashLabel)
+	tc.MaxTextSize = 18
+end
+
+-- ── SPAWN RIG ─────────────────────────────────────────────────────────────
+local function spawnRig(userId, cash)
+	if currentRig then
+		currentRig:Destroy()
+		currentRig = nil
+	end
+
+	local rig = rigTemplate:Clone()
+	rig.Name = "TopPlayerRig_Active"
+	rig.Parent = workspace
+
+	local hrp = rig:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		hrp.CFrame = spawnPoint.CFrame + Vector3.new(0, spawnPoint.Size.Y / 2 + 3, 0)
+		hrp.Anchored = true
+	end
+
+	for _, part in pairs(rig:GetDescendants()) do
+		if part:IsA("BasePart") then part.CanCollide = false end
+	end
+
+	task.spawn(function()
+		local humanoid = rig:FindFirstChildOfClass("Humanoid")
+		if not humanoid then return end
+
+		local ok, desc = pcall(function()
+			return Players:GetHumanoidDescriptionFromUserIdAsync(userId)
+		end)
+		if ok and desc then
+			pcall(function() humanoid:ApplyDescriptionResetAsync(desc) end)
+		end
+
+		-- Name already in cache from leaderboard fetch — no extra API call needed
+		local name = nameCache[userId] or "Unknown"
+		createNametag(rig, name, cash)
+	end)
+
+	task.spawn(function()
+		local humanoid = rig:FindFirstChildOfClass("Humanoid")
+		if not humanoid then return end
+		local animator = humanoid:WaitForChild("Animator", 5)
+		if not animator then return end
+
+		local anim = Instance.new("Animation")
+		anim.AnimationId = danceAnim.AnimationId
+		local track = animator:LoadAnimation(anim)
+		track.Looped = true
+		track:Play()
+	end)
+
+	currentRig = rig
+	currentTopUserId = userId
+end
+
+-- ── UPDATE RIG NAMETAG IN PLACE ──────────────────────────────────────────
+local function updateRigCash(cash)
+	if not currentRig then return end
+	local head = currentRig:FindFirstChild("Head")
+	if not head then return end
+	local trophyGui = head:FindFirstChild("TrophyGui")
+	if not trophyGui then return end
+	for _, child in ipairs(trophyGui:GetDescendants()) do
+		if child:IsA("TextLabel") then
+			child.Text = suffixNum(cash)
+			break
+		end
+	end
+end
+
+-- ── UPDATE RIG from cached leaderboard data ───────────────────────────────
+local function updateRig(data)
+	if #data == 0 then return end
+	local top = data[1] -- already sorted descending, first = top player
+	if top.amount <= 0 then return end
+
+	if top.userId ~= currentTopUserId then
+		-- Top player changed — spawn new rig
+		spawnRig(top.userId, top.amount)
+		currentTopCash = top.amount
+	elseif top.amount ~= currentTopCash then
+		-- Same player but cash changed — just update the nametag
+		updateRigCash(top.amount)
+		currentTopCash = top.amount
+	end
+end
+
 -- ── MAIN ──────────────────────────────────────────────────────────────────
 local gui = buildGui(leaderboardPart)
 local lastDsFetch = 0
@@ -320,6 +463,10 @@ while true do
 		cachedData = fetchFromDataStore()
 		lastDsFetch = now
 	end
-	pcall(populateGui, gui, getMergedData())
+
+	local merged = getMergedData()
+	pcall(populateGui, gui, merged)
+	pcall(updateRig, merged)  -- rig uses same merged data, no extra DS call
+
 	task.wait(LIVE_UPDATE_INTERVAL)
 end
