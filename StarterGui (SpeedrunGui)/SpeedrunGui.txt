@@ -397,10 +397,10 @@ modalTitle.ZIndex          = 22
 local mtTc = Instance.new("UITextSizeConstraint", modalTitle); mtTc.MaxTextSize = 20
 
 local modalBody = Instance.new("TextLabel", modal)
-modalBody.Size            = UDim2.new(0.86, 0, 0.26, 0)
-modalBody.Position        = UDim2.new(0.07, 0, 0.41, 0)
+modalBody.Size            = UDim2.new(0.86, 0, 0.45, 0)
+modalBody.Position        = UDim2.new(0.07, 0, 0.35, 0)
 modalBody.BackgroundTransparency = 1
-modalBody.Text            = "Your current main plot will be saved exactly as it is now.\n\nYou can return to it at any time using the\n\"Return to Main Plot\" button."
+modalBody.Text = "Your current main plot will be saved exactly as it is now. Return at any time using \"Return to Main Plot\".\n\n• You start each run with 10,000 Cash\n• The full shop is unlocked from the start\n• Your purchased upgrades carry over (only from main plot)\n\n⏱  Each age tier timer starts when you begin your first research in that age, so plan ahead if you want to compete on the individual age leaderboards!\nThe total run timer starts the moment you click Start Run."
 modalBody.TextColor3      = Color3.fromRGB(170, 170, 200)
 modalBody.TextScaled      = true
 modalBody.Font            = Enum.Font.Gotham
@@ -1190,6 +1190,7 @@ local function onOpen()
 			timerStatus.Text      = "Run in progress..."
 			setStartBtnActive(false)
 			startBtn.Text         = "▶  Running..."
+			runData = data
 			startTimerLoop()
 
 		elseif (data.CompletedTime or 0) > 0 then
@@ -1433,3 +1434,4 @@ menuObject.Changed:Connect(function()
 end)
 
 mainFrame.Visible = false
+
