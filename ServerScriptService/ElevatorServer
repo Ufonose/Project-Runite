@@ -1,33 +1,55 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local surfaceEvent = ReplicatedStorage.Events.TeleportToSurface
 local caveEvent = ReplicatedStorage.Events.TeleportToCave
 local surfaceElevators = workspace.SurfaceElevators
 local caveElevators = workspace.CaveElevators
 
+-- Track which players currently have a replication focus set
+local focusActive = {}
+
 local function getBasePlot(plot)
 	return plot:FindFirstChild("BasePlot")
 end
 
+local function setFocus(player, focusPart)
+	if focusActive[player] then return end -- already set, don't double-add
+	pcall(function()
+		player:AddReplicationFocus(focusPart)
+		focusActive[player] = focusPart
+	end)
+end
+
+local function clearFocus(player)
+	local focusPart = focusActive[player]
+	if not focusPart then return end -- never set, skip entirely
+	focusActive[player] = nil
+	pcall(function()
+		player:RemoveReplicationFocus(focusPart)
+	end)
+end
+
+-- Clean up when a player leaves
+Players.PlayerRemoving:Connect(function(player)
+	focusActive[player] = nil
+end)
+
 -- Cave --> Surface
-surfaceEvent.OnServerEvent:Connect(function(player)
+surfaceEvent.OnServerEvent:Connect(function(player, targetPlotName)
 	local setPlot = player:FindFirstChild("SetPlot")
 	if not setPlot or not setPlot.Value then return end
 
 	local plot = setPlot.Value
-	local plotName = plot.Name
-	local surfaceSpot = surfaceElevators:FindFirstChild(plotName)
+	local surfaceSpot = surfaceElevators:FindFirstChild(targetPlotName or plot.Name)
 
 	if surfaceSpot and player.Character then
 		local hrp = player.Character:FindFirstChild("HumanoidRootPart")
 		if hrp then
 			hrp.CFrame = surfaceSpot.CFrame + Vector3.new(0, 4, 0)
 
-			-- Add replication focus so physics keeps simulating the mine
 			local focusPart = getBasePlot(plot)
 			if focusPart then
-				pcall(function()
-					player:AddReplicationFocus(focusPart)
-				end)
+				setFocus(player, focusPart)
 			end
 		end
 	end
@@ -40,17 +62,7 @@ caveEvent.OnServerEvent:Connect(function(player, targetPlotName)
 		local hrp = player.Character:FindFirstChild("HumanoidRootPart")
 		if hrp then
 			hrp.CFrame = caveSpot.CFrame + Vector3.new(0, 4, 0)
-
-			-- Remove the focus now that the player is back near their mine
-			local setPlot = player:FindFirstChild("SetPlot")
-			if setPlot and setPlot.Value then
-				local focusPart = getBasePlot(setPlot.Value)
-				if focusPart then
-					pcall(function()
-						player:RemoveReplicationFocus(focusPart)
-					end)
-				end
-			end
+			clearFocus(player)
 		end
 	end
 end)
