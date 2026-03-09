@@ -15,11 +15,11 @@ local SpeedrunHandler = {}
 -- LEADERBOARD DATA STORES
 -- ============================================================
 local LeaderboardStores = {
-	[1]       = DataStoreService:GetOrderedDataStore("Speedrun_Age1_v1"),
-	[2]       = DataStoreService:GetOrderedDataStore("Speedrun_Age2_v1"),
-	[3]       = DataStoreService:GetOrderedDataStore("Speedrun_Age3_v1"),
-	[4]       = DataStoreService:GetOrderedDataStore("Speedrun_Age4_v1"),
-	["Total"] = DataStoreService:GetOrderedDataStore("Speedrun_Total_v1"),
+	[1]       = DataStoreService:GetOrderedDataStore("Speedrun_Age1_v5"),
+	[2]       = DataStoreService:GetOrderedDataStore("Speedrun_Age2_v5"),
+	[3]       = DataStoreService:GetOrderedDataStore("Speedrun_Age3_v5"),
+	[4]       = DataStoreService:GetOrderedDataStore("Speedrun_Age4_v5"),
+	["Total"] = DataStoreService:GetOrderedDataStore("Speedrun_Total_v5"),
 }
 
 -- ============================================================
@@ -267,16 +267,23 @@ end
 -- FETCH LEADERBOARD
 -- ============================================================
 local nameCache = {}
+local leaderboardCache = {}
+local LEADERBOARD_CACHE_TTL = 60
 
 local function fetchLeaderboard(ageId)
+	local cached = leaderboardCache[ageId]
+	if cached and (os.time() - cached.timestamp) < LEADERBOARD_CACHE_TTL then
+		return cached.data
+	end
+
 	local store = LeaderboardStores[ageId]
-	if not store then return {} end
+	if not store then return cached and cached.data or {} end
 
 	local success, pages = pcall(function() return store:GetSortedAsync(false, 100) end)
-	if not success then return {} end
+	if not success then return cached and cached.data or {} end
 
 	local ok, pageData = pcall(function() return pages:GetCurrentPage() end)
-	if not ok then return {} end
+	if not ok then return cached and cached.data or {} end
 
 	local results = {}
 	for rank, entry in ipairs(pageData) do
@@ -288,9 +295,11 @@ local function fetchLeaderboard(ageId)
 		}
 	end
 
-	-- Fetch all names in parallel
+	if #results == 0 then
+		return cached and cached.data or {}
+	end
+
 	local pending = #results
-	local done    = Instance.new("BindableEvent")
 
 	for _, result in ipairs(results) do
 		task.spawn(function()
@@ -307,13 +316,15 @@ local function fetchLeaderboard(ageId)
 				end
 			end
 			pending -= 1
-			if pending == 0 then done:Fire() end
 		end)
 	end
 
-	if pending > 0 then done.Event:Wait() end
-	done:Destroy()
+	-- Poll until all name lookups are done — no BindableEvent race condition
+	while pending > 0 do
+		task.wait()
+	end
 
+	leaderboardCache[ageId] = { data = results, timestamp = os.time() }
 	return results
 end
 
@@ -392,6 +403,14 @@ function SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
 			if srCount then srCount.Value = speedrun.TotalRuns end
 			speedrun.IsActive     = false
 			speedrun.CompletedTime = elapsed
+			
+			local pbVal = player:FindFirstChild("SpeedrunPB")
+			if not pbVal then
+				pbVal = Instance.new("IntValue")
+				pbVal.Name = "SpeedrunPB"
+				pbVal.Parent = player
+			end
+			pbVal.Value = speedrun.BestTotalTime
 
 			saveToLeaderboard(player, "Total", elapsed)
 			SpeedrunHandler.Remotes.SpeedrunCompleted:FireClient(player, elapsed, isTotalPB)
@@ -621,7 +640,20 @@ end
 -- ============================================================
 function SpeedrunHandler.ResumeRun(player)
 	local speedrun = getSpeedrun(player)
-	if not speedrun or not speedrun.IsActive then return end
+	if not speedrun then return end
+
+	-- Restore SpeedrunPB IntValue so leaderboard can read it immediately
+	if speedrun.BestTotalTime and speedrun.BestTotalTime > 0 then
+		local pbVal = player:FindFirstChild("SpeedrunPB")
+		if not pbVal then
+			pbVal = Instance.new("IntValue")
+			pbVal.Name = "SpeedrunPB"
+			pbVal.Parent = player
+		end
+		pbVal.Value = speedrun.BestTotalTime
+	end
+
+	if not speedrun.IsActive then return end
 	if speedrun.StartTime ~= 0 then return end
 	speedrun.StartTime      = os.time() - (speedrun.ElapsedOnPause or 0)
 	speedrun.ElapsedOnPause = 0
