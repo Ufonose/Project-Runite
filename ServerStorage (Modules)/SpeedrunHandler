@@ -126,7 +126,7 @@ local function teleportToSpawn(player)
 	local hrp  = char and char:FindFirstChild("HumanoidRootPart")
 	if not hrp then return end
 
-	hrp.CFrame = CFrame.new(spawnPart.Position + Vector3.new(0, SPAWN_HEIGHT, 0))
+	hrp.CFrame = spawnPart.CFrame * CFrame.new(0, SPAWN_HEIGHT, 0)
 end
 
 -- ============================================================
