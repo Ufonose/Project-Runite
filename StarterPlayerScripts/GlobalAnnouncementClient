@@ -1,0 +1,16 @@
+-- GlobalAnnouncementClient
+-- Displays server-wide announcements in the chat as a system message.
+
+local TextChatService  = game:GetService("TextChatService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local event = ReplicatedStorage.Events:WaitForChild("GlobalAnnouncement")
+
+event.OnClientEvent:Connect(function(msg)
+	local ok, channel = pcall(function()
+		return TextChatService.TextChannels:WaitForChild("RBXGeneral", 5)
+	end)
+	if ok and channel then
+		channel:DisplaySystemMessage('<font color="#FFD700">' .. msg .. "</font>")
+	end
+end)
