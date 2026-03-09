@@ -13,20 +13,27 @@ locationValue.Parent = player
 local setPlot = player:WaitForChild("SetPlot")
 local plotName = setPlot.Value and setPlot.Value.Name
 
--- Cave elevator prompt (go to surface)
+-- ── Cave elevator prompts (go to surface) ────────────────────────────────
+-- Connect ALL cave elevators, not just the player's own, so they can
+-- return to the surface from any plot's cave.
 local caveElevators = workspace:WaitForChild("CaveElevators")
-local cavePlot = caveElevators:WaitForChild(plotName)
-local cavePrompt = cavePlot:WaitForChild("ProximityPrompt")
 
-cavePrompt.Triggered:Connect(function()
-	locationValue.Value = "Surface"
-	ReplicatedStorage.Events.TeleportToSurface:FireServer()
-end)
+local function connectCavePrompt(cavePart)
+	local prompt = cavePart:WaitForChild("ProximityPrompt", 5)
+	if prompt then
+		prompt.Triggered:Connect(function()
+			locationValue.Value = "Surface"
+			ReplicatedStorage.Events.TeleportToSurface:FireServer(cavePart.Name)
+		end)
+	end
+end
 
--- Surface elevator prompts (return to cave)
-local surfaceElevators = workspace:WaitForChild("SurfaceElevators")
+for _, cavePart in pairs(caveElevators:GetChildren()) do
+	connectCavePrompt(cavePart)
+end
+caveElevators.ChildAdded:Connect(connectCavePrompt)
 
--- Surface elevator prompts (return to cave)
+-- ── Surface elevator prompts (return to cave) ────────────────────────────
 local surfaceElevators = workspace:WaitForChild("SurfaceElevators")
 
 local function connectSurfacePrompt(surfacePart)
@@ -39,10 +46,7 @@ local function connectSurfacePrompt(surfacePart)
 	end
 end
 
--- Handle parts already in the folder
 for _, surfacePart in pairs(surfaceElevators:GetChildren()) do
 	connectSurfacePrompt(surfacePart)
 end
-
--- Handle parts that replicate in after the script runs
 surfaceElevators.ChildAdded:Connect(connectSurfacePrompt)
