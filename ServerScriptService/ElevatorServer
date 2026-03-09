@@ -13,7 +13,14 @@ local function getBasePlot(plot)
 end
 
 local function setFocus(player, focusPart)
-	if focusActive[player] then return end -- already set, don't double-add
+	if focusActive[player] == focusPart then return end -- already set to this part
+	-- Remove old focus first if switching
+	if focusActive[player] then
+		pcall(function()
+			player:RemoveReplicationFocus(focusActive[player])
+		end)
+		focusActive[player] = nil
+	end
 	pcall(function()
 		player:AddReplicationFocus(focusPart)
 		focusActive[player] = focusPart
@@ -22,7 +29,7 @@ end
 
 local function clearFocus(player)
 	local focusPart = focusActive[player]
-	if not focusPart then return end -- never set, skip entirely
+	if not focusPart then return end
 	focusActive[player] = nil
 	pcall(function()
 		player:RemoveReplicationFocus(focusPart)
@@ -58,11 +65,26 @@ end)
 -- Surface --> Cave
 caveEvent.OnServerEvent:Connect(function(player, targetPlotName)
 	local caveSpot = caveElevators:FindFirstChild(targetPlotName)
-	if caveSpot and player.Character then
-		local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-		if hrp then
-			hrp.CFrame = caveSpot.CFrame + Vector3.new(0, 4, 0)
-			clearFocus(player)
+	if not caveSpot or not player.Character then return end
+
+	local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	hrp.CFrame = caveSpot.CFrame + Vector3.new(0, 4, 0)
+
+	local setPlot = player:FindFirstChild("SetPlot")
+	local ownPlotName = setPlot and setPlot.Value and setPlot.Value.Name
+
+	if targetPlotName == ownPlotName then
+		-- Returning to own cave — no longer need the focus
+		clearFocus(player)
+	else
+		-- Visiting someone else's cave — keep focus on own BasePlot so it stays loaded
+		if setPlot and setPlot.Value then
+			local focusPart = getBasePlot(setPlot.Value)
+			if focusPart then
+				setFocus(player, focusPart)
+			end
 		end
 	end
 end)
