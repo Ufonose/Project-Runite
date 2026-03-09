@@ -294,6 +294,7 @@ end
 -- ============================================================================
 local currentStep = 0
 local stepConns   = {}
+local beamParts   = {}
 local finished    = false
 
 -- Pre-declare all step functions so they can reference each other freely
@@ -344,10 +345,16 @@ startStep1 = function()
 	local attA = Instance.new("Attachment"); attA.Position = Vector3.new(0, 0.5, -1); attA.Parent = hrp
 	local attB = Instance.new("Attachment"); attB.Position = Vector3.new(0, 0, 0);    attB.Parent = buyButton
 	local beam = makeBeam(attB, attA)
+	
+	-- Track so showFinalNote can clean them up on Skip
+	table.insert(beamParts, beam)
+	table.insert(beamParts, attA)
+	table.insert(beamParts, attB)
 
 	local conn = buyButton.AncestryChanged:Connect(function(_, parent)
 		if parent == nil then
 			beam:Destroy(); attA:Destroy(); attB:Destroy()
+			table.clear(beamParts)
 			cleanStepConns()
 			pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(2) end)
 			task.wait(0.4)
@@ -534,6 +541,12 @@ showFinalNote = function()
 	if finished then return end
 	finished = true
 	cleanStepConns()
+	
+	-- Destroy beam + attachments if player skipped during step 1
+	for _, obj in ipairs(beamParts) do
+		if obj and obj.Parent then obj:Destroy() end
+	end
+	table.clear(beamParts)
 	destroyGhosts(ghostConveyors)
 	destroyGhosts(ghostCorners)
 
