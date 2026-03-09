@@ -1,0 +1,124 @@
+-- AnnouncementHandler
+-- Fires global chat announcements when a player sets a new #1 on any age leaderboard.
+
+local DataStoreService  = game:GetService("DataStoreService")
+local MessagingService  = game:GetService("MessagingService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- ── Must match LeaderboardStores keys in SpeedrunHandler exactly ──────────
+local AGE_STORES = {
+	[1]       = "Speedrun_Age1_v6",
+	[2]       = "Speedrun_Age2_v6",
+	[3]       = "Speedrun_Age3_v6",
+	[4]       = "Speedrun_Age4_v6",
+	["Total"] = "Speedrun_Total_v6",
+}
+
+local AGE_LABELS = {
+	[1]       = "⛏️ First Age",
+	[2]       = "🔧 Second Age",
+	[3]       = "⚙️ Third Age",
+	[4]       = "🏗️ Fourth Age",
+	["Total"] = "👑 All Ages",
+}
+
+local TOPIC = "MineBaron_GlobalAnnouncement"
+
+local Events = ReplicatedStorage:WaitForChild("Events")
+local AnnounceEvent = Events:FindFirstChild("GlobalAnnouncement")
+	or (function()
+		local e = Instance.new("RemoteEvent")
+		e.Name = "GlobalAnnouncement"
+		e.Parent = Events
+		return e
+	end)()
+
+-- Tracks current #1 time per age (math.huge = no record yet)
+local topTimes = {}
+for k in pairs(AGE_STORES) do
+	topTimes[k] = { uid = nil, seconds = math.huge }
+end
+
+local initialized = false
+
+-- ── Subscribe ─────────────────────────────────────────────────────────────
+task.spawn(function()
+	local ok, err = pcall(function()
+		MessagingService:SubscribeAsync(TOPIC, function(message)
+			AnnounceEvent:FireAllClients(message.Data)
+		end)
+	end)
+	if not ok then warn("[Announce] SubscribeAsync failed:", err) end
+end)
+
+-- ── Seed all stores on server start ──────────────────────────────────────
+task.spawn(function()
+	for ageId, dsName in pairs(AGE_STORES) do
+		local ok, ds = pcall(function()
+			return DataStoreService:GetOrderedDataStore(dsName)
+		end)
+		if ok then
+			local ok2, pages = pcall(function() return ds:GetSortedAsync(false, 1) end)
+			if ok2 then
+				local pg = pages:GetCurrentPage()
+				if pg[1] then
+					topTimes[ageId].uid     = tonumber(pg[1].key)
+					topTimes[ageId].seconds = math.abs(pg[1].value)
+				end
+			end
+		end
+	end
+	initialized = true
+	print("[Announce] Seeded all age leaderboard tops")
+end)
+
+local function waitInit()
+	while not initialized do task.wait(0.1) end
+end
+
+local function formatTime(seconds)
+	local hours = math.floor(seconds / 3600)
+	local mins  = math.floor((seconds % 3600) / 60)
+	local secs  = seconds % 60
+	return string.format("%d:%02d:%02d", hours, mins, secs)
+end
+
+local function announce(msg)
+	local ok, err = pcall(function()
+		MessagingService:PublishAsync(TOPIC, msg)
+	end)
+	if not ok then
+		warn("[Announce] PublishAsync failed:", err)
+		AnnounceEvent:FireAllClients(msg)
+	end
+	print("[Announce] Global →", msg)
+end
+
+-- ── Public API ────────────────────────────────────────────────────────────
+
+local AnnouncementHandler = {}
+
+-- Call this after every successful saveToLeaderboard.
+-- ageId matches LeaderboardStores keys: 1, 2, 3, 4, or "Total"
+function AnnouncementHandler.CheckAge(player, ageId, seconds)
+	waitInit()
+
+	local top = topTimes[ageId]
+	if not top then return end
+	if seconds >= top.seconds then return end -- not a new #1
+
+	local isFirst = top.uid == nil
+	top.uid     = player.UserId
+	top.seconds = seconds
+
+	local label = AGE_LABELS[ageId] or ("Age " .. tostring(ageId))
+	local timeStr = formatTime(seconds)
+
+	if isFirst then
+		announce(string.format("🏆 %s set the first ever %s record! (%s)", player.Name, label, timeStr))
+	else
+		announce(string.format("🏆 %s set a new %s record! (%s)", player.Name, label, timeStr))
+	end
+end
+
+return AnnouncementHandler
