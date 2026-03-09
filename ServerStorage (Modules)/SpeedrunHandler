@@ -8,6 +8,7 @@ local Players          = game:GetService("Players")
 
 local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
 local ResearchData  = require(ServerStorage.Modules.ResearchData)
+local AnnouncementHandler = require(ServerStorage.Modules.AnnouncementHandler)
 
 local SpeedrunHandler = {}
 
@@ -15,11 +16,11 @@ local SpeedrunHandler = {}
 -- LEADERBOARD DATA STORES
 -- ============================================================
 local LeaderboardStores = {
-	[1]       = DataStoreService:GetOrderedDataStore("Speedrun_Age1_v5"),
-	[2]       = DataStoreService:GetOrderedDataStore("Speedrun_Age2_v5"),
-	[3]       = DataStoreService:GetOrderedDataStore("Speedrun_Age3_v5"),
-	[4]       = DataStoreService:GetOrderedDataStore("Speedrun_Age4_v5"),
-	["Total"] = DataStoreService:GetOrderedDataStore("Speedrun_Total_v5"),
+	[1]       = DataStoreService:GetOrderedDataStore("Speedrun_Age1_v6"),
+	[2]       = DataStoreService:GetOrderedDataStore("Speedrun_Age2_v6"),
+	[3]       = DataStoreService:GetOrderedDataStore("Speedrun_Age3_v6"),
+	[4]       = DataStoreService:GetOrderedDataStore("Speedrun_Age4_v6"),
+	["Total"] = DataStoreService:GetOrderedDataStore("Speedrun_Total_v6"),
 }
 
 -- ============================================================
@@ -258,6 +259,7 @@ local function saveToLeaderboard(player, ageId, timeSeconds)
 
 	if ok then
 		print(string.format("[Speedrun LB] ✅ Saved %s | Age %s | %ds", player.Name, tostring(ageId), timeSeconds))
+		AnnouncementHandler.CheckAge(player, ageId, timeSeconds) -- ✅ covers all ages + Total
 	else
 		warn(string.format("[Speedrun LB] ❌ UpdateAsync failed | Age %s | %s", tostring(ageId), tostring(err)))
 	end
@@ -401,9 +403,9 @@ function SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
 			speedrun.TotalRuns = speedrun.TotalRuns + 1
 			local srCount = player:FindFirstChild("SpeedrunCount")
 			if srCount then srCount.Value = speedrun.TotalRuns end
-			speedrun.IsActive     = false
+			speedrun.IsActive      = false
 			speedrun.CompletedTime = elapsed
-			
+
 			local pbVal = player:FindFirstChild("SpeedrunPB")
 			if not pbVal then
 				pbVal = Instance.new("IntValue")
@@ -415,6 +417,7 @@ function SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
 			saveToLeaderboard(player, "Total", elapsed)
 			SpeedrunHandler.Remotes.SpeedrunCompleted:FireClient(player, elapsed, isTotalPB)
 			print(string.format("[Speedrun] %s finished in %ds (PB: %s)", player.Name, elapsed, tostring(isTotalPB)))
+			
 		end
 	end
 end
