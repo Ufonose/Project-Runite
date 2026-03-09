@@ -14,7 +14,7 @@ local MAX_ENTRIES = 100
 local ROW_HEIGHT  = 36
 local ROW_PADDING = 5
 
-local SpeedrunStore = DataStoreService:GetOrderedDataStore("Speedrun_Total_v4")
+local SpeedrunStore = DataStoreService:GetOrderedDataStore("Speedrun_Total_v5")
 local cachedData    = {}
 local nameCache     = {}
 
@@ -141,13 +141,20 @@ local function createRow(parent, rank, name, seconds, isOnline, userId)
 	rankLabel.Font = Enum.Font.GothamBold
 	rankLabel.Parent = row
 
+	-- Avatar container so dot can overlap the corner
+	local avatarContainer = Instance.new("Frame")
+	avatarContainer.Size = UDim2.new(0, ROW_HEIGHT - 8, 0, ROW_HEIGHT - 8)
+	avatarContainer.Position = UDim2.new(0.155, 0, 0.5, -(ROW_HEIGHT - 8) / 2)
+	avatarContainer.BackgroundTransparency = 1
+	avatarContainer.BorderSizePixel = 0
+	avatarContainer.Parent = row
+
 	local avatar = Instance.new("ImageLabel")
-	avatar.Size = UDim2.new(0, ROW_HEIGHT - 8, 0, ROW_HEIGHT - 8)
-	avatar.Position = UDim2.new(0.155, 0, 0.5, -(ROW_HEIGHT - 8) / 2)
+	avatar.Size = UDim2.new(1, 0, 1, 0)
 	avatar.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 	avatar.BorderSizePixel = 0
 	avatar.Image = ""
-	avatar.Parent = row
+	avatar.Parent = avatarContainer
 	Instance.new("UICorner", avatar).CornerRadius = UDim.new(0.3, 0)
 
 	local avatarStroke = Instance.new("UIStroke")
@@ -165,14 +172,16 @@ local function createRow(parent, rank, name, seconds, isOnline, userId)
 		end)
 	end
 
+	-- FIX: green dot anchored to bottom-right of avatarContainer
 	if isOnline then
 		local dot = Instance.new("Frame")
-		dot.Size = UDim2.new(0, 8, 0, 8)
-		dot.Position = UDim2.new(0.155, ROW_HEIGHT - 14, 0.5, (ROW_HEIGHT - 8) / 2 - 4)
+		dot.Size = UDim2.new(0, 9, 0, 9)
+		dot.AnchorPoint = Vector2.new(1, 1)
+		dot.Position = UDim2.new(1, 2, 1, 2)
 		dot.BackgroundColor3 = Color3.fromRGB(80, 255, 120)
 		dot.BorderSizePixel = 0
 		dot.ZIndex = 2
-		dot.Parent = row
+		dot.Parent = avatarContainer
 		Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
 
 		local dotStroke = Instance.new("UIStroke")
@@ -251,9 +260,12 @@ local function getMergedData()
 					userId  = player.UserId,
 				}
 			else
-				-- player is online but not top, still mark them online if they appear
 				merged[player.UserId].online = true
 			end
+		elseif merged[player.UserId] then
+			-- FIX: player is online and in the DS leaderboard but SpeedrunPB not set yet;
+			-- still show the green dot
+			merged[player.UserId].online = true
 		end
 	end
 
@@ -398,7 +410,7 @@ end
 -- ── UPDATE RIG ────────────────────────────────────────────────────────────
 local function updateRig(data)
 	if #data == 0 then return end
-	local top = data[1] -- already sorted ascending by seconds, first = fastest
+	local top = data[1]
 	if top.seconds <= 0 then return end
 
 	if top.userId ~= currentTopUserId then
@@ -411,18 +423,19 @@ end
 
 -- ── MAIN ──────────────────────────────────────────────────────────────────
 local gui = buildGui(leaderboardPart)
-local lastDsFetch = 0
 
-while true do
-	local now = os.time()
-	if now - lastDsFetch >= DS_FETCH_INTERVAL then
+-- FIX: DS fetch runs in its own loop so heavy yielding never blocks live updates
+task.spawn(function()
+	while true do
 		cachedData = fetchFromDataStore()
-		lastDsFetch = now
+		task.wait(DS_FETCH_INTERVAL)
 	end
+end)
 
+-- Live update loop runs every 5s uninterrupted
+while true do
 	local merged = getMergedData()
 	pcall(populateGui, gui, merged)
 	pcall(updateRig, merged)
-
 	task.wait(LIVE_UPDATE_INTERVAL)
 end
