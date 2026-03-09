@@ -67,6 +67,8 @@ local DATA_TEMPLATE = {
 		-- Personal best split times per age (preserved across resets, never wiped)
 		BestAgeSplits = {},
 
+		AgeStartTimes = {},
+
 		-- Personal best total time in seconds (0 = never completed a full run)
 		BestTotalTime = 0,
 
@@ -80,7 +82,7 @@ local DATA_TEMPLATE = {
 	},
 }
 
-local PlayerStore = ProfileStore.New("Runite_nor5", DATA_TEMPLATE) -- Runite_v5
+local PlayerStore = ProfileStore.New("Runite_s5", DATA_TEMPLATE) -- Runite_v5 Runite_t1062
 local ActiveProfiles = {} -- FIXED: now keyed by UserId (number)
 
 -- ============================================================
