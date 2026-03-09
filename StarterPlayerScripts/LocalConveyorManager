@@ -44,12 +44,34 @@ local trackedOres = {}
 local oreData     = {}
 
 local function onOreAdded(ore)
+	-- Walk up to find the plot owner; skip ores that don't belong to us
+	local current = ore.Parent
+	while current and current ~= workspace do
+		if current.Name == "OresDropped" then
+			local plot = current.Parent and current.Parent.Parent -- OresDropped → MiscInfo → Plot
+			if plot then
+				local ownerVal = plot:FindFirstChild("Owner")
+				if ownerVal and ownerVal.Value ~= localPlayer.Name then
+					-- Hide it and don't track it — saves the entire Heartbeat cost
+					for _, part in ipairs(ore:GetDescendants()) do
+						if part:IsA("BasePart") or part:IsA("Decal") then
+							part.Transparency = 1
+						end
+					end
+					if ore:IsA("BasePart") then ore.Transparency = 1 end
+					return
+				end
+			end
+			break
+		end
+		current = current.Parent
+	end
+
 	trackedOres[ore] = true
 	oreData[ore] = {
 		seed        = ore:GetAttribute("OreID") or 0,
 		laneOffset  = ore:GetAttribute("LaneOffset") or 0,
 		baseRotV3   = ore:GetAttribute("BaseRotation") or Vector3_new(0, 0, 0),
-		-- Stuck detection
 		lastPos     = ore.Position,
 		stuckTimer  = 0,
 		lastCheck   = os_clock(),
