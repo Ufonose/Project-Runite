@@ -4,6 +4,10 @@ local caveEvent = ReplicatedStorage.Events.TeleportToCave
 local surfaceElevators = workspace.SurfaceElevators
 local caveElevators = workspace.CaveElevators
 
+local function getBasePlot(plot)
+	return plot:FindFirstChild("BasePlot")
+end
+
 -- Cave --> Surface
 surfaceEvent.OnServerEvent:Connect(function(player)
 	local setPlot = player:FindFirstChild("SetPlot")
@@ -18,10 +22,12 @@ surfaceEvent.OnServerEvent:Connect(function(player)
 		if hrp then
 			hrp.CFrame = surfaceSpot.CFrame + Vector3.new(0, 4, 0)
 
-			-- Add replication focus at the player's mine so physics keeps simulating there
-			local focusPart = plot:FindFirstChildWhichIsA("BasePart", true)
+			-- Add replication focus so physics keeps simulating the mine
+			local focusPart = getBasePlot(plot)
 			if focusPart then
-				player:AddReplicationFocus(focusPart)
+				pcall(function()
+					player:AddReplicationFocus(focusPart)
+				end)
 			end
 		end
 	end
@@ -35,12 +41,14 @@ caveEvent.OnServerEvent:Connect(function(player, targetPlotName)
 		if hrp then
 			hrp.CFrame = caveSpot.CFrame + Vector3.new(0, 4, 0)
 
-			-- Remove the extra focus now that player is back near their mine
+			-- Remove the focus now that the player is back near their mine
 			local setPlot = player:FindFirstChild("SetPlot")
 			if setPlot and setPlot.Value then
-				local focusPart = setPlot.Value:FindFirstChildWhichIsA("BasePart", true)
+				local focusPart = getBasePlot(setPlot.Value)
 				if focusPart then
-					player:RemoveReplicationFocus(focusPart)
+					pcall(function()
+						player:RemoveReplicationFocus(focusPart)
+					end)
 				end
 			end
 		end
