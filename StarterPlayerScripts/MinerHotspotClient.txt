@@ -145,7 +145,8 @@ local function createModernHotspotUI(parent, info)
 
 	local function resetCostDisplay()
 		if info.IsResearchLocked then
-			costLabel.Text = "🔒 Complete All Research"
+			costLabel.RichText = true
+			costLabel.Text = "🔒 Finish All Research\n<font color='#00cc66'>⚡ Instant Buy: R$50</font>"
 			costLabel.TextColor3 = Color3.fromRGB(200, 150, 80)
 			costLabel.TextSize = Camera.ViewportSize.X < 900 and 9 or 13
 		elseif info.Config.CashCost then
@@ -286,22 +287,59 @@ local function setupHotspot(hotspot)
 				SoundManager.Error()
 				costLabel.Text = errorMsg == "Not enough cash" and "Not enough cash!" or "Not enough tokens!"
 				costLabel.TextSize = Camera.ViewportSize.X < 900 and 12 or 15
+				costLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+				task.wait(2)
+				resetCostDisplay()
+				pulseTween:Play()
+
 			elseif errorMsg == "Complete all research first" then
 				SoundManager.Error()
 				costLabel.Text = "🔒 Complete all research first!"
+				costLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 				costLabel.TextSize = Camera.ViewportSize.X < 900 and 8 or 11
+				-- Prompt Robux purchase immediately
+				local remote = RepStorage.Events:FindFirstChild("GetLegendaryMineProductId")
+				if remote then
+					local ok2, productId = pcall(function() return remote:InvokeServer() end)
+					if ok2 and productId and productId ~= 0 then
+						game:GetService("MarketplaceService"):PromptProductPurchase(player, productId)
+						-- Wait for unlock confirmation then clean up
+						local unlockEvent = RepStorage.Events:WaitForChild("LegendaryMineUnlocked", 60)
+						if unlockEvent then
+							local conn
+							conn = unlockEvent.OnClientEvent:Connect(function()
+								conn:Disconnect()
+								if billboardGui and billboardGui.Parent then billboardGui:Destroy() end
+								if ghostMiner and ghostMiner.Parent then ghostMiner:Destroy() end
+							end)
+						end
+					end
+				end
+				task.wait(2)
+				resetCostDisplay()
+				pulseTween:Play()
+
 			elseif errorMsg == "Already unlocked" then
 				costLabel.Text = "✓ Already unlocked!"
+				costLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+				task.wait(2)
+				resetCostDisplay()
+				pulseTween:Play()
+
 			elseif errorMsg then
 				costLabel.Text = "❌ " .. errorMsg
+				costLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+				task.wait(2)
+				resetCostDisplay()
+				pulseTween:Play()
+
 			else
 				costLabel.Text = "❌ Cannot unlock!"
+				costLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+				task.wait(2)
+				resetCostDisplay()
+				pulseTween:Play()
 			end
-
-			costLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-			task.wait(2)
-			resetCostDisplay()
-			pulseTween:Play()
 		end
 	end)
 end
