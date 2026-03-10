@@ -69,7 +69,7 @@ task.spawn(function()
 		end
 	end
 	initialized = true
-	print("[Announce] Seeded all age leaderboard tops")
+	--print("[Announce] Seeded all age leaderboard tops")
 end)
 
 local function waitInit()
