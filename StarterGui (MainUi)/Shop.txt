@@ -221,7 +221,7 @@ function module.LOAD(MODULE_INFO)
 	-- ==================== ITEMS TAB BUTTON ====================
 	local itemsTabButton = Instance.new("TextButton")
 	itemsTabButton.Name = "ItemsTab"
-	itemsTabButton.Size = UDim2.new(0.485, 0, 0.8, 0)
+	itemsTabButton.Size = UDim2.new(0.317, 0, 0.8, 0)
 	itemsTabButton.Position = UDim2.new(0, 0, 0.1, 0)
 	itemsTabButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
 	itemsTabButton.Text = "🛒 Items"
@@ -249,8 +249,8 @@ function module.LOAD(MODULE_INFO)
 	-- ==================== UPGRADES TAB BUTTON ====================
 	local upgradesTabButton = Instance.new("TextButton")
 	upgradesTabButton.Name = "UpgradesTab"
-	upgradesTabButton.Size = UDim2.new(0.485, 0, 0.8, 0)
-	upgradesTabButton.Position = UDim2.new(0.515, 0, 0.1, 0)
+	upgradesTabButton.Size = UDim2.new(0.317, 0, 0.8, 0)
+	upgradesTabButton.Position = UDim2.new(0.341, 0, 0.1, 0)
 	upgradesTabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 	upgradesTabButton.Text = "⚡ Upgrades"
 	upgradesTabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -273,6 +273,34 @@ function module.LOAD(MODULE_INFO)
 	upgradesTabStroke.Thickness = 2
 	upgradesTabStroke.Transparency = 0.7
 	upgradesTabStroke.Parent = upgradesTabButton
+	
+	-- ==================== PREMIUM TAB BUTTON ====================
+	local premiumTabButton = Instance.new("TextButton")
+	premiumTabButton.Name = "PremiumTab"
+	premiumTabButton.Size = UDim2.new(0.317, 0, 0.8, 0)
+	premiumTabButton.Position = UDim2.new(0.682, 0, 0.1, 0)
+	premiumTabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+	premiumTabButton.Text = "👑 Premium"
+	premiumTabButton.TextColor3 = Color3.fromRGB(255, 215, 0)
+	premiumTabButton.TextSize = 16
+	premiumTabButton.Font = Enum.Font.GothamBold
+	premiumTabButton.TextScaled = true
+	premiumTabButton.ZIndex = 8
+	premiumTabButton.Parent = tabButtonsBackground
+
+	local premiumTabConstraint = Instance.new("UITextSizeConstraint")
+	premiumTabConstraint.MaxTextSize = 16
+	premiumTabConstraint.Parent = premiumTabButton
+
+	local premiumTabCorner = Instance.new("UICorner")
+	premiumTabCorner.CornerRadius = UDim.new(0, 10)
+	premiumTabCorner.Parent = premiumTabButton
+
+	local premiumTabStroke = Instance.new("UIStroke")
+	premiumTabStroke.Color = Color3.fromRGB(180, 140, 0)
+	premiumTabStroke.Thickness = 2
+	premiumTabStroke.Transparency = 0.4
+	premiumTabStroke.Parent = premiumTabButton
 
 	-- ==================== LEFT SIDEBAR - CATEGORIES WITH SEARCH ====================
 	local categoryFrame = Instance.new("Frame")
@@ -1043,24 +1071,46 @@ function module.LOAD(MODULE_INFO)
 		SoundManager.ButtonClick()
 		itemsTabButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
 		upgradesTabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		premiumTabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 
 		itemsContainer.Visible = true
 		if shopFrame:FindFirstChild("UpgradesContainer") then
 			shopFrame.UpgradesContainer.Visible = false
 		end
-		-- Removed .Enabled = false line (ModuleScripts don't have this)
+		if shopFrame:FindFirstChild("PremiumContainer") then
+			shopFrame.PremiumContainer.Visible = false
+		end
 	end)
 
 	upgradesTabButton.MouseButton1Click:Connect(function()
 		SoundManager.ButtonClick()
 		upgradesTabButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
 		itemsTabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		premiumTabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 
 		itemsContainer.Visible = false
 		if shopFrame:FindFirstChild("UpgradesContainer") then
 			shopFrame.UpgradesContainer.Visible = true
 		end
-		-- Removed .Enabled = true line (ModuleScripts don't have this)
+		if shopFrame:FindFirstChild("PremiumContainer") then
+			shopFrame.PremiumContainer.Visible = false
+		end
+	end)
+
+	-- Premium tab switching is handled by PremiumShopHandler,
+	-- but we register the button click here so Shop.lua controls
+	-- the Items/Upgrades side of the switch too.
+	premiumTabButton.MouseButton1Click:Connect(function()
+		SoundManager.ButtonClick()
+		premiumTabButton.BackgroundColor3 = Color3.fromRGB(160, 110, 0)
+		itemsTabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+		upgradesTabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+
+		itemsContainer.Visible = false
+		if shopFrame:FindFirstChild("UpgradesContainer") then
+			shopFrame.UpgradesContainer.Visible = false
+		end
+		-- PremiumContainer visibility + ownership check is handled by PremiumShopHandler
 	end)
 
 	-- Menu toggle handler
