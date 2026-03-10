@@ -435,11 +435,16 @@ function SpeedrunHandler.EnterSpeedrunMode(player)
 	if not speedrun then return false, "Data error" end
 
 	if not speedrun.Unlocked then
-		local research = getResearch(player)
-		if research and allResearchCompleted(research.CompletedObjectives) then
+		local hasEarlyAccess = _G.PlayerHasSpeedrunEarlyAccess and _G.PlayerHasSpeedrunEarlyAccess(player)
+		if hasEarlyAccess then
 			speedrun.Unlocked = true
 		else
-			return false, "Complete all research objectives first!"
+			local research = getResearch(player)
+			if research and allResearchCompleted(research.CompletedObjectives) then
+				speedrun.Unlocked = true
+			else
+				return false, "Complete all research objectives first!"
+			end
 		end
 	end
 
