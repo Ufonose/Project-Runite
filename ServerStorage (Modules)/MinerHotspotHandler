@@ -65,7 +65,7 @@ function MinerHotspotHandler.UnlockHotspot(player, hotspotId)
 	-- new:
 	if config.RequiresFullResearch then
 		local speedrun = session["Speedrun"]
-		if not (speedrun and speedrun.Unlocked) then
+		if not (speedrun and speedrun.InSpeedrunMode) then
 			local ResearchData = require(ServerStorage.Modules.ResearchData)
 			local research = session["Research"]
 			if not research then return false, "Research not loaded" end
