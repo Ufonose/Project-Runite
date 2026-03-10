@@ -7,6 +7,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local researchGui = script.Parent
 local SoundManager = require(RepStorage.Modules.SoundManager)
 local UserInputService = game:GetService("UserInputService")
+local MarketplaceService = game:GetService("MarketplaceService")
 
 -- Check if player is on mobile device
 local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
@@ -226,6 +227,103 @@ end)
 closeButton.MouseLeave:Connect(function()
 	closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 end)
+
+-- ==================== AUTO RESEARCH TOGGLE ====================
+local autoToggleBtn = Instance.new("TextButton")
+autoToggleBtn.Name = "AutoResearchToggle"
+autoToggleBtn.Size = UDim2.new(0.12, 0, 0.6, 0)
+autoToggleBtn.Position = UDim2.new(0.82, 0, 0.2, 0)
+autoToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+autoToggleBtn.Text = "⚡ Auto"
+autoToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoToggleBtn.TextSize = 18
+autoToggleBtn.Font = Enum.Font.GothamBold
+autoToggleBtn.TextScaled = true
+autoToggleBtn.ZIndex = 8
+autoToggleBtn.Visible = true  -- always visible
+autoToggleBtn.Parent = titleBar
+
+local autoToggleCorner = Instance.new("UICorner")
+autoToggleCorner.CornerRadius = UDim.new(0, 8)
+autoToggleCorner.Parent = autoToggleBtn
+
+local autoToggleConstraint = Instance.new("UITextSizeConstraint")
+autoToggleConstraint.MaxTextSize = 18
+autoToggleConstraint.Parent = autoToggleBtn
+
+local autoToggleStroke = Instance.new("UIStroke")
+autoToggleStroke.Color = Color3.fromRGB(100, 100, 120)
+autoToggleStroke.Thickness = 1
+autoToggleStroke.Transparency = 0.4
+autoToggleStroke.Parent = autoToggleBtn
+
+-- State
+local autoResearchOwned = false
+local autoResearchChecked = false
+
+local AUTO_RESEARCH_GAMEPASS_ID = 1741387786  -- !! Must match GamepassHandler !!
+
+local function refreshToggleVisual()
+	if not autoResearchOwned then
+		-- Not owned: show a locked/promo state
+		autoToggleBtn.Text = "⚡ Auto: OFF"
+		autoToggleBtn.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
+		autoToggleStroke.Color = Color3.fromRGB(200, 80, 80)
+	else
+		local setting = player.Settings:FindFirstChild("AutoResearch")
+		local isOn = setting == nil or setting.Value == true
+		autoToggleBtn.Text = isOn and "⚡ Auto: ON" or "⚡ Auto: OFF"
+		autoToggleBtn.BackgroundColor3 = isOn
+			and Color3.fromRGB(60, 104, 60)
+			or  Color3.fromRGB(80, 40, 40)
+		autoToggleStroke.Color = isOn
+			and Color3.fromRGB(0, 0, 0)
+			or  Color3.fromRGB(0, 0, 0)
+	end
+end
+
+local function checkAutoResearchOwnership()
+	if autoResearchChecked then return end
+	task.spawn(function()
+		local passIdRemote = RepStorage.Events:WaitForChild("GetAutoResearchPassId", 5)
+		local checkRemote  = RepStorage.Events:WaitForChild("CheckGamepassOwned", 5)
+		if not passIdRemote or not checkRemote then return end
+
+		local passId = passIdRemote:InvokeServer()
+		local owned  = checkRemote:InvokeServer(passId)
+		autoResearchOwned   = owned == true
+		autoResearchChecked = true
+		refreshToggleVisual()
+	end)
+end
+
+autoToggleBtn.MouseButton1Click:Connect(function()
+	SoundManager.ButtonClick()
+	if not autoResearchOwned then
+		-- Prompt the purchase instead of toggling
+		MarketplaceService:PromptGamePassPurchase(player, AUTO_RESEARCH_GAMEPASS_ID)
+	else
+		RepStorage.Events.UpdateToggle:InvokeServer("AutoResearch")
+		refreshToggleVisual()
+
+		local setting = player.Settings:FindFirstChild("AutoResearch")
+		if setting and setting.Value == true then
+			RepStorage.Events.TriggerAutoResearch:FireServer()
+		end
+	end
+end)
+
+-- Update if they buy the pass while the research GUI is open
+local purchasedEvent = RepStorage.Events:WaitForChild("GamepassPurchased", 5)
+if purchasedEvent then
+	purchasedEvent.OnClientEvent:Connect(function(gpName)
+		if gpName == "AutoResearch" then
+			autoResearchOwned   = true
+			autoResearchChecked = true
+			refreshToggleVisual()
+		end
+	end)
+end
 
 closeButton.MouseButton1Click:Connect(function()
 	SoundManager.MenuClose()
@@ -1547,6 +1645,7 @@ menuObject.Changed:Connect(function()
 		SoundManager.MenuOpen()
 		updateScaleFactor()
 		refreshAgeTabsAndTree()
+		checkAutoResearchOwnership()
 	end
 end)
 
