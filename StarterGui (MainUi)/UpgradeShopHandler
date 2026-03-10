@@ -17,7 +17,7 @@ function module.LOAD(MODULE_INFO)
 	-- Don't create anything during LOAD - wait until ShopFrame exists
 	-- This avoids race conditions with Shop module loading
 
-	print("UpgradeShopHandler: Waiting for ShopFrame to be created by Shop module...")
+	--print("UpgradeShopHandler: Waiting for ShopFrame to be created by Shop module...")
 
 	task.spawn(function()
 		-- Wait for ShopFrame (created by Shop.lua in script.Parent)
@@ -29,7 +29,7 @@ function module.LOAD(MODULE_INFO)
 			return
 		end
 
-		print("UpgradeShopHandler: ShopFrame found! Creating upgrades UI...")
+		--print("UpgradeShopHandler: ShopFrame found! Creating upgrades UI...")
 
 		-- Variables
 		local DB = true
@@ -814,8 +814,23 @@ function module.LOAD(MODULE_INFO)
 				LOAD_UPGRADES()
 			end
 		end)
+		
+		-- ==================== SPEEDRUN REFRESH ====================
+		local Events = RepStorage:WaitForChild("Events")
 
-		print("UpgradeShopHandler fully loaded!")
+		Events:WaitForChild("SpeedrunStarted").OnClientEvent:Connect(function()
+			LOAD_UPGRADES()
+		end)
+
+		Events:WaitForChild("SpeedrunReset").OnClientEvent:Connect(function()
+			LOAD_UPGRADES()
+		end)
+
+		Events:WaitForChild("RestoredMainPlot").OnClientEvent:Connect(function()
+			LOAD_UPGRADES()
+		end)
+
+		--print("UpgradeShopHandler fully loaded!")
 	end)
 end
 
