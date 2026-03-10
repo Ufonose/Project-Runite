@@ -206,6 +206,13 @@ local function performReset(player)
 	-- 8. Reset barriers / hotspots
 	session["UnlockedBarriers"] = {}
 	session["MinerHotspots"]    = { UnlockedHotspots = {} }
+	-- Reset upgrades — must not carry over pre-start lobby purchases into the run
+	local snapshot = session["Speedrun"] and session["Speedrun"].Snapshot
+	if snapshot and snapshot ~= false and snapshot.Upgrades then
+		session["Upgrades"] = deepCopy(snapshot.Upgrades)
+	else
+		session["Upgrades"] = {}
+	end
 
 	-- 9. Reset research (preserve ItemsCollected)
 	local savedCollected = session["Research"] and session["Research"]["ItemsCollected"] or {}
@@ -532,6 +539,24 @@ function SpeedrunHandler.ReturnToMainPlot(player)
 
 	-- Reload the plot
 	DataHandling.LOAD_PLOT(player, session["PlotItemPlaced"] or {})
+	
+	-- Restore physical CaveUnlocks + MinerHotspots folders from template
+	local plotTemplates = ServerStorage:FindFirstChild("PlotTemplates")
+	if plotTemplates then
+		local template = plotTemplates:FindFirstChild(PLR_PLOT.Name)
+		if template then
+			local function restoreChild(name)
+				local src = template:FindFirstChild(name)
+				if src then
+					local ex = PLR_PLOT:FindFirstChild(name)
+					if ex then ex:Destroy() end
+					src:Clone().Parent = PLR_PLOT
+				end
+			end
+			restoreChild("CaveUnlocks")
+			restoreChild("MinerHotspots")
+		end
+	end
 
 	-- Re-activate hotspot miners
 	local unlockedHotspots = session["MinerHotspots"] and session["MinerHotspots"].UnlockedHotspots or {}
