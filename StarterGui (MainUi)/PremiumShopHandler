@@ -1,0 +1,452 @@
+-- StarterGui > MainUi > Shop > PremiumShopHandler (ModuleScript)
+
+local module = {}
+
+function module.LOAD(MODULE_INFO)
+	local SERVICES = MODULE_INFO["SERVICES"]
+	local RepStorage = SERVICES["ReplicatedStorage"]
+	local Plrs = SERVICES["Players"]
+	local Plr = Plrs.LocalPlayer
+	local MarketplaceService = game:GetService("MarketplaceService")
+
+	-- !! Must match GamepassHandler !!
+	local DOUBLE_CASH_GAMEPASS_ID    = 1745379165
+	local AUTO_RESEARCH_GAMEPASS_ID  = 1741387786
+	local RESEARCH_BOOST_GAMEPASS_ID = 1744553461
+
+	task.spawn(function()
+		local shopFolder = script.Parent
+		local shopFrame = shopFolder:WaitForChild("ShopFrame", 60)
+		if not shopFrame then
+			warn("PremiumShopHandler: ShopFrame never appeared!")
+			return
+		end
+
+		local tabButtonsBackground = shopFrame:WaitForChild("TabButtonsBackground", 10)
+		local premiumTabButton = tabButtonsBackground and tabButtonsBackground:WaitForChild("PremiumTab", 10)
+		if not premiumTabButton then
+			warn("PremiumShopHandler: PremiumTab button not found!")
+			return
+		end
+
+		-- ==================== PREMIUM CONTAINER ====================
+		local premiumContainer = Instance.new("Frame")
+		premiumContainer.Name = "PremiumContainer"
+		premiumContainer.Size = UDim2.new(1, 0, 1, 0)
+		premiumContainer.BackgroundTransparency = 1
+		premiumContainer.Visible = false
+		premiumContainer.ZIndex = 7
+		premiumContainer.Parent = shopFrame
+
+		-- Main panel
+		local premiumPanel = Instance.new("ScrollingFrame")
+		premiumPanel.Name = "PremiumPanel"
+		premiumPanel.Size = UDim2.new(0.76, 0, 0.84, 0)
+		premiumPanel.Position = UDim2.new(0.2, 0, 0.128, 0)
+		premiumPanel.BackgroundColor3 = Color3.fromRGB(28, 28, 33)
+		premiumPanel.BackgroundTransparency = 0.2
+		premiumPanel.BorderSizePixel = 0
+		premiumPanel.ScrollBarThickness = 6
+		premiumPanel.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 110)
+		premiumPanel.CanvasSize = UDim2.new(0, 0, 0, 0) -- updated below
+		premiumPanel.ZIndex = 7
+		premiumPanel.Parent = premiumContainer
+
+		local ppCorner = Instance.new("UICorner")
+		ppCorner.CornerRadius = UDim.new(0, 12)
+		ppCorner.Parent = premiumPanel
+
+		local ppStroke = Instance.new("UIStroke")
+		ppStroke.Color = Color3.fromRGB(180, 140, 0)
+		ppStroke.Thickness = 1.5
+		ppStroke.Transparency = 0.4
+		ppStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		ppStroke.Parent = premiumPanel
+
+		-- Gold gradient header
+		local premiumHeader = Instance.new("Frame")
+		premiumHeader.Size = UDim2.new(1, 0, 0.1, 0)
+		premiumHeader.BackgroundColor3 = Color3.fromRGB(160, 110, 0)
+		premiumHeader.BorderSizePixel = 0
+		premiumHeader.ZIndex = 8
+		premiumHeader.Parent = premiumPanel
+
+		local headerCorner = Instance.new("UICorner")
+		headerCorner.CornerRadius = UDim.new(0, 12)
+		headerCorner.Parent = premiumHeader
+
+		-- Cover bottom corners so only the top rounds
+		local headerFill = Instance.new("Frame")
+		headerFill.Size = UDim2.new(1, 0, 0.5, 0)
+		headerFill.Position = UDim2.new(0, 0, 0.5, 0)
+		headerFill.BackgroundColor3 = Color3.fromRGB(160, 110, 0)
+		headerFill.BorderSizePixel = 0
+		headerFill.ZIndex = 8
+		headerFill.Parent = premiumHeader
+
+		local headerGradient = Instance.new("UIGradient")
+		headerGradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(200, 150, 0)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 80,  0)),
+		})
+		headerGradient.Rotation = 90
+		headerGradient.Parent = premiumHeader
+
+		local headerLabel = Instance.new("TextLabel")
+		headerLabel.Size = UDim2.new(1, 0, 1, 0)
+		headerLabel.BackgroundTransparency = 1
+		headerLabel.Text = "👑  PREMIUM"
+		headerLabel.TextColor3 = Color3.fromRGB(255, 240, 180)
+		headerLabel.Font = Enum.Font.GothamBold
+		headerLabel.TextScaled = true
+		headerLabel.ZIndex = 9
+		headerLabel.Parent = premiumHeader
+
+		local headerConstraint = Instance.new("UITextSizeConstraint")
+		headerConstraint.MaxTextSize = 22
+		headerConstraint.Parent = headerLabel
+
+		-- Subtitle
+		local subLabel = Instance.new("TextLabel")
+		subLabel.Size = UDim2.new(0.9, 0, 0.06, 0)
+		subLabel.Position = UDim2.new(0.05, 0, 0.115, 0)
+		subLabel.BackgroundTransparency = 1
+		subLabel.Text = "Permanent boosts for dedicated miners"
+		subLabel.TextColor3 = Color3.fromRGB(160, 160, 170)
+		subLabel.Font = Enum.Font.Gotham
+		subLabel.TextScaled = true
+		subLabel.ZIndex = 8
+		subLabel.Parent = premiumPanel
+
+		local subConstraint = Instance.new("UITextSizeConstraint")
+		subConstraint.MaxTextSize = 14
+		subConstraint.Parent = subLabel
+
+		-- ==================== HELPER: BUILD A CARD ====================
+		local function buildCard(parent, cfg)
+			-- cfg = { posY, bgColor, strokeColor, iconColor, iconEmoji,
+			--         titleText, titleColor, descText, gpId }
+
+			local card = Instance.new("Frame")
+			card.Size = UDim2.new(0.88, 0, 0, 0) -- height set below via aspect ratio
+			card.Position = UDim2.new(0.06, 0, 0, cfg.posY)
+			card.BackgroundColor3 = cfg.bgColor
+			card.BorderSizePixel = 0
+			card.ZIndex = 8
+			card.Parent = parent
+
+			-- Fixed pixel height so cards don't rely on panel scale
+			local cardSizeConstraint = Instance.new("UISizeConstraint")
+			cardSizeConstraint.MinSize = Vector2.new(0, 160)
+			cardSizeConstraint.MaxSize = Vector2.new(math.huge, 160)
+			cardSizeConstraint.Parent = card
+
+			local cCorner = Instance.new("UICorner")
+			cCorner.CornerRadius = UDim.new(0, 14)
+			cCorner.Parent = card
+
+			local cStroke = Instance.new("UIStroke")
+			cStroke.Color = cfg.strokeColor
+			cStroke.Thickness = 1.5
+			cStroke.Transparency = 0.3
+			cStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			cStroke.Parent = card
+
+			-- Icon circle
+			local circle = Instance.new("Frame")
+			circle.Size = UDim2.new(0, 56, 0, 56)
+			circle.Position = UDim2.new(0.5, 0, 0, 12)
+			circle.AnchorPoint = Vector2.new(0.5, 0)
+			circle.BackgroundColor3 = cfg.iconColor
+			circle.BorderSizePixel = 0
+			circle.ZIndex = 9
+			circle.Parent = card
+
+			local circleRound = Instance.new("UICorner")
+			circleRound.CornerRadius = UDim.new(0.5, 0)
+			circleRound.Parent = circle
+
+			local emoji = Instance.new("TextLabel")
+			emoji.Size = UDim2.new(1, 0, 1, 0)
+			emoji.BackgroundTransparency = 1
+			emoji.Text = cfg.iconEmoji
+			emoji.TextScaled = true
+			emoji.ZIndex = 10
+			emoji.Parent = circle
+
+			local emojiConstraint = Instance.new("UITextSizeConstraint")
+			emojiConstraint.MaxTextSize = 32
+			emojiConstraint.Parent = emoji
+
+			-- Title
+			local titleLbl = Instance.new("TextLabel")
+			titleLbl.Size = UDim2.new(0.9, 0, 0, 22)
+			titleLbl.Position = UDim2.new(0.05, 0, 0, 76)
+			titleLbl.BackgroundTransparency = 1
+			titleLbl.Text = cfg.titleText
+			titleLbl.TextColor3 = cfg.titleColor
+			titleLbl.Font = Enum.Font.GothamBold
+			titleLbl.TextScaled = true
+			titleLbl.ZIndex = 9
+			titleLbl.Parent = card
+
+			local titleConstraint = Instance.new("UITextSizeConstraint")
+			titleConstraint.MaxTextSize = 18
+			titleConstraint.Parent = titleLbl
+
+			-- Description
+			local descLbl = Instance.new("TextLabel")
+			descLbl.Size = UDim2.new(0.9, 0, 0, 34)
+			descLbl.Position = UDim2.new(0.05, 0, 0, 100)
+			descLbl.BackgroundTransparency = 1
+			descLbl.Text = cfg.descText
+			descLbl.TextColor3 = Color3.fromRGB(180, 180, 190)
+			descLbl.Font = Enum.Font.Gotham
+			descLbl.TextWrapped = true
+			descLbl.TextScaled = true
+			descLbl.ZIndex = 9
+			descLbl.Parent = card
+
+			local descConstraint = Instance.new("UITextSizeConstraint")
+			descConstraint.MaxTextSize = 11
+			descConstraint.Parent = descLbl
+
+			-- Buy button
+			local buyBtn = Instance.new("TextButton")
+			buyBtn.Size = UDim2.new(0.55, 0, 0, 28)
+			buyBtn.Position = UDim2.new(0.225, 0, 0, 126)
+			buyBtn.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+			buyBtn.Text = "🛒  Buy with Robux"
+			buyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+			buyBtn.Font = Enum.Font.GothamBold
+			buyBtn.TextScaled = true
+			buyBtn.ZIndex = 9
+			buyBtn.Visible = false
+			buyBtn.Parent = card
+
+			local buyCorner = Instance.new("UICorner")
+			buyCorner.CornerRadius = UDim.new(0, 8)
+			buyCorner.Parent = buyBtn
+
+			local buyConstraint = Instance.new("UITextSizeConstraint")
+			buyConstraint.MaxTextSize = 13
+			buyConstraint.Parent = buyBtn
+
+			-- Owned badge
+			local ownedBadge = Instance.new("TextLabel")
+			ownedBadge.Size = UDim2.new(0.55, 0, 0, 28)
+			ownedBadge.Position = UDim2.new(0.225, 0, 0, 126)
+			ownedBadge.BackgroundColor3 = Color3.fromRGB(30, 100, 40)
+			ownedBadge.Text = "✓  Active"
+			ownedBadge.TextColor3 = Color3.fromRGB(120, 255, 140)
+			ownedBadge.Font = Enum.Font.GothamBold
+			ownedBadge.TextScaled = true
+			ownedBadge.ZIndex = 9
+			ownedBadge.Visible = false
+			ownedBadge.Parent = card
+
+			local ownedCorner = Instance.new("UICorner")
+			ownedCorner.CornerRadius = UDim.new(0, 8)
+			ownedCorner.Parent = ownedBadge
+
+			local ownedConstraint = Instance.new("UITextSizeConstraint")
+			ownedConstraint.MaxTextSize = 13
+			ownedConstraint.Parent = ownedBadge
+
+			-- Checking label
+			local checkingLbl = Instance.new("TextLabel")
+			checkingLbl.Size = UDim2.new(0.55, 0, 0, 28)
+			checkingLbl.Position = UDim2.new(0.225, 0, 0, 126)
+			checkingLbl.BackgroundTransparency = 1
+			checkingLbl.Text = "Checking..."
+			checkingLbl.TextColor3 = Color3.fromRGB(140, 140, 150)
+			checkingLbl.Font = Enum.Font.Gotham
+			checkingLbl.TextScaled = true
+			checkingLbl.ZIndex = 9
+			checkingLbl.Visible = true
+			checkingLbl.Parent = card
+
+			local checkingConstraint = Instance.new("UITextSizeConstraint")
+			checkingConstraint.MaxTextSize = 12
+			checkingConstraint.Parent = checkingLbl
+
+			return {
+				card        = card,
+				cStroke     = cStroke,
+				buyBtn      = buyBtn,
+				ownedBadge  = ownedBadge,
+				checkingLbl = checkingLbl,
+			}
+		end
+
+		-- ==================== BUILD CARDS ====================
+		local card1 = buildCard(premiumPanel, {
+			posY       = 200,
+			bgColor    = Color3.fromRGB(35, 30, 20),
+			strokeColor = Color3.fromRGB(200, 150, 30),
+			iconColor  = Color3.fromRGB(160, 110, 0),
+			iconEmoji  = "💰",
+			titleText  = "2x Cash",
+			titleColor = Color3.fromRGB(255, 215, 0),
+			descText   = "Permanently double all cash earned from ore deposits. Stacks with upgrades.",
+			gpId       = DOUBLE_CASH_GAMEPASS_ID,
+		})
+
+		local card2 = buildCard(premiumPanel, {
+			posY       = 390,
+			bgColor    = Color3.fromRGB(20, 25, 40),
+			strokeColor = Color3.fromRGB(80, 140, 220),
+			iconColor  = Color3.fromRGB(40, 80, 160),
+			iconEmoji  = "🔬",
+			titleText  = "Auto Research",
+			titleColor = Color3.fromRGB(130, 180, 255),
+			descText   = "Automatically starts all available research objectives. Toggle on/off in the Research menu.",
+			gpId       = AUTO_RESEARCH_GAMEPASS_ID,
+		})
+
+		local card3 = buildCard(premiumPanel, {
+			posY        = 580,
+			bgColor     = Color3.fromRGB(20, 35, 35),
+			strokeColor = Color3.fromRGB(60, 180, 140),
+			iconColor   = Color3.fromRGB(30, 120, 90),
+			iconEmoji   = "⚗️",
+			titleText   = "Research Boost",
+			titleColor  = Color3.fromRGB(80, 220, 170),
+			descText    = "Ore deposits count as 2x progress on research objectives. Disabled during speedruns for fair competition.",
+			gpId        = RESEARCH_BOOST_GAMEPASS_ID,
+		})
+
+		-- Update canvas to fit all three cards
+		premiumPanel.CanvasSize = UDim2.new(0, 0, 0, 780)
+
+		-- ==================== OWNERSHIP LOGIC ====================
+		local checked1, owned1 = false, false
+		local checked2, owned2 = false, false
+		local checked3, owned3 = false, false
+
+		local function refreshCard(cardData, isOwned, ownedBgColor, ownedStrokeColor, defaultBgColor, defaultStrokeColor)
+			cardData.checkingLbl.Visible = false
+			if isOwned then
+				cardData.buyBtn.Visible    = false
+				cardData.ownedBadge.Visible = true
+				cardData.card.BackgroundColor3 = ownedBgColor
+				cardData.cStroke.Color         = ownedStrokeColor
+			else
+				cardData.buyBtn.Visible    = true
+				cardData.ownedBadge.Visible = false
+				cardData.card.BackgroundColor3 = defaultBgColor
+				cardData.cStroke.Color         = defaultStrokeColor
+			end
+		end
+
+		local function refreshCard1()
+			refreshCard(card1, owned1,
+				Color3.fromRGB(25, 45, 25), Color3.fromRGB(50, 180, 80),
+				Color3.fromRGB(35, 30, 20),  Color3.fromRGB(200, 150, 30))
+		end
+
+		local function refreshCard2()
+			refreshCard(card2, owned2,
+				Color3.fromRGB(25, 45, 25), Color3.fromRGB(50, 180, 80),
+				Color3.fromRGB(20, 25, 40),  Color3.fromRGB(80, 140, 220))
+		end
+		
+		local function refreshCard3()
+			refreshCard(card3, owned3,
+				Color3.fromRGB(25, 45, 25), Color3.fromRGB(50, 180, 80),
+				Color3.fromRGB(20, 35, 35),  Color3.fromRGB(60, 180, 140))
+		end
+
+		local function checkOwnership()
+			if checked1 and checked2 then return end
+
+			task.spawn(function()
+				local checkRemote = RepStorage.Events:WaitForChild("CheckGamepassOwned", 5)
+				if not checkRemote then return end
+
+				if not checked1 then
+					local ok, result = pcall(function()
+						return checkRemote:InvokeServer(DOUBLE_CASH_GAMEPASS_ID)
+					end)
+					if ok then owned1 = result == true; checked1 = true end
+					refreshCard1()
+				end
+
+				if not checked2 then
+					local ok, result = pcall(function()
+						return checkRemote:InvokeServer(AUTO_RESEARCH_GAMEPASS_ID)
+					end)
+					if ok then owned2 = result == true; checked2 = true end
+					refreshCard2()
+				end
+				
+				if not checked3 then
+					local ok, result = pcall(function()
+						return checkRemote:InvokeServer(RESEARCH_BOOST_GAMEPASS_ID)
+					end)
+					if ok then owned3 = result == true; checked3 = true end
+					refreshCard3()
+				end
+			end)
+		end
+
+		-- Buy buttons
+		card1.buyBtn.MouseButton1Click:Connect(function()
+			MarketplaceService:PromptGamePassPurchase(Plr, DOUBLE_CASH_GAMEPASS_ID)
+		end)
+
+		card2.buyBtn.MouseButton1Click:Connect(function()
+			MarketplaceService:PromptGamePassPurchase(Plr, AUTO_RESEARCH_GAMEPASS_ID)
+		end)
+		
+		card3.buyBtn.MouseButton1Click:Connect(function()
+			MarketplaceService:PromptGamePassPurchase(Plr, RESEARCH_BOOST_GAMEPASS_ID)
+		end)
+
+		-- Listen for purchases to refresh UI without reopening the shop
+		local purchasedEvent = RepStorage.Events:WaitForChild("GamepassPurchased", 5)
+		if purchasedEvent then
+			purchasedEvent.OnClientEvent:Connect(function(gpName)
+				if gpName == "DoubleCash" then
+					owned1 = true; checked1 = true
+					if premiumContainer.Visible then refreshCard1() end
+				elseif gpName == "AutoResearch" then
+					owned2 = true; checked2 = true
+					if premiumContainer.Visible then refreshCard2() end
+				elseif gpName == "ResearchBoost" then
+					owned3 = true; checked3 = true
+					if premiumContainer.Visible then refreshCard3() end
+				end
+			end)
+		end
+
+		-- ==================== TAB SWITCHING ====================
+		premiumTabButton.MouseButton1Click:Connect(function()
+			local itemsTabBtn    = tabButtonsBackground:FindFirstChild("ItemsTab")
+			local upgradesTabBtn = tabButtonsBackground:FindFirstChild("UpgradesTab")
+			if itemsTabBtn    then itemsTabBtn.BackgroundColor3    = Color3.fromRGB(40, 40, 45) end
+			if upgradesTabBtn then upgradesTabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 45) end
+			premiumTabButton.BackgroundColor3 = Color3.fromRGB(160, 110, 0)
+
+			local ic = shopFrame:FindFirstChild("ItemsContainer")
+			if ic then ic.Visible = false end
+			local uc = shopFrame:FindFirstChild("UpgradesContainer")
+			if uc then uc.Visible = false end
+
+			premiumContainer.Visible = true
+			checkOwnership()
+		end)
+
+		-- Hide PremiumContainer when Upgrades tab is clicked
+		local upgradesTabBtn = tabButtonsBackground:WaitForChild("UpgradesTab", 10)
+		if upgradesTabBtn then
+			upgradesTabBtn.MouseButton1Click:Connect(function()
+				premiumContainer.Visible = false
+				premiumTabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+			end)
+		end
+
+	end) -- end task.spawn
+end
+
+return module
