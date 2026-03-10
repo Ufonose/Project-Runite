@@ -67,10 +67,18 @@ local function refreshOwnership(player)
 		end
 	end
 
-	checkPass(DOUBLE_CASH_GAMEPASS_ID,               "DoubleCash")
-	checkPass(AUTO_RESEARCH_GAMEPASS_ID,             "AutoResearch")
-	checkPass(RESEARCH_BOOST_GAMEPASS_ID,            "ResearchBoost")
-	checkPass(SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID,     "SpeedrunEarlyAccess")
+	checkPass(DOUBLE_CASH_GAMEPASS_ID,           "DoubleCash")
+	checkPass(AUTO_RESEARCH_GAMEPASS_ID,         "AutoResearch")
+	checkPass(RESEARCH_BOOST_GAMEPASS_ID,        "ResearchBoost")
+	checkPass(SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID, "SpeedrunEarlyAccess")
+
+	-- If they own Early Access, make sure speedrun is unlocked too
+	if session.Gamepasses.SpeedrunEarlyAccess == true then
+		local speedrun = session["Speedrun"]
+		if speedrun then
+			speedrun.Unlocked = true
+		end
+	end
 end
 
 -- ============================================================
