@@ -10,6 +10,7 @@ local PlayerDataManager = require(ServerStorage.Modules.PlayerDataManager)
 local DOUBLE_CASH_GAMEPASS_ID    = 1745379165
 local AUTO_RESEARCH_GAMEPASS_ID  = 1741387786
 local RESEARCH_BOOST_GAMEPASS_ID = 1744553461
+local SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID = 1744113516 
 
 -- ============================================================
 -- GLOBALS: used by other server scripts
@@ -33,6 +34,13 @@ _G.PlayerHasResearchBoost = function(player)
 	return session ~= nil
 		and session.Gamepasses ~= nil
 		and session.Gamepasses.ResearchBoost == true
+end
+
+_G.PlayerHasSpeedrunEarlyAccess = function(player)
+	local session = PlayerDataManager.Get(player)
+	return session ~= nil
+		and session.Gamepasses ~= nil
+		and session.Gamepasses.SpeedrunEarlyAccess == true
 end
 
 -- ============================================================
@@ -59,6 +67,7 @@ local function refreshOwnership(player)
 	checkPass(DOUBLE_CASH_GAMEPASS_ID,    "DoubleCash")
 	checkPass(AUTO_RESEARCH_GAMEPASS_ID,  "AutoResearch")
 	checkPass(RESEARCH_BOOST_GAMEPASS_ID, "ResearchBoost")
+	checkPass(SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID, "SpeedrunEarlyAccess")
 end
 
 -- ============================================================
@@ -94,6 +103,18 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gamep
 		Events.MessageClient:FireClient(player, "screen", {
 			message = "⚡ Research Boost activated! Item deposits count as 2x progress."
 		})
+		
+	elseif gamepassId == SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID then
+		session.Gamepasses.SpeedrunEarlyAccess = true
+		-- Permanently unlock Speedrun mode in their profile
+		local speedrun = session["Speedrun"]
+		if speedrun then
+			speedrun.Unlocked = true
+		end
+		Events.GamepassPurchased:FireClient(player, "SpeedrunEarlyAccess")
+		Events.MessageClient:FireClient(player, "screen", {
+			message = "🏁 Speedrun Early Access unlocked! You can now enter Speedrun Mode without completing all research."
+		})
 	end
 end)
 
@@ -113,6 +134,8 @@ checkRemote.OnServerInvoke = function(player, gpId)
 		return session.Gamepasses.AutoResearch == true
 	elseif gpId == RESEARCH_BOOST_GAMEPASS_ID then
 		return session.Gamepasses.ResearchBoost == true
+	elseif gpId == SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID then
+		return session.Gamepasses.SpeedrunEarlyAccess == true
 	end
 	return false
 end
@@ -128,6 +151,13 @@ gpIdRemote.Name = "GetAutoResearchPassId"
 gpIdRemote.Parent = Events
 gpIdRemote.OnServerInvoke = function()
 	return AUTO_RESEARCH_GAMEPASS_ID
+end
+
+local srEarlyAccessIdRemote = Instance.new("RemoteFunction")
+srEarlyAccessIdRemote.Name = "GetSpeedrunEarlyAccessPassId"
+srEarlyAccessIdRemote.Parent = Events
+srEarlyAccessIdRemote.OnServerInvoke = function()
+	return SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID
 end
 
 -- ============================================================
