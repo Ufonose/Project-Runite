@@ -44,7 +44,7 @@ RepStorage.Events.GetHotspotInfo.OnServerInvoke = function(player, hotspotId)
 		local speedrun = session["Speedrun"]
 		-- If speedrun is already unlocked, research was completed at some point
 		-- (this stays true even during a speedrun where CompletedObjectives is reset)
-		if speedrun and speedrun.Unlocked then
+		if speedrun and speedrun.InSpeedrunMode then
 			isResearchLocked = false
 		else
 			local ResearchData = require(ServerStorage.Modules.ResearchData)
