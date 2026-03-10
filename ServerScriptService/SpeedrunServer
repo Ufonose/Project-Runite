@@ -42,4 +42,4 @@ Players.PlayerAdded:Connect(function(player)
 	end
 end)
 
-print("✅ SpeedrunServer loaded")
+--print("✅ SpeedrunServer loaded")
