@@ -1,9 +1,9 @@
--- ServerStorage (Modules)/ResearchHandler
+-- ServerStorage/Modules/ResearchHandler
 local ServerStorage = game:GetService("ServerStorage")
-local RepStorage = game:GetService("ReplicatedStorage")
+local RepStorage    = game:GetService("ReplicatedStorage")
 
-local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
-local ResearchData = require(ServerStorage.Modules.ResearchData)
+local PlayerSession  = require(ServerStorage.Modules.PlayerDataManager)
+local ResearchData   = require(ServerStorage.Modules.ResearchData)
 local SpeedrunHandler = require(ServerStorage.Modules.SpeedrunHandler)
 
 local ResearchHandler = {}
@@ -22,15 +22,15 @@ local function getItemNameFromId(itemId)
 end
 
 function ResearchHandler.InitializePlayer(player)
-	local session = PlayerSession.Get(player) -- FIXED
+	local session = PlayerSession.Get(player)
 	if not session then return false end
 
 	if not session["Research"] then
 		session["Research"] = {
 			CompletedObjectives = {},
-			ActiveObjectives = {},
-			ObjectiveProgress = {},
-			ItemsCollected = {},
+			ActiveObjectives    = {},
+			ObjectiveProgress   = {},
+			ItemsCollected      = {},
 		}
 	end
 
@@ -44,7 +44,7 @@ end
 function ResearchHandler.TrackItemCollection(player, itemName, amount)
 	if not ResearchHandler.InitializePlayer(player) then return end
 
-	local session = PlayerSession.Get(player) -- FIXED
+	local session  = PlayerSession.Get(player)
 	local research = session["Research"]
 
 	if not research.ItemsCollected[itemName] then
@@ -56,14 +56,13 @@ end
 function ResearchHandler.StartObjective(player, objectiveId)
 	if not ResearchHandler.InitializePlayer(player) then return false end
 
-	local session = PlayerSession.Get(player) -- FIXED
+	local session  = PlayerSession.Get(player)
 	local research = session["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
 	if not objective then return false end
-
 	if table.find(research.CompletedObjectives, objectiveId) then return false, "Already completed" end
-	if table.find(research.ActiveObjectives, objectiveId) then return false, "Already active" end
+	if table.find(research.ActiveObjectives,    objectiveId) then return false, "Already active" end
 
 	if not ResearchData.CanStartObjective(objectiveId, research.CompletedObjectives) then
 		return false, "Prerequisites not met"
@@ -75,7 +74,8 @@ function ResearchHandler.StartObjective(player, objectiveId)
 	for _, requirement in pairs(objective.Requirements) do
 		research.ObjectiveProgress[tostring(objectiveId)][requirement.ItemName] = 0
 	end
-	-- ✅ Notify speedrun of objective start (for age timer tracking)
+
+	-- Notify SpeedrunHandler for age timer tracking
 	SpeedrunHandler.OnObjectiveStarted(player, objectiveId)
 	return true
 end
@@ -83,7 +83,7 @@ end
 function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
 	if not ResearchHandler.InitializePlayer(player) then return false end
 
-	local session = PlayerSession.Get(player) -- FIXED
+	local session = PlayerSession.Get(player)
 	local research = session["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
@@ -103,7 +103,18 @@ function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
 
 	local progressKey = tostring(objectiveId)
 	local currentProgress = research.ObjectiveProgress[progressKey][itemName] or 0
-	local newProgress = math.min(currentProgress + amount, requirement.Amount)
+
+	-- Apply 2x Research Boost (disabled during speedruns for fairness)
+	local depositAmount = amount
+	if _G.PlayerHasResearchBoost and _G.PlayerHasResearchBoost(player) then
+		local speedrun = session["Speedrun"]
+		local inSpeedrun = speedrun and speedrun.IsActive == true
+		if not inSpeedrun then
+			depositAmount = amount * 2
+		end
+	end
+
+	local newProgress = math.min(currentProgress + depositAmount, requirement.Amount)
 	research.ObjectiveProgress[progressKey][itemName] = newProgress
 
 	if ResearchHandler.CheckObjectiveComplete(player, objectiveId) then
@@ -114,10 +125,10 @@ function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
 end
 
 function ResearchHandler.CheckObjectiveComplete(player, objectiveId)
-	local session = PlayerSession.Get(player) -- FIXED
+	local session = PlayerSession.Get(player)
 	if not session then return false end
 
-	local research = session["Research"]
+	local research  = session["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
 	if not objective or not research.ObjectiveProgress[tostring(objectiveId)] then
@@ -135,10 +146,10 @@ function ResearchHandler.CheckObjectiveComplete(player, objectiveId)
 end
 
 function ResearchHandler.CompleteObjective(player, objectiveId)
-	local session = PlayerSession.Get(player) -- FIXED
+	local session = PlayerSession.Get(player)
 	if not session then return false end
 
-	local research = session["Research"]
+	local research  = session["Research"]
 	local objective = ResearchData.GetObjective(objectiveId)
 
 	if not objective then return false end
@@ -172,19 +183,49 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 	end
 
 	RepStorage.Events.MessageClient:FireClient(player, "screen", {
-		["message"] = notificationMessage
+		message = notificationMessage
 	})
-	
-	-- ✅ NEW: Notify SpeedrunHandler so it can record age splits and unlock detection
+
+	-- Notify SpeedrunHandler for age splits and unlock detection
 	SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
+
+	-- ✅ Auto-start any objectives that just became available
+	task.defer(ResearchHandler.AutoStartAvailableObjectives, player)
 
 	return true
 end
 
 function ResearchHandler.GetPlayerResearch(player)
 	ResearchHandler.InitializePlayer(player)
-	local session = PlayerSession.Get(player) -- FIXED
+	local session = PlayerSession.Get(player)
 	return session and session["Research"]
 end
+
+-- ============================================================
+-- ✅ AUTO RESEARCH (Gamepass feature)
+-- ============================================================
+function ResearchHandler.AutoStartAvailableObjectives(player)
+	-- Only run if the player owns the pass
+	if not _G.PlayerHasAutoResearch or not _G.PlayerHasAutoResearch(player) then return end
+
+	-- Only run if the player has the setting enabled
+	local autoSetting = player.Settings:FindFirstChild("AutoResearch")
+	if autoSetting and autoSetting.Value == false then return end
+
+	local session = PlayerSession.Get(player)
+	if not session then return end
+
+	local available = ResearchData.GetAvailableObjectives(
+		session["Research"].CompletedObjectives,
+		session["Research"].ActiveObjectives
+	)
+
+	for _, objective in pairs(available) do
+		ResearchHandler.StartObjective(player, objective.Id)
+	end
+end
+
+-- Expose as global so GamepassHandler and ResearchServer can call it
+_G.AutoStartAvailableObjectives = ResearchHandler.AutoStartAvailableObjectives
 
 return ResearchHandler
