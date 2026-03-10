@@ -7,10 +7,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PlayerDataManager = require(ServerStorage.Modules.PlayerDataManager)
 
 -- !! Gamepass IDs !!
-local DOUBLE_CASH_GAMEPASS_ID    = 1745379165
-local AUTO_RESEARCH_GAMEPASS_ID  = 1741387786
-local RESEARCH_BOOST_GAMEPASS_ID = 1744553461
-local SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID = 1744113516 
+local DOUBLE_CASH_GAMEPASS_ID               = 1745379165
+local AUTO_RESEARCH_GAMEPASS_ID             = 1741387786
+local RESEARCH_BOOST_GAMEPASS_ID            = 1744553461
+local SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID     = 1744113516
+
+-- !! Developer Product IDs !!
+local LEGENDARY_MINE_PRODUCT_ID             = 3553756561
 
 -- ============================================================
 -- GLOBALS: used by other server scripts
@@ -64,14 +67,14 @@ local function refreshOwnership(player)
 		end
 	end
 
-	checkPass(DOUBLE_CASH_GAMEPASS_ID,    "DoubleCash")
-	checkPass(AUTO_RESEARCH_GAMEPASS_ID,  "AutoResearch")
-	checkPass(RESEARCH_BOOST_GAMEPASS_ID, "ResearchBoost")
-	checkPass(SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID, "SpeedrunEarlyAccess")
+	checkPass(DOUBLE_CASH_GAMEPASS_ID,               "DoubleCash")
+	checkPass(AUTO_RESEARCH_GAMEPASS_ID,             "AutoResearch")
+	checkPass(RESEARCH_BOOST_GAMEPASS_ID,            "ResearchBoost")
+	checkPass(SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID,     "SpeedrunEarlyAccess")
 end
 
 -- ============================================================
--- Handle purchase completion
+-- Handle gamepass purchase completion
 -- ============================================================
 local Events = ReplicatedStorage:WaitForChild("Events")
 
@@ -103,20 +106,62 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gamep
 		Events.MessageClient:FireClient(player, "screen", {
 			message = "⚡ Research Boost activated! Item deposits count as 2x progress."
 		})
-		
+
 	elseif gamepassId == SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID then
 		session.Gamepasses.SpeedrunEarlyAccess = true
-		-- Permanently unlock Speedrun mode in their profile
 		local speedrun = session["Speedrun"]
 		if speedrun then
 			speedrun.Unlocked = true
 		end
 		Events.GamepassPurchased:FireClient(player, "SpeedrunEarlyAccess")
 		Events.MessageClient:FireClient(player, "screen", {
-			message = "🏁 Speedrun Early Access unlocked! You can now enter Speedrun Mode without completing all research."
+			message = "🏁 Speedrun access unlocked! You can now enter Speedrun Mode."
 		})
 	end
 end)
+
+-- ============================================================
+-- Handle developer product purchase completion
+-- NOTE: Only one ProcessReceipt handler can exist per server.
+-- Add all future dev products as elseif branches here.
+-- ============================================================
+MarketplaceService.ProcessReceipt = function(receiptInfo)
+	local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
+	if not player then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+
+	local session = PlayerDataManager.Get(player)
+	if not session then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+
+	if receiptInfo.ProductId == LEGENDARY_MINE_PRODUCT_ID then
+		local MinerHotspotHandler = require(ServerStorage.Modules.MinerHotspotHandler)
+		local LEGENDARY_HOTSPOT_ID = 9
+
+		-- Already unlocked — safe to grant again (idempotent)
+		if MinerHotspotHandler.IsHotspotUnlocked(player, LEGENDARY_HOTSPOT_ID) then
+			return Enum.ProductPurchaseDecision.PurchaseGranted
+		end
+
+		-- Unlock: skip research + cash gate, activate directly
+		if not session["MinerHotspots"] then
+			session["MinerHotspots"] = { UnlockedHotspots = {} }
+		end
+		table.insert(session["MinerHotspots"].UnlockedHotspots, LEGENDARY_HOTSPOT_ID)
+		MinerHotspotHandler.ActivateHotspot(player, LEGENDARY_HOTSPOT_ID)
+
+		Events.LegendaryMineUnlocked:FireClient(player)
+		Events.MessageClient:FireClient(player, "screen", {
+			message = "⛏️ Legendary Mine unlocked! It has been placed on your plot."
+		})
+
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+
+	return Enum.ProductPurchaseDecision.NotProcessedYet
+end
 
 -- ============================================================
 -- RemoteFunction: client queries ownership (for Premium tab UI)
@@ -145,6 +190,11 @@ local purchasedEvent = Instance.new("RemoteEvent")
 purchasedEvent.Name = "GamepassPurchased"
 purchasedEvent.Parent = Events
 
+-- RemoteEvent: tells the client the Legendary Mine was unlocked via dev product
+local legendaryMineUnlocked = Instance.new("RemoteEvent")
+legendaryMineUnlocked.Name = "LegendaryMineUnlocked"
+legendaryMineUnlocked.Parent = Events
+
 -- RemoteFunction: client queries the Auto Research gamepass ID
 local gpIdRemote = Instance.new("RemoteFunction")
 gpIdRemote.Name = "GetAutoResearchPassId"
@@ -153,11 +203,20 @@ gpIdRemote.OnServerInvoke = function()
 	return AUTO_RESEARCH_GAMEPASS_ID
 end
 
+-- RemoteFunction: client queries the Speedrun Early Access gamepass ID
 local srEarlyAccessIdRemote = Instance.new("RemoteFunction")
 srEarlyAccessIdRemote.Name = "GetSpeedrunEarlyAccessPassId"
 srEarlyAccessIdRemote.Parent = Events
 srEarlyAccessIdRemote.OnServerInvoke = function()
 	return SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID
+end
+
+-- RemoteFunction: client queries the Legendary Mine dev product ID
+local legendaryMineProductIdRemote = Instance.new("RemoteFunction")
+legendaryMineProductIdRemote.Name = "GetLegendaryMineProductId"
+legendaryMineProductIdRemote.Parent = Events
+legendaryMineProductIdRemote.OnServerInvoke = function()
+	return LEGENDARY_MINE_PRODUCT_ID
 end
 
 -- ============================================================
