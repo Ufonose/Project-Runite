@@ -26,6 +26,7 @@ local DATA_TEMPLATE = {
 	settingMinesActive = true,
 	settingOreLimit = 250,
 	settingUISounds = true,
+	settingAutoResearch = true,
 
 	Upgrades = {
 		["IronMineSpeed"] = 0,
@@ -80,9 +81,16 @@ local DATA_TEMPLATE = {
 		Snapshot        = false,  -- stores main plot state before entering speedrun mode
 		CompletedTime  = 0,
 	},
+	
+	Gamepasses = {
+		DoubleCash   = false,
+		AutoResearch = false, 
+		ResearchBoost  = false,
+	},
+
 }
 
-local PlayerStore = ProfileStore.New("Runite_s5", DATA_TEMPLATE) -- Runite_v5 Runite_t1062
+local PlayerStore = ProfileStore.New("Runite_gp3", DATA_TEMPLATE) -- Runite_v5 Runite_t1062
 local ActiveProfiles = {} -- FIXED: now keyed by UserId (number)
 
 -- ============================================================
