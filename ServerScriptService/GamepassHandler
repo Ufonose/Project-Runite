@@ -1,0 +1,141 @@
+-- ServerScriptService/GamepassHandler
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local ServerStorage = game:GetService("ServerStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local PlayerDataManager = require(ServerStorage.Modules.PlayerDataManager)
+
+-- !! Gamepass IDs !!
+local DOUBLE_CASH_GAMEPASS_ID    = 1745379165
+local AUTO_RESEARCH_GAMEPASS_ID  = 1741387786
+local RESEARCH_BOOST_GAMEPASS_ID = 1744553461
+
+-- ============================================================
+-- GLOBALS: used by other server scripts
+-- ============================================================
+_G.PlayerHasDoubleCash = function(player)
+	local session = PlayerDataManager.Get(player)
+	return session ~= nil
+		and session.Gamepasses ~= nil
+		and session.Gamepasses.DoubleCash == true
+end
+
+_G.PlayerHasAutoResearch = function(player)
+	local session = PlayerDataManager.Get(player)
+	return session ~= nil
+		and session.Gamepasses ~= nil
+		and session.Gamepasses.AutoResearch == true
+end
+
+_G.PlayerHasResearchBoost = function(player)
+	local session = PlayerDataManager.Get(player)
+	return session ~= nil
+		and session.Gamepasses ~= nil
+		and session.Gamepasses.ResearchBoost == true
+end
+
+-- ============================================================
+-- Check & cache ownership into Profile.Data
+-- ============================================================
+local function refreshOwnership(player)
+	local session = PlayerDataManager.Get(player)
+	if not session then return end
+
+	local function checkPass(passId, key)
+		local owned = false
+		local ok, err = pcall(function()
+			owned = MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
+		end)
+		if not ok then
+			warn("GamepassHandler: UserOwnsGamePassAsync failed for", player.Name, "-", err)
+			return
+		end
+		if owned and session.Gamepasses[key] ~= true then
+			session.Gamepasses[key] = true
+		end
+	end
+
+	checkPass(DOUBLE_CASH_GAMEPASS_ID,    "DoubleCash")
+	checkPass(AUTO_RESEARCH_GAMEPASS_ID,  "AutoResearch")
+	checkPass(RESEARCH_BOOST_GAMEPASS_ID, "ResearchBoost")
+end
+
+-- ============================================================
+-- Handle purchase completion
+-- ============================================================
+local Events = ReplicatedStorage:WaitForChild("Events")
+
+MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gamepassId, wasPurchased)
+	if not wasPurchased then return end
+	local session = PlayerDataManager.Get(player)
+	if not session then return end
+
+	if gamepassId == DOUBLE_CASH_GAMEPASS_ID then
+		session.Gamepasses.DoubleCash = true
+		Events.GamepassPurchased:FireClient(player, "DoubleCash")
+		Events.MessageClient:FireClient(player, "screen", {
+			message = "💰 2x Cash activated! Your earnings are permanently doubled."
+		})
+
+	elseif gamepassId == AUTO_RESEARCH_GAMEPASS_ID then
+		session.Gamepasses.AutoResearch = true
+		Events.GamepassPurchased:FireClient(player, "AutoResearch")
+		Events.MessageClient:FireClient(player, "screen", {
+			message = "⚡ Auto Research activated! Available objectives will start automatically."
+		})
+		if _G.AutoStartAvailableObjectives then
+			_G.AutoStartAvailableObjectives(player)
+		end
+
+	elseif gamepassId == RESEARCH_BOOST_GAMEPASS_ID then
+		session.Gamepasses.ResearchBoost = true
+		Events.GamepassPurchased:FireClient(player, "ResearchBoost")
+		Events.MessageClient:FireClient(player, "screen", {
+			message = "⚡ Research Boost activated! Item deposits count as 2x progress."
+		})
+	end
+end)
+
+-- ============================================================
+-- RemoteFunction: client queries ownership (for Premium tab UI)
+-- ============================================================
+local checkRemote = Instance.new("RemoteFunction")
+checkRemote.Name = "CheckGamepassOwned"
+checkRemote.Parent = Events
+
+checkRemote.OnServerInvoke = function(player, gpId)
+	local session = PlayerDataManager.Get(player)
+	if not session then return false end
+	if gpId == DOUBLE_CASH_GAMEPASS_ID then
+		return session.Gamepasses.DoubleCash == true
+	elseif gpId == AUTO_RESEARCH_GAMEPASS_ID then
+		return session.Gamepasses.AutoResearch == true
+	elseif gpId == RESEARCH_BOOST_GAMEPASS_ID then
+		return session.Gamepasses.ResearchBoost == true
+	end
+	return false
+end
+
+-- RemoteEvent: tells the client a purchase just happened
+local purchasedEvent = Instance.new("RemoteEvent")
+purchasedEvent.Name = "GamepassPurchased"
+purchasedEvent.Parent = Events
+
+-- RemoteFunction: client queries the Auto Research gamepass ID
+local gpIdRemote = Instance.new("RemoteFunction")
+gpIdRemote.Name = "GetAutoResearchPassId"
+gpIdRemote.Parent = Events
+gpIdRemote.OnServerInvoke = function()
+	return AUTO_RESEARCH_GAMEPASS_ID
+end
+
+-- ============================================================
+-- Player join: re-check ownership
+-- ============================================================
+Players.PlayerAdded:Connect(function(player)
+	local dataLoaded = player:WaitForChild("DataLoaded", 30)
+	if dataLoaded then
+		task.spawn(refreshOwnership, player)
+	end
+end)
