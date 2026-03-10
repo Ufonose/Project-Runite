@@ -134,7 +134,7 @@ local function LOAD_DATA(Plr)
 	dsTag.Parent = Plr
 
 	loadingTag:Destroy()
-	print("✅ LOAD_DATA finalized for " .. Plr.Name)
+	--print("✅ LOAD_DATA finalized for " .. Plr.Name)
 end
 
 -- Events
