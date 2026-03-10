@@ -600,6 +600,14 @@ function SpeedrunHandler.StartRun(player)
 
 	teleportToSpawn(player)
 	SpeedrunHandler.Remotes.SpeedrunStarted:FireClient(player)
+
+	-- Auto-start available objectives if the player has the gamepass and toggle is ON
+	task.defer(function()
+		if _G.AutoStartAvailableObjectives then
+			_G.AutoStartAvailableObjectives(player)
+		end
+	end)
+
 	print(string.format("[Speedrun] %s started a new run", player.Name))
 	return true, "Run started!"
 end
