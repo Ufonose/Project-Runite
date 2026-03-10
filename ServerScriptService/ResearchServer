@@ -1,35 +1,38 @@
--- ServerScriptService/ResearchServer (WITH ITEMSCOLLECTED)
-
-local RepStorage = game:GetService("ReplicatedStorage")
+-- ServerScriptService/ResearchServer
+local RepStorage    = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
+local Players       = game:GetService("Players")
 local ResearchHandler = require(ServerStorage.Modules.ResearchHandler)
-local ResearchData = require(ServerStorage.Modules.ResearchData)
+local ResearchData    = require(ServerStorage.Modules.ResearchData)
 
 -- Get research data for player
 RepStorage.Events.GetResearchData.OnServerInvoke = function(player)
+	-- Wait for DataLoaded if the session isn't ready yet
 	local research = ResearchHandler.GetPlayerResearch(player)
-
-	-- SAFETY FIX: If data isn't loaded yet, return a "loading" state instead of crashing
 	if not research then
-		warn("Research data requested before loading was complete for:", player.Name)
+		player:WaitForChild("DataLoaded", 30)
+		research = ResearchHandler.GetPlayerResearch(player)
+	end
+	-- Still nil after waiting — something went wrong
+	if not research then
+		warn("Research data unavailable after waiting for:", player.Name)
 		return {
 			CompletedObjectives = {},
-			ActiveObjectives = {},
-			ObjectiveProgress = {},
-			ResearchTokens = player:FindFirstChild("ResearchTokens") and player.ResearchTokens.Value or 0,
-			AllObjectives = ResearchData.Objectives,
-			ItemsCollected = {},
-			IsLoading = true -- Tell the UI we are still waiting
+			ActiveObjectives    = {},
+			ObjectiveProgress   = {},
+			ResearchTokens      = player:FindFirstChild("ResearchTokens") and player.ResearchTokens.Value or 0,
+			AllObjectives       = ResearchData.Objectives,
+			ItemsCollected      = {},
+			IsLoading           = true,
 		}
 	end
-
 	return {
 		CompletedObjectives = research.CompletedObjectives,
-		ActiveObjectives = research.ActiveObjectives,
-		ObjectiveProgress = research.ObjectiveProgress,
-		ResearchTokens = player.ResearchTokens.Value,
-		AllObjectives = ResearchData.Objectives,
-		ItemsCollected = research.ItemsCollected,
+		ActiveObjectives    = research.ActiveObjectives,
+		ObjectiveProgress   = research.ObjectiveProgress,
+		ResearchTokens      = player.ResearchTokens.Value,
+		AllObjectives       = ResearchData.Objectives,
+		ItemsCollected      = research.ItemsCollected,
 	}
 end
 
@@ -41,4 +44,27 @@ end
 -- Get which research unlocks a specific item
 RepStorage.Events.GetItemUnlockRequirement.OnServerInvoke = function(player, itemId)
 	return ResearchData.GetUnlockingResearch(itemId)
+end
+
+-- Restart available objectives after toggle
+RepStorage.Events.TriggerAutoResearch.OnServerEvent:Connect(function(player)
+	ResearchHandler.AutoStartAvailableObjectives(player)
+end)
+
+-- Auto Research: when a player joins, start any already-available objectives
+Players.PlayerAdded:Connect(function(player)
+	task.spawn(function()
+		local dataLoaded = player:WaitForChild("DataLoaded", 30)
+		if not dataLoaded then return end
+		ResearchHandler.AutoStartAvailableObjectives(player)
+	end)
+end)
+
+-- Handle players already in the server (Studio testing)
+for _, player in pairs(Players:GetPlayers()) do
+	task.spawn(function()
+		local dataLoaded = player:WaitForChild("DataLoaded", 30)
+		if not dataLoaded then return end
+		ResearchHandler.AutoStartAvailableObjectives(player)
+	end)
 end
