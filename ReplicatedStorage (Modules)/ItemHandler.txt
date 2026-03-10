@@ -130,6 +130,11 @@ function module.PROCESS_ORE(PLOT, FURNACE, SMELT_PART, ORE_ADD, ORE_MULTI, ORE)
 			local cashBonusMultiplier = _G.GetUpgradeMultiplier(PLOT_OWNER, "CashBonus")
 			CASH_VAL = CASH_VAL * cashBonusMultiplier
 		end
+		
+		-- ⭐ Apply 2x Cash Gamepass (stacks on top of upgrades)
+		if _G.PlayerHasDoubleCash and _G.PlayerHasDoubleCash(PLOT_OWNER) then
+			CASH_VAL = CASH_VAL * 2
+		end
 
 		-- Round to avoid floating point issues
 		CASH_VAL = math.floor(CASH_VAL)
