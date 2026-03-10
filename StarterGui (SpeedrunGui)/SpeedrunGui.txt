@@ -3,6 +3,7 @@
 local Players      = game:GetService("Players")
 local RepStorage   = game:GetService("ReplicatedStorage")
 local RunService   = game:GetService("RunService")
+local MarketplaceService = game:GetService("MarketplaceService")
 
 local Plr        = Players.LocalPlayer
 local PlayerGui  = Plr:WaitForChild("PlayerGui")
@@ -24,6 +25,7 @@ local SpeedrunReset        = Events:WaitForChild("SpeedrunReset")
 local EnteredSpeedrunMode  = Events:WaitForChild("EnteredSpeedrunMode")
 local RestoredMainPlot     = Events:WaitForChild("RestoredMainPlot")
 local SpeedrunAgeStarted   = Events:WaitForChild("SpeedrunAgeStarted")
+local AllResearchCompleted = Events:WaitForChild("AllResearchCompleted")
 
 local speedrunGui = script.Parent
 
@@ -319,9 +321,58 @@ lockedLabel.ZIndex          = 8
 lockedLabel.Visible         = false
 local llTc = Instance.new("UITextSizeConstraint", lockedLabel); llTc.MaxTextSize = 18
 
+local earlyAccessBtn = Instance.new("TextButton", enterPanel)
+earlyAccessBtn.Name              = "EarlyAccessBtn"
+earlyAccessBtn.Size              = UDim2.new(0.55, 0, 0.08, 0)
+earlyAccessBtn.Position          = UDim2.new(0.225, 0, 0.62, 0)
+earlyAccessBtn.BackgroundColor3  = Color3.fromRGB(91, 61, 0)
+earlyAccessBtn.BorderSizePixel   = 0
+earlyAccessBtn.Text              = "⚡ Unlock Early"
+earlyAccessBtn.TextColor3        = Color3.fromRGB(255, 240, 180)
+earlyAccessBtn.TextScaled        = true
+earlyAccessBtn.Font              = Enum.Font.GothamBold
+earlyAccessBtn.ZIndex            = 9
+earlyAccessBtn.Visible           = false  -- shown only when lockedLabel is visible
+makeCorner(earlyAccessBtn, 10)
+makeStroke(earlyAccessBtn, Color3.fromRGB(194, 136, 0), 1.5, 0.2)
+local eaTc = Instance.new("UITextSizeConstraint", earlyAccessBtn); eaTc.MaxTextSize = 16
+
+-- Hover effect
+earlyAccessBtn.MouseEnter:Connect(function()
+	earlyAccessBtn.BackgroundColor3 = Color3.fromRGB(90, 60, 0)
+end)
+earlyAccessBtn.MouseLeave:Connect(function()
+	earlyAccessBtn.BackgroundColor3 = Color3.fromRGB(91, 61, 0)
+end)
+
+-- Purchase prompt
+earlyAccessBtn.MouseButton1Click:Connect(function()
+	local remote = RepStorage.Events:FindFirstChild("GetSpeedrunEarlyAccessPassId")
+	if not remote then return end
+	local ok, passId = pcall(function() return remote:InvokeServer() end)
+	if ok and passId and passId ~= 0 then
+		MarketplaceService:PromptGamePassPurchase(Plr, passId)
+	end
+end)
+
+-- Hide the button and re-show Enter button after purchase
+local purchasedEvent = RepStorage.Events:WaitForChild("GamepassPurchased", 5)
+if purchasedEvent then
+	purchasedEvent.OnClientEvent:Connect(function(gpName)
+		if gpName == "SpeedrunEarlyAccess" then
+			local menuObject = speedrunGui:FindFirstChild("MenuObject")
+			if menuObject and menuObject.Value then
+				menuObject.Value = false
+				task.wait(0.05)
+				menuObject.Value = true
+			end
+		end
+	end)
+end
+
 local enterBtn = Instance.new("TextButton", enterPanel)
 enterBtn.Size                   = UDim2.new(1, 0, 0.13, 0)
-enterBtn.Position               = UDim2.new(0, 0, 0.64, 0)
+enterBtn.Position               = UDim2.new(0, 0, 0.74, 0)
 enterBtn.BackgroundColor3       = Color3.fromRGB(40, 130, 200)
 enterBtn.BackgroundTransparency = 0.1
 enterBtn.Text                   = "🚀  Enter Speedrun Mode"
@@ -1237,6 +1288,7 @@ local function onOpen()
 	else
 		speedrunSubPanel = "enter"
 		lockedLabel.Visible             = not data.Unlocked
+		earlyAccessBtn.Visible          = not data.Unlocked
 		enterBtn.Active                 = data.Unlocked
 		enterBtn.BackgroundTransparency = data.Unlocked and 0.1 or 0.6
 		enterBtn.TextColor3             = data.Unlocked and Color3.fromRGB(255,255,255) or Color3.fromRGB(100,100,110)
@@ -1450,8 +1502,18 @@ RestoredMainPlot.OnClientEvent:Connect(function()
 	syncStatsDisplay(runData)
 	syncPBLabels(runData)
 	lockedLabel.Visible             = not (runData and runData.Unlocked)
+	earlyAccessBtn.Visible          = not (runData and runData.Unlocked)
 	enterBtn.BackgroundTransparency = (runData and runData.Unlocked) and 0.1 or 0.6
 	showSpeedrunTab()
+end)
+
+AllResearchCompleted.OnClientEvent:Connect(function()
+	local menuObject = speedrunGui:FindFirstChild("MenuObject")
+	if menuObject and menuObject.Value then
+		menuObject.Value = false
+		task.wait(0.05)
+		menuObject.Value = true
+	end
 end)
 
 -- ============================================================
