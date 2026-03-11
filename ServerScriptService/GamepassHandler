@@ -11,9 +11,21 @@ local DOUBLE_CASH_GAMEPASS_ID               = 1745379165
 local AUTO_RESEARCH_GAMEPASS_ID             = 1741387786
 local RESEARCH_BOOST_GAMEPASS_ID            = 1744553461
 local SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID     = 1744113516
+local MAX_ALL_UPGRADES_GAMEPASS_ID          = 1745314478
 
 -- !! Developer Product IDs !!
 local LEGENDARY_MINE_PRODUCT_ID             = 3553756561
+
+local MAX_UPGRADE_PRODUCT_IDS = {
+	[3554030580] = "IronMineSpeed",
+	[3554030624] = "CopperMineSpeed",
+	[3554030671] = "GoldMineSpeed",
+	[3554030725] = "ConveyorSpeed",
+	[3554031037] = "CashBonus",
+	[3554030819] = "GemDiscovery",
+	[3554030856] = "DoubleDropChance",
+	[3554030775] = "MovementSpeed",
+}
 
 -- ============================================================
 -- GLOBALS: used by other server scripts
@@ -46,6 +58,13 @@ _G.PlayerHasSpeedrunEarlyAccess = function(player)
 		and session.Gamepasses.SpeedrunEarlyAccess == true
 end
 
+_G.PlayerHasMaxAllUpgrades = function(player)
+	local session = PlayerDataManager.Get(player)
+	return session ~= nil
+		and session.Gamepasses ~= nil
+		and session.Gamepasses.MaxAllUpgrades == true
+end
+
 -- ============================================================
 -- Check & cache ownership into Profile.Data
 -- ============================================================
@@ -71,12 +90,28 @@ local function refreshOwnership(player)
 	checkPass(AUTO_RESEARCH_GAMEPASS_ID,         "AutoResearch")
 	checkPass(RESEARCH_BOOST_GAMEPASS_ID,        "ResearchBoost")
 	checkPass(SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID, "SpeedrunEarlyAccess")
+	checkPass(MAX_ALL_UPGRADES_GAMEPASS_ID,      "MaxAllUpgrades")
 
 	-- If they own Early Access, make sure speedrun is unlocked too
 	if session.Gamepasses.SpeedrunEarlyAccess == true then
 		local speedrun = session["Speedrun"]
 		if speedrun then
 			speedrun.Unlocked = true
+		end
+	end
+
+	-- If they own Max All Upgrades, re-apply on every join (covers future upgrades)
+	if session.Gamepasses.MaxAllUpgrades == true then
+		local attempts = 0
+		while not _G.MaxUpgradeForPlayer and attempts < 10 do
+			task.wait(0.5)
+			attempts += 1
+		end
+		if _G.MaxUpgradeForPlayer then
+			local UpgradesData = require(ReplicatedStorage.Modules.UpgradesData)
+			for upgradeId in pairs(UpgradesData.Upgrades) do
+				_G.MaxUpgradeForPlayer(player, upgradeId)
+			end
 		end
 	end
 end
@@ -125,6 +160,24 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gamep
 		Events.MessageClient:FireClient(player, "screen", {
 			message = "🏁 Speedrun access unlocked! You can now enter Speedrun Mode."
 		})
+
+	elseif gamepassId == MAX_ALL_UPGRADES_GAMEPASS_ID then
+		session.Gamepasses.MaxAllUpgrades = true
+		local attempts = 0
+		while not _G.MaxUpgradeForPlayer and attempts < 10 do
+			task.wait(0.5)
+			attempts += 1
+		end
+		if _G.MaxUpgradeForPlayer then
+			local UpgradesData = require(ReplicatedStorage.Modules.UpgradesData)
+			for upgradeId in pairs(UpgradesData.Upgrades) do
+				_G.MaxUpgradeForPlayer(player, upgradeId)
+			end
+		end
+		Events.GamepassPurchased:FireClient(player, "MaxAllUpgrades")
+		Events.MessageClient:FireClient(player, "screen", {
+			message = "⚡ Max All Upgrades activated! All upgrades are now maxed."
+		})
 	end
 end)
 
@@ -144,16 +197,17 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 
+	-- -------------------------------------------------------
+	-- Legendary Mine
+	-- -------------------------------------------------------
 	if receiptInfo.ProductId == LEGENDARY_MINE_PRODUCT_ID then
 		local MinerHotspotHandler = require(ServerStorage.Modules.MinerHotspotHandler)
 		local LEGENDARY_HOTSPOT_ID = 9
 
-		-- Already unlocked — safe to grant again (idempotent)
 		if MinerHotspotHandler.IsHotspotUnlocked(player, LEGENDARY_HOTSPOT_ID) then
 			return Enum.ProductPurchaseDecision.PurchaseGranted
 		end
 
-		-- Unlock: skip research + cash gate, activate directly
 		if not session["MinerHotspots"] then
 			session["MinerHotspots"] = { UnlockedHotspots = {} }
 		end
@@ -163,6 +217,37 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 		Events.LegendaryMineUnlocked:FireClient(player)
 		Events.MessageClient:FireClient(player, "screen", {
 			message = "⛏️ Legendary Mine unlocked! It has been placed on your plot."
+		})
+
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+
+		-- -------------------------------------------------------
+		-- Max Upgrade (one branch covers all 8 individual upgrades)
+		-- -------------------------------------------------------
+	elseif MAX_UPGRADE_PRODUCT_IDS[receiptInfo.ProductId] then
+		local upgradeId = MAX_UPGRADE_PRODUCT_IDS[receiptInfo.ProductId]
+
+		local attempts = 0
+		while not _G.MaxUpgradeForPlayer and attempts < 10 do
+			task.wait(0.5)
+			attempts += 1
+		end
+
+		if not _G.MaxUpgradeForPlayer then
+			warn("ProcessReceipt: MaxUpgradeForPlayer not ready for", upgradeId)
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+
+		local ok = _G.MaxUpgradeForPlayer(player, upgradeId)
+		if not ok then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+
+		local UpgradesData = require(ReplicatedStorage.Modules.UpgradesData)
+		local upgradeName = UpgradesData.Upgrades[upgradeId] and UpgradesData.Upgrades[upgradeId].Name or upgradeId
+
+		Events.MessageClient:FireClient(player, "screen", {
+			message = "⚡ " .. upgradeName .. " maxed instantly!"
 		})
 
 		return Enum.ProductPurchaseDecision.PurchaseGranted
@@ -189,6 +274,8 @@ checkRemote.OnServerInvoke = function(player, gpId)
 		return session.Gamepasses.ResearchBoost == true
 	elseif gpId == SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID then
 		return session.Gamepasses.SpeedrunEarlyAccess == true
+	elseif gpId == MAX_ALL_UPGRADES_GAMEPASS_ID then
+		return session.Gamepasses.MaxAllUpgrades == true
 	end
 	return false
 end
