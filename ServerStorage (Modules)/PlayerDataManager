@@ -87,11 +87,12 @@ local DATA_TEMPLATE = {
 		AutoResearch = false, 
 		ResearchBoost  = false,
 		SpeedrunEarlyAccess = false,
+		MaxAllUpgrades      = false,
 	},
 
 }
 
-local PlayerStore = ProfileStore.New("Runite_gp10", DATA_TEMPLATE) -- Runite_v5 Runite_t1062
+local PlayerStore = ProfileStore.New("Runite_gp33", DATA_TEMPLATE) -- Runite_v5 Runite_t1062
 local ActiveProfiles = {} -- FIXED: now keyed by UserId (number)
 
 -- ============================================================
