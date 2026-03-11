@@ -101,7 +101,7 @@ if BuyUpgradeRemote then
 		local newLevel = currentLevel + 1
 		upgrades[upgradeId] = newLevel
 
-		print(player.Name .. " upgraded " .. upgradeData.Name .. " to level " .. newLevel)
+		--print(player.Name .. " upgraded " .. upgradeData.Name .. " to level " .. newLevel)
 
 		-- Trigger appliers
 		if upgradeId == "ConveyorSpeed" then
@@ -183,7 +183,7 @@ _G.MaxUpgradeForPlayer = function(player, upgradeId)
 	upgrades[upgradeId] = maxLevel
 	ApplyUpgradeEffects(player, upgradeId, maxLevel)
 
-	print(player.Name .. " maxed upgrade [" .. upgradeId .. "] via dev product (level " .. maxLevel .. ")")
+	--print(player.Name .. " maxed upgrade [" .. upgradeId .. "] via dev product (level " .. maxLevel .. ")")
 	return true
 end
 
