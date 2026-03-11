@@ -1,5 +1,4 @@
 -- ServerScriptService/UpgradesServerHandler.lua
--- UPDATED: Integrated with PlayerDataManager
 
 local RepStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -12,12 +11,14 @@ if not EventsFolder then
 end
 
 -- Load modules
-local PlayerSession = require(ServerStorage:WaitForChild("Modules"):WaitForChild("PlayerDataManager")) -- ADDED
+local PlayerSession = require(ServerStorage:WaitForChild("Modules"):WaitForChild("PlayerDataManager"))
 local UpgradesData = require(RepStorage:WaitForChild("Modules"):WaitForChild("UpgradesData"))
 local ConveyorUpgradeApplier = require(ServerStorage:WaitForChild("Modules"):WaitForChild("ConveyorUpgradeApplier"))
 local MinerUpgradeApplier = require(ServerStorage:WaitForChild("Modules"):WaitForChild("MinerUpgradeApplier"))
 
--- Helper to get player upgrades from the module session
+-- ============================================================
+-- Helper to get player upgrades from session
+-- ============================================================
 local function GetPlayerUpgrades(player)
 	local session = PlayerSession.Get(player)
 	if not session then
@@ -25,7 +26,6 @@ local function GetPlayerUpgrades(player)
 		return {}
 	end
 
-	-- Initialize Upgrades table if it doesn't exist in the session
 	if not session["Upgrades"] then
 		session["Upgrades"] = {}
 	end
@@ -33,7 +33,9 @@ local function GetPlayerUpgrades(player)
 	return session["Upgrades"]
 end
 
--- Get all player upgrades (for the UI)
+-- ============================================================
+-- RemoteFunction: get all player upgrades (for UI)
+-- ============================================================
 local GetPlayerUpgradesRemote = EventsFolder:FindFirstChild("GetPlayerUpgrades")
 if GetPlayerUpgradesRemote then
 	GetPlayerUpgradesRemote.OnServerInvoke = function(player)
@@ -50,7 +52,9 @@ if GetPlayerUpgradesRemote then
 	end
 end
 
--- Get upgrades data info (names, costs, icons)
+-- ============================================================
+-- RemoteFunction: get upgrade definitions (names, costs, icons)
+-- ============================================================
 local GetUpgradesDataRemote = EventsFolder:FindFirstChild("GetUpgradesData")
 if GetUpgradesDataRemote then
 	GetUpgradesDataRemote.OnServerInvoke = function(player)
@@ -70,7 +74,9 @@ if GetUpgradesDataRemote then
 	end
 end
 
--- Buy upgrade logic
+-- ============================================================
+-- RemoteFunction: buy one level of an upgrade
+-- ============================================================
 local BuyUpgradeRemote = EventsFolder:FindFirstChild("BuyUpgrade")
 if BuyUpgradeRemote then
 	BuyUpgradeRemote.OnServerInvoke = function(player, upgradeId)
@@ -90,15 +96,14 @@ if BuyUpgradeRemote then
 
 		if not cashValue or cashValue.Value < cost then return false end
 
-		-- Process Purchase
+		-- Process purchase
 		cashValue.Value -= cost
 		local newLevel = currentLevel + 1
 		upgrades[upgradeId] = newLevel
 
-		-- 
 		print(player.Name .. " upgraded " .. upgradeData.Name .. " to level " .. newLevel)
 
-		-- Trigger Appliers
+		-- Trigger appliers
 		if upgradeId == "ConveyorSpeed" then
 			ConveyorUpgradeApplier.ApplyToPlayerPlot(player, newLevel)
 		elseif upgradeId == "IronMineSpeed" then
@@ -108,24 +113,25 @@ if BuyUpgradeRemote then
 		elseif upgradeId == "GoldMineSpeed" then
 			MinerUpgradeApplier.ApplyToPlayerPlot(player, "Gold Mine")
 		elseif upgradeId == "MovementSpeed" then
-			-- Apply walkspeed upgrade immediately
 			if _G.ApplyWalkspeedUpgrade then
 				_G.ApplyWalkspeedUpgrade(player)
 			else
-				-- Fallback if global isn't ready
 				local char = player.Character
 				if char and char:FindFirstChild("Humanoid") then
 					char.Humanoid.WalkSpeed = 16 + newLevel
 				end
 			end
 		end
+		-- CashBonus, GemDiscovery, DoubleDropChance are passive — no applier needed
 
 		return true
 	end
 end
 
--- Helper function for other server scripts
-function GetUpgradeMultiplier(player, upgradeId)
+-- ============================================================
+-- Global: get upgrade multiplier (used by other server scripts)
+-- ============================================================
+local function GetUpgradeMultiplier(player, upgradeId)
 	local upgrades = GetPlayerUpgrades(player)
 	local level = upgrades[upgradeId] or 0
 	return UpgradesData.GetUpgradeMultiplier(upgradeId, level)
@@ -133,4 +139,52 @@ end
 
 _G.GetUpgradeMultiplier = GetUpgradeMultiplier
 
-print("Upgrades server handler loaded successfully!")
+-- ============================================================
+-- DEV PRODUCT HELPER: max a single upgrade instantly
+-- Called by GamepassHandler's ProcessReceipt
+-- ============================================================
+local function ApplyUpgradeEffects(player, upgradeId, newLevel)
+	if upgradeId == "ConveyorSpeed" then
+		ConveyorUpgradeApplier.ApplyToPlayerPlot(player, newLevel)
+	elseif upgradeId == "IronMineSpeed" then
+		MinerUpgradeApplier.ApplyToPlayerPlot(player, "Iron Mine")
+	elseif upgradeId == "CopperMineSpeed" then
+		MinerUpgradeApplier.ApplyToPlayerPlot(player, "Copper Mine")
+	elseif upgradeId == "GoldMineSpeed" then
+		MinerUpgradeApplier.ApplyToPlayerPlot(player, "Gold Mine")
+	elseif upgradeId == "MovementSpeed" then
+		if _G.ApplyWalkspeedUpgrade then
+			_G.ApplyWalkspeedUpgrade(player)
+		else
+			local char = player.Character
+			if char and char:FindFirstChild("Humanoid") then
+				char.Humanoid.WalkSpeed = 16 + newLevel
+			end
+		end
+	end
+	-- CashBonus, GemDiscovery, DoubleDropChance are passive — no applier needed
+end
+
+_G.MaxUpgradeForPlayer = function(player, upgradeId)
+	local upgradeData = UpgradesData.Upgrades[upgradeId]
+	if not upgradeData then
+		warn("MaxUpgradeForPlayer: unknown upgradeId:", upgradeId)
+		return false
+	end
+
+	local upgrades = GetPlayerUpgrades(player)
+	local maxLevel = upgradeData.MaxLevel
+
+	-- Already maxed — idempotent, still return true so receipt is granted
+	if (upgrades[upgradeId] or 0) >= maxLevel then
+		return true
+	end
+
+	upgrades[upgradeId] = maxLevel
+	ApplyUpgradeEffects(player, upgradeId, maxLevel)
+
+	print(player.Name .. " maxed upgrade [" .. upgradeId .. "] via dev product (level " .. maxLevel .. ")")
+	return true
+end
+
+--print("Upgrades server handler loaded successfully!")
