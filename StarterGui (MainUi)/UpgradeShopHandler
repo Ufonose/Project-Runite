@@ -495,20 +495,15 @@ function module.LOAD(MODULE_INFO)
 		selectedStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		selectedStroke.Parent = selectedPanel
 
-		local selectedIcon = Instance.new("TextLabel")
+		local selectedIcon = Instance.new("ImageLabel")
 		selectedIcon.Size = UDim2.new(0.2885, 0, 0.8824, 0)
 		selectedIcon.Position = UDim2.new(0.0192, 0, 0.0588, 0)
 		selectedIcon.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 		selectedIcon.BorderSizePixel = 0
-		selectedIcon.Text = "⚡"
-		selectedIcon.TextSize = 60
-		selectedIcon.TextScaled = true
+		selectedIcon.Image = ""
+		selectedIcon.ScaleType = Enum.ScaleType.Fit
 		selectedIcon.ZIndex = 8
 		selectedIcon.Parent = selectedPanel
-
-		local selectedIconConstraint = Instance.new("UITextSizeConstraint")
-		selectedIconConstraint.MaxTextSize = 60
-		selectedIconConstraint.Parent = selectedIcon
 
 		local selectedIconCorner = Instance.new("UICorner")
 		selectedIconCorner.CornerRadius = UDim.new(0, 12)
@@ -723,24 +718,20 @@ function module.LOAD(MODULE_INFO)
 				iconCorner.CornerRadius = UDim.new(0, 10)
 				iconCorner.Parent = upgradeIcon
 
-				local iconLabel = Instance.new("TextLabel")
+				local iconLabel = Instance.new("ImageLabel")
 				iconLabel.Size = UDim2.new(1, 0, 1, 0)
 				iconLabel.BackgroundTransparency = 1
-				iconLabel.Text = upgradeData.Icon or "⚡"
-				iconLabel.TextSize = 45
-				iconLabel.TextScaled = true
+				iconLabel.Image = upgradeData.Icon or ""  -- store rbxassetid:// in UpgradesData
+				iconLabel.ScaleType = Enum.ScaleType.Fit
 				iconLabel.ZIndex = 10
 				iconLabel.Parent = upgradeIcon
-
-				local iconConstraint = Instance.new("UITextSizeConstraint")
-				iconConstraint.MaxTextSize = 45
-				iconConstraint.Parent = iconLabel
 
 				-- Level badge — overlaid on top-right of upgradeIcon (parent = upgradeIcon)
 				local levelBadge = Instance.new("TextLabel")
 				levelBadge.Size = UDim2.new(0.35, 0, 0.25, 0)
 				levelBadge.Position = UDim2.new(0.6, 0, 0.05, 0)
 				levelBadge.BackgroundColor3 = isMaxLevel and Color3.fromRGB(130, 100, 50) or Color3.fromRGB(70, 130, 180)
+				levelBadge.BackgroundTransparency = 0.5
 				levelBadge.BorderSizePixel = 0
 				levelBadge.Text = isMaxLevel and "MAX" or ("Lv " .. currentLevel)
 				levelBadge.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -857,7 +848,7 @@ function module.LOAD(MODULE_INFO)
 							IsMaxLevel = isMaxLevel
 						}
 
-						selectedIcon.Text = upgradeData.Icon or "⚡"
+						selectedIcon.Image = upgradeData.Icon or ""
 						selectedName.Text = upgradeData.Name
 						selectedLevel.Text = isMaxLevel and "MAX LEVEL" or ("Level " .. currentLevel .. " → Level " .. nextLevel)
 						selectedDesc.Text = upgradeData.Description
