@@ -522,6 +522,9 @@ function SpeedrunHandler.ReturnToMainPlot(player)
 		item:Destroy()
 	end
 
+	-- Save post-speedrun ItemsCollected before snapshot wipes it
+	local survivingCollected = session["Research"] and session["Research"]["ItemsCollected"] or {}
+
 	-- Restore session from snapshot
 	session["Money"]            = snapshot.Money
 	session["ResearchTokens"]   = snapshot.ResearchTokens
@@ -531,6 +534,9 @@ function SpeedrunHandler.ReturnToMainPlot(player)
 	session["MinerHotspots"]    = deepCopy(snapshot.MinerHotspots)
 	session["Research"]         = deepCopy(snapshot.Research)
 	session["Upgrades"]         = deepCopy(snapshot.Upgrades)
+
+	-- Put the accumulated statistics back (they already include pre-speedrun counts as base)
+	session["Research"]["ItemsCollected"] = survivingCollected
 
 	-- Sync cash/tokens IntValues
 	plrCash.Value = snapshot.Money
