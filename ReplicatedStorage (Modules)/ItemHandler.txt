@@ -135,6 +135,11 @@ function module.PROCESS_ORE(PLOT, FURNACE, SMELT_PART, ORE_ADD, ORE_MULTI, ORE)
 		if _G.PlayerHasDoubleCash and _G.PlayerHasDoubleCash(PLOT_OWNER) then
 			CASH_VAL = CASH_VAL * 2
 		end
+		
+		-- ⭐ Apply Stonepeak Studios group benefit (+10% cash)
+		if _G.PlayerInStonepeak and _G.PlayerInStonepeak(PLOT_OWNER) then
+			CASH_VAL = CASH_VAL * 1.10
+		end
 
 		-- Round to avoid floating point issues
 		CASH_VAL = math.floor(CASH_VAL)
