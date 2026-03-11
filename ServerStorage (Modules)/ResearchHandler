@@ -113,6 +113,13 @@ function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
 			depositAmount = amount * 2
 		end
 	end
+	
+	-- ⭐ Apply Stonepeak Studios group benefit (5% chance to count as double)  <-- ADD HERE
+	if _G.PlayerInStonepeak and _G.PlayerInStonepeak(player) then
+		if math.random() < 0.05 then
+			depositAmount = depositAmount * 2
+		end
+	end
 
 	local newProgress = math.min(currentProgress + depositAmount, requirement.Amount)
 	research.ObjectiveProgress[progressKey][itemName] = newProgress
