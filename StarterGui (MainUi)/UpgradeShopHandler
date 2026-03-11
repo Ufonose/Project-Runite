@@ -234,7 +234,7 @@ function module.LOAD(MODULE_INFO)
 			},
 			{
 				Name = "QualityOfLifeCategory",
-				Display = "Quality of Life",
+				Display = "QoL",
 				Color = Color3.fromRGB(100, 140, 70),
 				Upgrades = {"MovementSpeed"}
 			},
@@ -562,7 +562,7 @@ function module.LOAD(MODULE_INFO)
 		selectedDesc.BackgroundTransparency = 1
 		selectedDesc.Text = "Description here"
 		selectedDesc.TextColor3 = Color3.fromRGB(180, 180, 190)
-		selectedDesc.TextSize = 11
+		selectedDesc.TextSize = 16
 		selectedDesc.Font = Enum.Font.Gotham
 		selectedDesc.TextWrapped = true
 		selectedDesc.TextXAlignment = Enum.TextXAlignment.Left
@@ -572,7 +572,7 @@ function module.LOAD(MODULE_INFO)
 		selectedDesc.Parent = infoContainer
 
 		local selectedDescConstraint = Instance.new("UITextSizeConstraint")
-		selectedDescConstraint.MaxTextSize = 11
+		selectedDescConstraint.MaxTextSize = 16
 		selectedDescConstraint.Parent = selectedDesc
 
 		-- ==================== CONTROLS ROW (3 buttons) ====================
@@ -801,14 +801,14 @@ function module.LOAD(MODULE_INFO)
 				effectLabel.BackgroundTransparency = 1
 				effectLabel.Text = effectText
 				effectLabel.TextColor3 = Color3.fromRGB(150, 200, 150)
-				effectLabel.TextSize = 11
+				effectLabel.TextSize = 12
 				effectLabel.Font = Enum.Font.Gotham
 				effectLabel.TextScaled = true
 				effectLabel.ZIndex = 9
 				effectLabel.Parent = upgradeCard
 
 				local effectConstraint = Instance.new("UITextSizeConstraint")
-				effectConstraint.MaxTextSize = 11
+				effectConstraint.MaxTextSize = 12
 				effectConstraint.Parent = effectLabel
 
 				local costLabel = Instance.new("TextLabel")
