@@ -8,7 +8,7 @@ UpgradesData.Upgrades = {
 	IronMineSpeed = {
 		Name = "Iron Mine Speed",
 		Description = "Makes all Iron Mines produce ore 3% faster per level",
-		Icon = "⛏️",
+		Icon = "rbxassetid://113276014001202",
 		BaseCost = 1, --6800k * 1.9 Max = 2194K
 		CostMultiplier = 1.9,
 		MaxLevel = 10,
@@ -32,8 +32,8 @@ UpgradesData.Upgrades = {
 	CopperMineSpeed = {
 		Name = "Copper Mine Speed",
 		Description = "Makes all Copper Mines produce ore 3% faster per level",
-		Icon = "⛏️",
-		BaseCost = 1, --7900 * 1.9 Max = 2549K
+		Icon = "rbxassetid://113936706201432",
+		BaseCost = 7900, --7900 * 1.9 Max = 2549K
 		CostMultiplier = 1.9,
 		MaxLevel = 10,
 		SortOrder = 2,
@@ -54,7 +54,7 @@ UpgradesData.Upgrades = {
 	GoldMineSpeed = {
 		Name = "Gold Mine Speed",
 		Description = "Makes all Gold Mines produce ore 3% faster per level",
-		Icon = "⛏️",
+		Icon = "rbxassetid://70911763131597",
 		BaseCost = 1, --9000 * 1.9 Max = 2904K
 		CostMultiplier = 1.9,
 		MaxLevel = 10,
@@ -77,8 +77,8 @@ UpgradesData.Upgrades = {
 	ConveyorSpeed = {
 		Name = "Conveyor Speed",
 		Description = "Increases conveyor speed by +1 per level",
-		Icon = "➡️",
-		BaseCost = 6300, --6300 * 2.3 Max = 932k
+		Icon = "rbxassetid://95253801086963",
+		BaseCost = 1, --6300 * 2.3 Max = 932k
 		CostMultiplier = 2.3,
 		MaxLevel = 7,
 		SortOrder = 4,
@@ -98,7 +98,7 @@ UpgradesData.Upgrades = {
 	CashBonus = {
 		Name = "Cash Bonus",
 		Description = "Increases cash earned from all deposits by 5% per level",
-		Icon = "💰",
+		Icon = "rbxassetid://111315713850960",
 		BaseCost = 1, -- 3700 * 1.4 Max = 2211K
 		CostMultiplier = 1.4,
 		MaxLevel = 20,
@@ -119,7 +119,7 @@ UpgradesData.Upgrades = {
 	GemDiscovery = {
 		Name = "Gem Discovery",
 		Description = "Increases gem drop rates by 10% of their base chance per level",
-		Icon = "💎",
+		Icon = "rbxassetid://136080504441247",
 		BaseCost = 1, --4600 * 1.75 Max = 708K
 		CostMultiplier = 1.75,
 		MaxLevel = 10,
@@ -142,7 +142,7 @@ UpgradesData.Upgrades = {
 	DoubleDropChance = {
 		Name = "Double Drop Chance",
 		Description = "Adds a 1% chance per level for miners to drop double ore or gems",
-		Icon = "✨",
+		Icon = "rbxassetid://90556477817535",
 		BaseCost = 1, --8000 * 1.9 Max = 2581K
 		CostMultiplier = 1.9,
 		MaxLevel = 10,
@@ -164,7 +164,7 @@ UpgradesData.Upgrades = {
 	MovementSpeed = {
 		Name = "Movement Speed",
 		Description = "Increases your walking speed by +1 per level",
-		Icon = "🏃",
+		Icon = "rbxassetid://75308431632454",
 		BaseCost = 1, --1500 * 1.4 Max = 233K
 		CostMultiplier = 1.4,
 		MaxLevel = 16,  -- 16 base + 16 levels = 32 max walkspeed
