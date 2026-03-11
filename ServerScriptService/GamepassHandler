@@ -66,6 +66,29 @@ _G.PlayerHasMaxAllUpgrades = function(player)
 end
 
 -- ============================================================
+-- GROUP BENEFIT: Stonepeak Studios members
+-- ============================================================
+local STONEPEAK_GROUP_ID = 165526802
+local _groupCache = {}
+
+_G.PlayerInStonepeak = function(player)
+	if _groupCache[player.UserId] ~= nil then
+		return _groupCache[player.UserId]
+	end
+	local ok, result = pcall(function()
+		return player:IsInGroup(STONEPEAK_GROUP_ID)
+	end)
+	local inGroup = ok and result or false
+	_groupCache[player.UserId] = inGroup
+	return inGroup
+end
+
+-- Clear cache when player leaves
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+	_groupCache[player.UserId] = nil
+end)
+
+-- ============================================================
 -- Check & cache ownership into Profile.Data
 -- ============================================================
 local function refreshOwnership(player)
