@@ -1,35 +1,39 @@
 local module = {}
 
 function module.LOAD(MODULE_INFO)
-	-- Basic Needs
 	local MODULES = MODULE_INFO["MODULES"]
 	local SERVICES = MODULE_INFO["SERVICES"]
-	-- Services
 	local RepStorage = SERVICES["ReplicatedStorage"]
 	local Plrs = SERVICES["Players"]
-	-- Modules
+	local MarketplaceService = game:GetService("MarketplaceService")
+
 	local CASH_LIB = MODULES["CashLib"]
 	local SoundManager = require(RepStorage.Modules.SoundManager)
-	-- Plr Info
 	local Plr = Plrs.LocalPlayer
-	local LOAD_UPGRADES = nil -- Forward declaration
+	local LOAD_UPGRADES = nil
 
-	-- Don't create anything during LOAD - wait until ShopFrame exists
-	-- This avoids race conditions with Shop module loading
+	-- !! Must match GamepassHandler !!
+	local MAX_ALL_UPGRADES_GAMEPASS_ID = 1745314478
 
-	--print("UpgradeShopHandler: Waiting for ShopFrame to be created by Shop module...")
+	-- !! Must match MAX_UPGRADE_PRODUCT_IDS in GamepassHandler !!
+	local MAX_UPGRADE_PRODUCT_IDS = {
+		IronMineSpeed    = 3554030580,
+		CopperMineSpeed  = 3554030624,
+		GoldMineSpeed    = 3554030671,
+		ConveyorSpeed    = 3554030725,
+		CashBonus        = 3554031037,
+		GemDiscovery     = 3554030819,
+		DoubleDropChance = 3554030856,
+		MovementSpeed    = 3554030775,
+	}
 
 	task.spawn(function()
-		-- Wait for ShopFrame (created by Shop.lua in script.Parent)
 		local shopFolder = script.Parent
 		local shopFrame = shopFolder:WaitForChild("ShopFrame", 60)
-
 		if not shopFrame then
 			warn("UpgradeShopHandler: ShopFrame never appeared!")
 			return
 		end
-
-		--print("UpgradeShopHandler: ShopFrame found! Creating upgrades UI...")
 
 		-- Variables
 		local DB = true
@@ -38,6 +42,20 @@ function module.LOAD(MODULE_INFO)
 		local PLAYER_UPGRADES = nil
 		local CURRENT_CATEGORY = "AllCategory"
 		local searchBox = nil
+		local IN_SPEEDRUN = false
+
+		-- Pre-fetch Robux prices for all upgrade products
+		local PRODUCT_PRICES = {}
+		task.spawn(function()
+			for upgradeId, productId in pairs(MAX_UPGRADE_PRODUCT_IDS) do
+				local ok, info = pcall(function()
+					return MarketplaceService:GetProductInfoAsync(productId, Enum.InfoType.Product)
+				end)
+				if ok and info and info.PriceInRobux then
+					PRODUCT_PRICES[upgradeId] = info.PriceInRobux
+				end
+			end
+		end)
 
 		-- ==================== UPGRADES CONTAINER ====================
 		local upgradesContainer = Instance.new("Frame")
@@ -194,42 +212,37 @@ function module.LOAD(MODULE_INFO)
 		allStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		allStroke.Parent = allButton
 
-		-- Category buttons data
-		-- StarterGui/MainUi/UpgradeShopHandler.lua
-		
-
+		-- Category definitions
 		local categories = {
 			{
-				Name = "MiningCategory", 
-				Display = "Mining", 
-				Color = Color3.fromRGB(70, 100, 140), 
+				Name = "MiningCategory",
+				Display = "Mining",
+				Color = Color3.fromRGB(70, 100, 140),
 				Upgrades = {"IronMineSpeed", "CopperMineSpeed", "GoldMineSpeed", "GemDiscovery", "DoubleDropChance"}
 			},
 			{
-				Name = "ProductionCategory", 
-				Display = "Production", 
-				Color = Color3.fromRGB(100, 70, 140), 
+				Name = "ProductionCategory",
+				Display = "Production",
+				Color = Color3.fromRGB(100, 70, 140),
 				Upgrades = {"ConveyorSpeed"}
 			},
 			{
-				Name = "EconomyCategory", 
-				Display = "Economy", 
-				Color = Color3.fromRGB(140, 100, 70), 
+				Name = "EconomyCategory",
+				Display = "Economy",
+				Color = Color3.fromRGB(140, 100, 70),
 				Upgrades = {"CashBonus"}
 			},
-			-- ADD THIS NEW CATEGORY:
 			{
-				Name = "QualityOfLifeCategory", 
-				Display = "Quality of Life", 
-				Color = Color3.fromRGB(100, 140, 70), 
+				Name = "QualityOfLifeCategory",
+				Display = "Quality of Life",
+				Color = Color3.fromRGB(100, 140, 70),
 				Upgrades = {"MovementSpeed"}
 			},
 		}
 
 		local categoryButtons = {}
 
-		-- Create category buttons
-		for i, category in pairs(categories) do
+		for i, category in ipairs(categories) do
 			local tabButton = Instance.new("TextButton")
 			tabButton.Name = category.Name
 			tabButton.Size = UDim2.new(0.9, 0, 0.045, 0)
@@ -263,13 +276,144 @@ function module.LOAD(MODULE_INFO)
 			tabButton.MouseButton1Click:Connect(function()
 				CURRENT_CATEGORY = category.Name
 				allButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-				for j, btnData in pairs(categoryButtons) do
+				for _, btnData in pairs(categoryButtons) do
 					btnData.Button.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 				end
 				tabButton.BackgroundColor3 = category.Color
 				LOAD_UPGRADES()
 			end)
 		end
+
+		-- ==================== MAX ALL BUTTON (bottom of sidebar) ====================
+		-- Max All button — frame with title, strikethrough price, discount price
+		local maxAllButton = Instance.new("Frame")
+		maxAllButton.Name = "MaxAllButton"
+		maxAllButton.Size = UDim2.new(0.9, 0, 0.09, 0)
+		maxAllButton.BackgroundColor3 = Color3.fromRGB(130, 100, 50)
+		maxAllButton.BorderSizePixel = 0
+		maxAllButton.LayoutOrder = 999
+		maxAllButton.ZIndex = 8
+		maxAllButton.Parent = categoryFrame
+
+		local maxAllCorner = Instance.new("UICorner")
+		maxAllCorner.CornerRadius = UDim.new(0, 10)
+		maxAllCorner.Parent = maxAllButton
+
+		local maxAllStroke = Instance.new("UIStroke")
+		maxAllStroke.Color = Color3.fromRGB(0, 0, 0)
+		maxAllStroke.Thickness = 1
+		maxAllStroke.Transparency = 0.7
+		maxAllStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		maxAllStroke.Parent = maxAllButton
+
+		-- Title
+		local maxAllTitle = Instance.new("TextLabel")
+		maxAllTitle.Size = UDim2.new(1, 0, 0.38, 0)
+		maxAllTitle.Position = UDim2.new(0, 0, 0.04, 0)
+		maxAllTitle.BackgroundTransparency = 1
+		maxAllTitle.Text = "⚡ Max All"
+		maxAllTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+		maxAllTitle.Font = Enum.Font.GothamBold
+		maxAllTitle.TextScaled = true
+		maxAllTitle.ZIndex = 9
+		maxAllTitle.Parent = maxAllButton
+
+		local maxAllTitleConstraint = Instance.new("UITextSizeConstraint")
+		maxAllTitleConstraint.MaxTextSize = 16
+		maxAllTitleConstraint.Parent = maxAllTitle
+
+		-- Strikethrough price
+		local strikeFrame = Instance.new("Frame")
+		strikeFrame.Size = UDim2.new(0.6, 0, 0.28, 0)
+		strikeFrame.Position = UDim2.new(0.2, 0, 0.42, 0)
+		strikeFrame.BackgroundTransparency = 1
+		strikeFrame.ZIndex = 9
+		strikeFrame.Parent = maxAllButton
+
+		local strikeLabel = Instance.new("TextLabel")
+		strikeLabel.Size = UDim2.new(1, 0, 1, 0)
+		strikeLabel.BackgroundTransparency = 1
+		strikeLabel.Text = "\u{E002} 400"  -- !! Set your original price here !!
+		strikeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		strikeLabel.Font = Enum.Font.Gotham
+		strikeLabel.TextScaled = true
+		strikeLabel.ZIndex = 9
+		strikeLabel.Parent = strikeFrame
+
+		local strikeConstraint = Instance.new("UITextSizeConstraint")
+		strikeConstraint.MaxTextSize = 14
+		strikeConstraint.Parent = strikeLabel
+
+		-- The strikethrough line
+		local strikeLine = Instance.new("Frame")
+		strikeLine.Size = UDim2.new(1, 0, 0.05, 0)
+		strikeLine.Position = UDim2.new(0, 0, 0.46, 0)
+		strikeLine.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+		strikeLine.BorderSizePixel = 0
+		strikeLine.ZIndex = 10
+		strikeLine.Parent = strikeFrame
+
+		-- Discount price
+		local discountLabel = Instance.new("TextLabel")
+		discountLabel.Size = UDim2.new(1, 0, 0.28, 0)
+		discountLabel.Position = UDim2.new(0, 0, 0.68, 0)
+		discountLabel.BackgroundTransparency = 1
+		discountLabel.Text = "\u{E002} 250"  -- !! Set your discount price here !!
+		discountLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		discountLabel.Font = Enum.Font.GothamBold
+		discountLabel.TextScaled = true
+		discountLabel.ZIndex = 9
+		discountLabel.Parent = maxAllButton
+
+		local discountConstraint = Instance.new("UITextSizeConstraint")
+		discountConstraint.MaxTextSize = 16
+		discountConstraint.Parent = discountLabel
+
+		-- Invisible click button over the whole frame
+		local maxAllButton_Click = Instance.new("TextButton")
+		maxAllButton_Click.Size = UDim2.new(1, 0, 1, 0)
+		maxAllButton_Click.BackgroundTransparency = 1
+		maxAllButton_Click.Text = ""
+		maxAllButton_Click.ZIndex = 11
+		maxAllButton_Click.Parent = maxAllButton
+
+		maxAllButton.Visible = not IN_SPEEDRUN
+
+		maxAllButton_Click.MouseButton1Click:Connect(function()
+			if not IN_SPEEDRUN then
+				MarketplaceService:PromptGamePassPurchase(Plr, MAX_ALL_UPGRADES_GAMEPASS_ID)
+			end
+		end)
+
+		-- Refresh after Max All gamepass purchase
+		MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(_, gamepassId, wasPurchased)
+			if not wasPurchased then return end
+			if gamepassId == MAX_ALL_UPGRADES_GAMEPASS_ID then
+				LOAD_UPGRADES()
+				selectedPanel.Visible = false
+				SELECTED_UPGRADE = nil
+			end
+		end)
+
+		-- Refresh after individual Max purchase
+		MarketplaceService.PromptProductPurchaseFinished:Connect(function(_, productId, wasPurchased)
+			if not wasPurchased then return end
+			for upgradeId, pid in pairs(MAX_UPGRADE_PRODUCT_IDS) do
+				if pid == productId then
+					LOAD_UPGRADES()
+					if SELECTED_UPGRADE and SELECTED_UPGRADE.Id == upgradeId then
+						local maxLevel = SELECTED_UPGRADE.Data.MaxLevel
+						SELECTED_UPGRADE.CurrentLevel = maxLevel
+						SELECTED_UPGRADE.IsMaxLevel = true
+						selectedLevel.Text = "MAX LEVEL"
+						upgradeButton.Text = "MAX LEVEL"
+						upgradeButton.BackgroundColor3 = Color3.fromRGB(130, 100, 50)
+						maxButton.Visible = false
+					end
+					break
+				end
+			end
+		end)
 
 		allButton.MouseButton1Click:Connect(function()
 			CURRENT_CATEGORY = "AllCategory"
@@ -309,14 +453,11 @@ function module.LOAD(MODULE_INFO)
 		upgradesGrid.Parent = upgradesScroll
 
 		local function updateUpgradesGridSize()
-			local viewport = workspace.CurrentCamera.ViewportSize
-			local screenWidth = viewport.X
+			local screenWidth = workspace.CurrentCamera.ViewportSize.X
 			local scrollWidth = upgradesScroll.AbsoluteSize.X
-
 			local numColumns = (screenWidth < 900) and 2 or 3
 			local cellWidth = (scrollWidth - 30) / numColumns - 10
 			local cellHeight = cellWidth / 0.7381
-
 			upgradesGrid.CellSize = UDim2.new(0, cellWidth, 0, cellHeight)
 			upgradesGrid.CellPadding = UDim2.new(0, 10, 0, 10)
 		end
@@ -434,6 +575,7 @@ function module.LOAD(MODULE_INFO)
 		selectedDescConstraint.MaxTextSize = 11
 		selectedDescConstraint.Parent = selectedDesc
 
+		-- ==================== CONTROLS ROW (3 buttons) ====================
 		local controlsRow = Instance.new("Frame")
 		controlsRow.Size = UDim2.new(1, 0, 0.4667, 0)
 		controlsRow.Position = UDim2.new(0, 0, 0.5333, 0)
@@ -441,72 +583,55 @@ function module.LOAD(MODULE_INFO)
 		controlsRow.ZIndex = 9
 		controlsRow.Parent = infoContainer
 
-		local upgradeButton = Instance.new("TextButton")
-		upgradeButton.Size = UDim2.new(0.48, 0, 1, 0)
-		upgradeButton.Position = UDim2.new(0, 0, 0, 0)
-		upgradeButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
-		upgradeButton.Text = "⚡ Upgrade - $1,000"
-		upgradeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-		upgradeButton.TextSize = 14
-		upgradeButton.Font = Enum.Font.GothamBold
-		upgradeButton.TextScaled = true
-		upgradeButton.ZIndex = 11
-		upgradeButton.Parent = controlsRow
+		local function makeButton(text, bgColor, parent, posX, posY, w, h)
+			local btn = Instance.new("TextButton")
+			btn.Size = UDim2.new(w, 0, h, 0)
+			btn.Position = UDim2.new(posX, 0, posY, 0)
+			btn.BackgroundColor3 = bgColor
+			btn.Text = text
+			btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+			btn.TextSize = 14
+			btn.Font = Enum.Font.GothamBold
+			btn.TextScaled = true
+			btn.ZIndex = 11
+			btn.Parent = parent
 
-		local upgradeTextConstraint = Instance.new("UITextSizeConstraint")
-		upgradeTextConstraint.MaxTextSize = 14
-		upgradeTextConstraint.Parent = upgradeButton
+			local c = Instance.new("UITextSizeConstraint")
+			c.MaxTextSize = 14
+			c.Parent = btn
 
-		local upgradeCorner = Instance.new("UICorner")
-		upgradeCorner.CornerRadius = UDim.new(0, 10)
-		upgradeCorner.Parent = upgradeButton
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius = UDim.new(0, 10)
+			corner.Parent = btn
 
-		local upgradeStroke = Instance.new("UIStroke")
-		upgradeStroke.Color = Color3.fromRGB(0, 0, 0)
-		upgradeStroke.Thickness = 1
-		upgradeStroke.Transparency = 0.7
-		upgradeStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-		upgradeStroke.Parent = upgradeButton
+			local stroke = Instance.new("UIStroke")
+			stroke.Color = Color3.fromRGB(0, 0, 0)
+			stroke.Thickness = 1
+			stroke.Transparency = 0.7
+			stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			stroke.Parent = btn
 
-		local cancelButton = Instance.new("TextButton")
-		cancelButton.Size = UDim2.new(0.48, 0, 1, 0)
-		cancelButton.Position = UDim2.new(0.52, 0, 0, 0)
-		cancelButton.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
-		cancelButton.Text = "Cancel"
-		cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-		cancelButton.TextSize = 14
-		cancelButton.Font = Enum.Font.GothamBold
-		cancelButton.TextScaled = true
-		cancelButton.ZIndex = 11
-		cancelButton.Parent = controlsRow
+			return btn
+		end
 
-		local cancelTextConstraint = Instance.new("UITextSizeConstraint")
-		cancelTextConstraint.MaxTextSize = 14
-		cancelTextConstraint.Parent = cancelButton
-
-		local cancelCorner = Instance.new("UICorner")
-		cancelCorner.CornerRadius = UDim.new(0, 10)
-		cancelCorner.Parent = cancelButton
-
-		local cancelStroke = Instance.new("UIStroke")
-		cancelStroke.Color = Color3.fromRGB(0, 0, 0)
-		cancelStroke.Thickness = 1
-		cancelStroke.Transparency = 0.7
-		cancelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-		cancelStroke.Parent = cancelButton
+		-- Top row: Upgrade (left) + Max (right), each ~49%, 2% gap
+		-- Bottom row: Cancel full width
+		-- Each row is ~46% of the controlsRow height, with ~8% gap between rows
+		local upgradeButton = makeButton("Upgrade - $1,000", Color3.fromRGB(70, 130, 180), controlsRow, 0,    0,    0.49, 0.46)
+		local maxButton     = makeButton("⚡ Instant Max",        Color3.fromRGB(130, 100, 50),  controlsRow, 0.51, 0,    0.49, 0.46)
+		local cancelButton  = makeButton("Cancel",              Color3.fromRGB(70, 70,   75),  controlsRow, 0,    0.54, 1,    0.46)
+		maxButton.Visible = false
 
 		-- ==================== UPGRADE LOADING ====================
 		local function FILTER_UPGRADE(upgradeId, upgradeName)
 			local CAN_SHOW = true
 
-			-- Search filter
 			if string.len(searchBox.Text) > 0 then
 				if not string.find(string.lower(upgradeName), string.lower(searchBox.Text)) then
 					CAN_SHOW = false
 				end
 			end
 
-			-- Category filter
 			if CAN_SHOW and CURRENT_CATEGORY ~= "AllCategory" then
 				local foundCategory = false
 				for _, btnData in pairs(categoryButtons) do
@@ -526,7 +651,6 @@ function module.LOAD(MODULE_INFO)
 		end
 
 		LOAD_UPGRADES = function()
-			-- Get upgrades data from server
 			local success, result = pcall(function()
 				UPGRADES_DATA = RepStorage.Events.GetUpgradesData:InvokeServer()
 				PLAYER_UPGRADES = RepStorage.Events.GetPlayerUpgrades:InvokeServer()
@@ -542,21 +666,26 @@ function module.LOAD(MODULE_INFO)
 				return
 			end
 
-			-- Clear existing upgrade cards
-			for _, child in pairs(upgradesScroll:GetChildren()) do
-				if child:IsA("Frame") then
-					child:Destroy()
+			-- Hide Max All button if all upgrades are already maxed
+			local allMaxed = true
+			for upgradeId, upgradeData in pairs(UPGRADES_DATA) do
+				local lvl = PLAYER_UPGRADES[upgradeId] or 0
+				if lvl < (upgradeData.MaxLevel or 10) then
+					allMaxed = false
+					break
 				end
 			end
+			maxAllButton.Visible = not IN_SPEEDRUN and not allMaxed
 
-			-- Create upgrade cards
+			for _, child in pairs(upgradesScroll:GetChildren()) do
+				if child:IsA("Frame") then child:Destroy() end
+			end
+
 			for upgradeId, upgradeData in pairs(UPGRADES_DATA) do
 				local currentLevel = PLAYER_UPGRADES[upgradeId] or 0
 				local nextLevel = currentLevel + 1
 				local maxLevel = upgradeData.MaxLevel or 10
 				local isMaxLevel = currentLevel >= maxLevel
-
-				-- Calculate cost for next level
 				local cost = upgradeData.BaseCost * (upgradeData.CostMultiplier ^ currentLevel)
 
 				local upgradeCard = Instance.new("Frame")
@@ -566,12 +695,10 @@ function module.LOAD(MODULE_INFO)
 				upgradeCard.BackgroundTransparency = 0.2
 				upgradeCard.BorderSizePixel = 0
 				upgradeCard.LayoutOrder = upgradeData.SortOrder or 0
+				upgradeCard.Visible = FILTER_UPGRADE(upgradeId, upgradeData.Name)
 				upgradeCard.ZIndex = 8
 				upgradeCard:SetAttribute("UPGRADE_ID", upgradeId)
 				upgradeCard:SetAttribute("CURRENT_LEVEL", currentLevel)
-
-				-- Apply filter
-				upgradeCard.Visible = FILTER_UPGRADE(upgradeId, upgradeData.Name)
 
 				local cardCorner = Instance.new("UICorner")
 				cardCorner.CornerRadius = UDim.new(0, 12)
@@ -584,7 +711,6 @@ function module.LOAD(MODULE_INFO)
 				cardStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 				cardStroke.Parent = upgradeCard
 
-				-- Icon area
 				local upgradeIcon = Instance.new("Frame")
 				upgradeIcon.Size = UDim2.new(0.9355, 0, 0.5, 0)
 				upgradeIcon.Position = UDim2.new(0.0323, 0, 0.0238, 0)
@@ -610,11 +736,12 @@ function module.LOAD(MODULE_INFO)
 				iconConstraint.MaxTextSize = 45
 				iconConstraint.Parent = iconLabel
 
-				-- Level badge
+				-- Level badge — overlaid on top-right of upgradeIcon (parent = upgradeIcon)
 				local levelBadge = Instance.new("TextLabel")
 				levelBadge.Size = UDim2.new(0.35, 0, 0.25, 0)
 				levelBadge.Position = UDim2.new(0.6, 0, 0.05, 0)
-				levelBadge.BackgroundColor3 = isMaxLevel and Color3.fromRGB(200, 150, 50) or Color3.fromRGB(70, 130, 180)
+				levelBadge.BackgroundColor3 = isMaxLevel and Color3.fromRGB(130, 100, 50) or Color3.fromRGB(70, 130, 180)
+				levelBadge.BorderSizePixel = 0
 				levelBadge.Text = isMaxLevel and "MAX" or ("Lv " .. currentLevel)
 				levelBadge.TextColor3 = Color3.fromRGB(255, 255, 255)
 				levelBadge.TextSize = 12
@@ -631,29 +758,28 @@ function module.LOAD(MODULE_INFO)
 				badgeCorner.CornerRadius = UDim.new(0, 6)
 				badgeCorner.Parent = levelBadge
 
-				-- Upgrade name
-				local upgradeName = Instance.new("TextLabel")
-				upgradeName.Size = UDim2.new(0.9355, 0, 0.119, 0)
-				upgradeName.Position = UDim2.new(0.0323, 0, 0.55, 0)
-				upgradeName.BackgroundTransparency = 1
-				upgradeName.Text = upgradeData.Name
-				upgradeName.TextColor3 = Color3.fromRGB(255, 255, 255)
-				upgradeName.TextSize = 13
-				upgradeName.Font = Enum.Font.GothamBold
-				upgradeName.TextXAlignment = Enum.TextXAlignment.Center
-				upgradeName.TextTruncate = Enum.TextTruncate.AtEnd
-				upgradeName.TextScaled = true
-				upgradeName.ZIndex = 9
-				upgradeName.Parent = upgradeCard
+				-- Name label
+				local nameLabel = Instance.new("TextLabel")
+				nameLabel.Size = UDim2.new(0.9355, 0, 0.119, 0)
+				nameLabel.Position = UDim2.new(0.0323, 0, 0.55, 0)
+				nameLabel.BackgroundTransparency = 1
+				nameLabel.Text = upgradeData.Name
+				nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+				nameLabel.TextSize = 13
+				nameLabel.Font = Enum.Font.GothamBold
+				nameLabel.TextXAlignment = Enum.TextXAlignment.Center
+				nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+				nameLabel.TextScaled = true
+				nameLabel.ZIndex = 9
+				nameLabel.Parent = upgradeCard
 
 				local nameConstraint = Instance.new("UITextSizeConstraint")
 				nameConstraint.MaxTextSize = 13
-				nameConstraint.Parent = upgradeName
+				nameConstraint.Parent = nameLabel
 
-				-- Current effect display
+				-- Effect text
 				local effectText = "Not Upgraded"
 				if currentLevel > 0 then
-					-- Calculate effect text based on upgrade type
 					if upgradeId == "IronMineSpeed" or upgradeId == "CopperMineSpeed" or upgradeId == "GoldMineSpeed" then
 						effectText = "+" .. (currentLevel * 3) .. "% Speed"
 					elseif upgradeId == "ConveyorSpeed" then
@@ -669,7 +795,6 @@ function module.LOAD(MODULE_INFO)
 					end
 				end
 
-				-- The rest of the effectLabel code stays the same:
 				local effectLabel = Instance.new("TextLabel")
 				effectLabel.Size = UDim2.new(0.9355, 0, 0.095, 0)
 				effectLabel.Position = UDim2.new(0.0323, 0, 0.69, 0)
@@ -686,11 +811,10 @@ function module.LOAD(MODULE_INFO)
 				effectConstraint.MaxTextSize = 11
 				effectConstraint.Parent = effectLabel
 
-				-- Cost/Status label
 				local costLabel = Instance.new("TextLabel")
 				costLabel.Size = UDim2.new(0.9355, 0, 0.1429, 0)
 				costLabel.Position = UDim2.new(0.0323, 0, 0.8333, 0)
-				costLabel.BackgroundColor3 = isMaxLevel and Color3.fromRGB(200, 150, 50) or Color3.fromRGB(70, 130, 180)
+				costLabel.BackgroundColor3 = isMaxLevel and Color3.fromRGB(130, 100, 50) or Color3.fromRGB(70, 130, 180)
 				costLabel.BorderSizePixel = 0
 				costLabel.Text = isMaxLevel and "⭐ MAX LEVEL" or ("$" .. CASH_LIB.SUFFIX_NUM(cost))
 				costLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -715,7 +839,6 @@ function module.LOAD(MODULE_INFO)
 				costStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 				costStroke.Parent = costLabel
 
-				-- Click button
 				local clickButton = Instance.new("TextButton")
 				clickButton.Size = UDim2.new(1, 0, 1, 0)
 				clickButton.BackgroundTransparency = 1
@@ -742,9 +865,13 @@ function module.LOAD(MODULE_INFO)
 						if isMaxLevel then
 							upgradeButton.Text = "⭐ MAX LEVEL"
 							upgradeButton.BackgroundColor3 = Color3.fromRGB(130, 100, 50)
+							maxButton.Visible = false
 						else
-							upgradeButton.Text = "⚡ Upgrade - $" .. CASH_LIB.SUFFIX_NUM(cost)
+							upgradeButton.Text = "Upgrade - $" .. CASH_LIB.SUFFIX_NUM(cost)
 							upgradeButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+							local price = PRODUCT_PRICES[upgradeId]
+							maxButton.Text = price and ("⚡ Instant Max - \u{E002}" .. price) or "⚡ Instant Max"
+							maxButton.Visible = not IN_SPEEDRUN and MAX_UPGRADE_PRODUCT_IDS[upgradeId] ~= nil
 						end
 
 						selectedPanel.Visible = true
@@ -769,7 +896,6 @@ function module.LOAD(MODULE_INFO)
 					SoundManager.Purchase()
 					LOAD_UPGRADES()
 
-					-- Update the selected upgrade info with new level
 					local newLevel = SELECTED_UPGRADE.CurrentLevel + 1
 					local newCost = SELECTED_UPGRADE.Data.BaseCost * (SELECTED_UPGRADE.Data.CostMultiplier ^ newLevel)
 					local isMaxLevel = newLevel >= SELECTED_UPGRADE.Data.MaxLevel
@@ -778,14 +904,14 @@ function module.LOAD(MODULE_INFO)
 					SELECTED_UPGRADE.Cost = newCost
 					SELECTED_UPGRADE.IsMaxLevel = isMaxLevel
 
-					-- Update panel display
 					selectedLevel.Text = isMaxLevel and "MAX LEVEL" or ("Level " .. newLevel .. " → Level " .. (newLevel + 1))
 
 					if isMaxLevel then
 						upgradeButton.Text = "⭐ MAX LEVEL"
 						upgradeButton.BackgroundColor3 = Color3.fromRGB(130, 100, 50)
+						maxButton.Visible = false
 					else
-						upgradeButton.Text = "⚡ Upgrade - $" .. CASH_LIB.SUFFIX_NUM(newCost)
+						upgradeButton.Text = "Upgrade - $" .. CASH_LIB.SUFFIX_NUM(newCost)
 						upgradeButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
 					end
 				else
@@ -797,40 +923,78 @@ function module.LOAD(MODULE_INFO)
 			end
 		end)
 
+		maxButton.MouseButton1Click:Connect(function()
+			if DB and SELECTED_UPGRADE and not SELECTED_UPGRADE.IsMaxLevel then
+				local productId = MAX_UPGRADE_PRODUCT_IDS[SELECTED_UPGRADE.Id]
+				if productId then
+					MarketplaceService:PromptProductPurchase(Plr, productId)
+				end
+			end
+		end)
+
+		-- Refresh UI after a Max purchase completes
+		MarketplaceService.PromptProductPurchaseFinished:Connect(function(_, productId, wasPurchased)
+			if not wasPurchased then return end
+			for upgradeId, pid in pairs(MAX_UPGRADE_PRODUCT_IDS) do
+				if pid == productId then
+					LOAD_UPGRADES()
+					if SELECTED_UPGRADE and SELECTED_UPGRADE.Id == upgradeId then
+						local maxLevel = SELECTED_UPGRADE.Data.MaxLevel
+						SELECTED_UPGRADE.CurrentLevel = maxLevel
+						SELECTED_UPGRADE.IsMaxLevel = true
+						selectedLevel.Text = "MAX LEVEL"
+						upgradeButton.Text = "⭐ MAX LEVEL"
+						upgradeButton.BackgroundColor3 = Color3.fromRGB(130, 100, 50)
+						maxButton.Visible = false
+					end
+					break
+				end
+			end
+		end)
+
 		cancelButton.MouseButton1Click:Connect(function()
 			SELECTED_UPGRADE = nil
 			selectedPanel.Visible = false
 		end)
 
-		-- Search functionality
 		searchBox:GetPropertyChangedSignal("Text"):Connect(function()
 			clearButton.Visible = string.len(searchBox.Text) > 0
 			LOAD_UPGRADES()
 		end)
 
-		-- Load upgrades when container becomes visible
 		upgradesContainer:GetPropertyChangedSignal("Visible"):Connect(function()
 			if upgradesContainer.Visible then
 				LOAD_UPGRADES()
 			end
 		end)
-		
+
 		-- ==================== SPEEDRUN REFRESH ====================
 		local Events = RepStorage:WaitForChild("Events")
 
+		Events:WaitForChild("EnteredSpeedrunMode").OnClientEvent:Connect(function()
+			IN_SPEEDRUN = true
+			maxButton.Visible = false
+			LOAD_UPGRADES()
+		end)
 		Events:WaitForChild("SpeedrunStarted").OnClientEvent:Connect(function()
+			IN_SPEEDRUN = true
+			maxButton.Visible = false
 			LOAD_UPGRADES()
 		end)
-
 		Events:WaitForChild("SpeedrunReset").OnClientEvent:Connect(function()
+			IN_SPEEDRUN = true  -- still in speedrun mode after reset
+			maxButton.Visible = false
 			LOAD_UPGRADES()
 		end)
-
 		Events:WaitForChild("RestoredMainPlot").OnClientEvent:Connect(function()
+			IN_SPEEDRUN = false
+			-- Re-show max button if an upgrade is still selected in the panel
+			if SELECTED_UPGRADE and not SELECTED_UPGRADE.IsMaxLevel then
+				maxButton.Visible = MAX_UPGRADE_PRODUCT_IDS[SELECTED_UPGRADE.Id] ~= nil
+			end
 			LOAD_UPGRADES()
 		end)
 
-		--print("UpgradeShopHandler fully loaded!")
 	end)
 end
 
