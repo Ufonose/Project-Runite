@@ -38,17 +38,198 @@ function module.LOAD(MODULE_INFO)
 		premiumContainer.ZIndex = 7
 		premiumContainer.Parent = shopFrame
 
-		-- Main panel
+		-- ==================== LEFT SIDEBAR ====================
+		local sidebarFrame = Instance.new("Frame")
+		sidebarFrame.Name = "PremiumSidebar"
+		sidebarFrame.Size = UDim2.new(0.15, 0, 0.915, 0)
+		sidebarFrame.Position = UDim2.new(0.0357, 0, 0.065, 0)
+		sidebarFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+		sidebarFrame.BackgroundTransparency = 0.3
+		sidebarFrame.BorderSizePixel = 0
+		sidebarFrame.ZIndex = 7
+		sidebarFrame.Parent = premiumContainer
+
+		local sidebarCorner = Instance.new("UICorner")
+		sidebarCorner.CornerRadius = UDim.new(0, 12)
+		sidebarCorner.Parent = sidebarFrame
+
+		local sidebarStroke = Instance.new("UIStroke")
+		sidebarStroke.Color = Color3.fromRGB(180, 140, 0)
+		sidebarStroke.Thickness = 1.5
+		sidebarStroke.Transparency = 0.5
+		sidebarStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		sidebarStroke.Parent = sidebarFrame
+
+		local sidebarPadding = Instance.new("UIPadding")
+		sidebarPadding.PaddingTop    = UDim.new(0.02, 0)
+		sidebarPadding.PaddingBottom = UDim.new(0.02, 0)
+		sidebarPadding.PaddingLeft   = UDim.new(0.06, 0)
+		sidebarPadding.PaddingRight  = UDim.new(0.06, 0)
+		sidebarPadding.Parent = sidebarFrame
+
+		local sidebarLayout = Instance.new("UIListLayout")
+		sidebarLayout.FillDirection = Enum.FillDirection.Vertical
+		sidebarLayout.Padding = UDim.new(0.015, 0)
+		sidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		sidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		sidebarLayout.Parent = sidebarFrame
+
+		-- Crown icon
+		local crownLabel = Instance.new("TextLabel")
+		crownLabel.Size = UDim2.new(0.85, 0, 0.12, 0)
+		crownLabel.BackgroundTransparency = 1
+		crownLabel.Text = "👑"
+		crownLabel.TextScaled = true
+		crownLabel.Font = Enum.Font.GothamBold
+		crownLabel.TextColor3 = Color3.fromRGB(255, 220, 80)
+		crownLabel.LayoutOrder = 1
+		crownLabel.ZIndex = 8
+		crownLabel.Parent = sidebarFrame
+
+		local crownConstraint = Instance.new("UITextSizeConstraint")
+		crownConstraint.MaxTextSize = 36
+		crownConstraint.Parent = crownLabel
+
+		-- "PREMIUM" title
+		local sidebarTitle = Instance.new("TextLabel")
+		sidebarTitle.Size = UDim2.new(0.9, 0, 0.07, 0)
+		sidebarTitle.BackgroundTransparency = 1
+		sidebarTitle.Text = "PREMIUM"
+		sidebarTitle.TextScaled = true
+		sidebarTitle.Font = Enum.Font.GothamBold
+		sidebarTitle.TextColor3 = Color3.fromRGB(255, 230, 120)
+		sidebarTitle.LayoutOrder = 2
+		sidebarTitle.ZIndex = 8
+		sidebarTitle.Parent = sidebarFrame
+
+		local sidebarTitleConstraint = Instance.new("UITextSizeConstraint")
+		sidebarTitleConstraint.MaxTextSize = 18
+		sidebarTitleConstraint.Parent = sidebarTitle
+
+		-- Gold divider
+		local divider = Instance.new("Frame")
+		divider.Size = UDim2.new(0.85, 0, 0.004, 0)
+		divider.BackgroundColor3 = Color3.fromRGB(180, 140, 0)
+		divider.BackgroundTransparency = 0.4
+		divider.BorderSizePixel = 0
+		divider.LayoutOrder = 3
+		divider.ZIndex = 8
+		divider.Parent = sidebarFrame
+
+		-- Subtitle blurb
+		local sidebarSubtitle = Instance.new("TextLabel")
+		sidebarSubtitle.Size = UDim2.new(0.9, 0, 0.12, 0)
+		sidebarSubtitle.BackgroundTransparency = 1
+		sidebarSubtitle.Text = "Boost your mining plot"
+		sidebarSubtitle.TextScaled = true
+		sidebarSubtitle.TextWrapped = true
+		sidebarSubtitle.Font = Enum.Font.Gotham
+		sidebarSubtitle.TextColor3 = Color3.fromRGB(170, 160, 130)
+		sidebarSubtitle.LayoutOrder = 4
+		sidebarSubtitle.ZIndex = 8
+		sidebarSubtitle.Parent = sidebarFrame
+
+		local sidebarSubConstraint = Instance.new("UITextSizeConstraint")
+		sidebarSubConstraint.MaxTextSize = 12
+		sidebarSubConstraint.Parent = sidebarSubtitle
+
+		-- Second divider
+		local divider2 = Instance.new("Frame")
+		divider2.Size = UDim2.new(0.85, 0, 0.004, 0)
+		divider2.BackgroundColor3 = Color3.fromRGB(180, 140, 0)
+		divider2.BackgroundTransparency = 0.6
+		divider2.BorderSizePixel = 0
+		divider2.LayoutOrder = 5
+		divider2.ZIndex = 8
+		divider2.Parent = sidebarFrame
+
+		-- "Passes" label
+		local passesLabel = Instance.new("TextLabel")
+		passesLabel.Size = UDim2.new(0.9, 0, 0.05, 0)
+		passesLabel.BackgroundTransparency = 1
+		passesLabel.Text = "PASSES"
+		passesLabel.TextScaled = true
+		passesLabel.Font = Enum.Font.GothamBold
+		passesLabel.TextColor3 = Color3.fromRGB(140, 130, 100)
+		passesLabel.LayoutOrder = 6
+		passesLabel.ZIndex = 8
+		passesLabel.Parent = sidebarFrame
+
+		local passesConstraint = Instance.new("UITextSizeConstraint")
+		passesConstraint.MaxTextSize = 11
+		passesConstraint.Parent = passesLabel
+
+		-- Mini pass indicators (icon + name, one per pass)
+		local passEntries = {
+			{ icon = "💰", name = "2x Cash",        color = Color3.fromRGB(255, 215, 0)   },
+			{ icon = "🔬", name = "Auto Research",  color = Color3.fromRGB(130, 180, 255) },
+			{ icon = "⚗️", name = "Research Boost", color = Color3.fromRGB(80, 220, 170)  },
+		}
+
+		for i, entry in ipairs(passEntries) do
+			local miniCard = Instance.new("Frame")
+			miniCard.Name = "MiniPass" .. i
+			miniCard.Size = UDim2.new(0.9, 0, 0.065, 0)
+			miniCard.BackgroundColor3 = Color3.fromRGB(35, 33, 25)
+			miniCard.BackgroundTransparency = 0.3
+			miniCard.BorderSizePixel = 0
+			miniCard.LayoutOrder = 6 + i
+			miniCard.ZIndex = 8
+			miniCard.Parent = sidebarFrame
+
+			local miniCorner = Instance.new("UICorner")
+			miniCorner.CornerRadius = UDim.new(0, 8)
+			miniCorner.Parent = miniCard
+
+			local miniStroke = Instance.new("UIStroke")
+			miniStroke.Color = Color3.fromRGB(180, 140, 0)
+			miniStroke.Thickness = 1
+			miniStroke.Transparency = 0.7
+			miniStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			miniStroke.Parent = miniCard
+
+			local miniIcon = Instance.new("TextLabel")
+			miniIcon.Size = UDim2.new(0.28, 0, 1, 0)
+			miniIcon.Position = UDim2.new(0.02, 0, 0, 0)
+			miniIcon.BackgroundTransparency = 1
+			miniIcon.Text = entry.icon
+			miniIcon.TextScaled = true
+			miniIcon.ZIndex = 9
+			miniIcon.Parent = miniCard
+
+			local miniIconConstraint = Instance.new("UITextSizeConstraint")
+			miniIconConstraint.MaxTextSize = 16
+			miniIconConstraint.Parent = miniIcon
+
+			local miniName = Instance.new("TextLabel")
+			miniName.Size = UDim2.new(0.68, 0, 1, 0)
+			miniName.Position = UDim2.new(0.3, 0, 0, 0)
+			miniName.BackgroundTransparency = 1
+			miniName.Text = entry.name
+			miniName.TextColor3 = entry.color
+			miniName.Font = Enum.Font.GothamBold
+			miniName.TextScaled = true
+			miniName.TextXAlignment = Enum.TextXAlignment.Left
+			miniName.ZIndex = 9
+			miniName.Parent = miniCard
+
+			local miniNameConstraint = Instance.new("UITextSizeConstraint")
+			miniNameConstraint.MaxTextSize = 11
+			miniNameConstraint.Parent = miniName
+		end
+
+		-- ==================== MAIN PANEL (scrolling) ====================
 		local premiumPanel = Instance.new("ScrollingFrame")
 		premiumPanel.Name = "PremiumPanel"
-		premiumPanel.Size = UDim2.new(0.76, 0, 0.84, 0)
+		premiumPanel.Size = UDim2.new(0.76, 0, 0.852, 0)
 		premiumPanel.Position = UDim2.new(0.2, 0, 0.128, 0)
 		premiumPanel.BackgroundColor3 = Color3.fromRGB(28, 28, 33)
 		premiumPanel.BackgroundTransparency = 0.2
 		premiumPanel.BorderSizePixel = 0
 		premiumPanel.ScrollBarThickness = 6
 		premiumPanel.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 110)
-		premiumPanel.CanvasSize = UDim2.new(0, 0, 0, 0) -- updated below
+		premiumPanel.AutomaticCanvasSize = Enum.AutomaticSize.Y
+		premiumPanel.CanvasSize = UDim2.new(0, 0, 0, 0)
 		premiumPanel.ZIndex = 7
 		premiumPanel.Parent = premiumContainer
 
@@ -63,165 +244,79 @@ function module.LOAD(MODULE_INFO)
 		ppStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		ppStroke.Parent = premiumPanel
 
-		-- Gold gradient header
-		local premiumHeader = Instance.new("Frame")
-		premiumHeader.Size = UDim2.new(1, 0, 0.1, 0)
-		premiumHeader.BackgroundColor3 = Color3.fromRGB(160, 110, 0)
-		premiumHeader.BorderSizePixel = 0
-		premiumHeader.ZIndex = 8
-		premiumHeader.Parent = premiumPanel
+		-- UIListLayout for the cards
+		local panelLayout = Instance.new("UIListLayout")
+		panelLayout.FillDirection = Enum.FillDirection.Vertical
+		panelLayout.Padding = UDim.new(0, 10)
+		panelLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		panelLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		panelLayout.Parent = premiumPanel
 
-		local headerCorner = Instance.new("UICorner")
-		headerCorner.CornerRadius = UDim.new(0, 12)
-		headerCorner.Parent = premiumHeader
+		local panelPadding = Instance.new("UIPadding")
+		panelPadding.PaddingTop    = UDim.new(0, 10)
+		panelPadding.PaddingBottom = UDim.new(0, 14)
+		panelPadding.PaddingLeft   = UDim.new(0, 12)
+		panelPadding.PaddingRight  = UDim.new(0, 12)
+		panelPadding.Parent = premiumPanel
 
-		-- Cover bottom corners so only the top rounds
-		local headerFill = Instance.new("Frame")
-		headerFill.Size = UDim2.new(1, 0, 0.5, 0)
-		headerFill.Position = UDim2.new(0, 0, 0.5, 0)
-		headerFill.BackgroundColor3 = Color3.fromRGB(160, 110, 0)
-		headerFill.BorderSizePixel = 0
-		headerFill.ZIndex = 8
-		headerFill.Parent = premiumHeader
-
-		local headerGradient = Instance.new("UIGradient")
-		headerGradient.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(200, 150, 0)),
-			ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 80,  0)),
-		})
-		headerGradient.Rotation = 90
-		headerGradient.Parent = premiumHeader
-
-		local headerLabel = Instance.new("TextLabel")
-		headerLabel.Size = UDim2.new(1, 0, 1, 0)
-		headerLabel.BackgroundTransparency = 1
-		headerLabel.Text = "👑  PREMIUM"
-		headerLabel.TextColor3 = Color3.fromRGB(255, 240, 180)
-		headerLabel.Font = Enum.Font.GothamBold
-		headerLabel.TextScaled = true
-		headerLabel.ZIndex = 9
-		headerLabel.Parent = premiumHeader
-
-		local headerConstraint = Instance.new("UITextSizeConstraint")
-		headerConstraint.MaxTextSize = 22
-		headerConstraint.Parent = headerLabel
-
-		-- Subtitle
-		local subLabel = Instance.new("TextLabel")
-		subLabel.Size = UDim2.new(0.9, 0, 0.06, 0)
-		subLabel.Position = UDim2.new(0.05, 0, 0.115, 0)
-		subLabel.BackgroundTransparency = 1
-		subLabel.Text = "Permanent boosts for dedicated miners"
-		subLabel.TextColor3 = Color3.fromRGB(160, 160, 170)
-		subLabel.Font = Enum.Font.Gotham
-		subLabel.TextScaled = true
-		subLabel.ZIndex = 8
-		subLabel.Parent = premiumPanel
-
-		local subConstraint = Instance.new("UITextSizeConstraint")
-		subConstraint.MaxTextSize = 14
-		subConstraint.Parent = subLabel
-
-		-- ==================== HELPER: BUILD A CARD ====================
-		local function buildCard(parent, cfg)
-			-- cfg = { posY, bgColor, strokeColor, iconColor, iconEmoji,
-			--         titleText, titleColor, descText, gpId }
-
+		-- ==================== HELPER: BUILD A WIDE CARD ====================
+		local function buildCard(cfg)
 			local card = Instance.new("Frame")
-			card.Size = UDim2.new(0.88, 0, 0, 0) -- height set below via aspect ratio
-			card.Position = UDim2.new(0.06, 0, 0, cfg.posY)
+			card.Name = "PremiumCard_" .. cfg.titleText
+			card.Size = UDim2.new(1, 0, 0, 130)
 			card.BackgroundColor3 = cfg.bgColor
 			card.BorderSizePixel = 0
+			card.LayoutOrder = cfg.order
 			card.ZIndex = 8
-			card.Parent = parent
-
-			-- Fixed pixel height so cards don't rely on panel scale
-			local cardSizeConstraint = Instance.new("UISizeConstraint")
-			cardSizeConstraint.MinSize = Vector2.new(0, 160)
-			cardSizeConstraint.MaxSize = Vector2.new(math.huge, 160)
-			cardSizeConstraint.Parent = card
+			card.Parent = premiumPanel
 
 			local cCorner = Instance.new("UICorner")
-			cCorner.CornerRadius = UDim.new(0, 14)
+			cCorner.CornerRadius = UDim.new(0, 12)
 			cCorner.Parent = card
 
 			local cStroke = Instance.new("UIStroke")
 			cStroke.Color = cfg.strokeColor
 			cStroke.Thickness = 1.5
-			cStroke.Transparency = 0.3
+			cStroke.Transparency = 0.35
 			cStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 			cStroke.Parent = card
 
-			-- Icon circle
-			local circle = Instance.new("Frame")
-			circle.Size = UDim2.new(0, 56, 0, 56)
-			circle.Position = UDim2.new(0.5, 0, 0, 12)
-			circle.AnchorPoint = Vector2.new(0.5, 0)
-			circle.BackgroundColor3 = cfg.iconColor
-			circle.BorderSizePixel = 0
-			circle.ZIndex = 9
-			circle.Parent = card
+			-- Left column: icon on top, button below
+			local iconCircle = Instance.new("Frame")
+			iconCircle.Size = UDim2.new(0, 72, 0, 72)
+			iconCircle.Position = UDim2.new(0, 14, 0, 10)
+			iconCircle.BackgroundColor3 = cfg.iconBgColor
+			iconCircle.BorderSizePixel = 0
+			iconCircle.ZIndex = 9
+			iconCircle.Parent = card
 
-			local circleRound = Instance.new("UICorner")
-			circleRound.CornerRadius = UDim.new(0.5, 0)
-			circleRound.Parent = circle
+			local iconCorner = Instance.new("UICorner")
+			iconCorner.CornerRadius = UDim.new(1, 0)
+			iconCorner.Parent = iconCircle
 
-			local emoji = Instance.new("TextLabel")
-			emoji.Size = UDim2.new(1, 0, 1, 0)
-			emoji.BackgroundTransparency = 1
-			emoji.Text = cfg.iconEmoji
-			emoji.TextScaled = true
-			emoji.ZIndex = 10
-			emoji.Parent = circle
+			local iconLabel = Instance.new("TextLabel")
+			iconLabel.Size = UDim2.new(1, 0, 1, 0)
+			iconLabel.BackgroundTransparency = 1
+			iconLabel.Text = cfg.iconEmoji
+			iconLabel.TextScaled = true
+			iconLabel.ZIndex = 10
+			iconLabel.Parent = iconCircle
 
-			local emojiConstraint = Instance.new("UITextSizeConstraint")
-			emojiConstraint.MaxTextSize = 32
-			emojiConstraint.Parent = emoji
+			local iconConstraint = Instance.new("UITextSizeConstraint")
+			iconConstraint.MaxTextSize = 32
+			iconConstraint.Parent = iconLabel
 
-			-- Title
-			local titleLbl = Instance.new("TextLabel")
-			titleLbl.Size = UDim2.new(0.9, 0, 0, 22)
-			titleLbl.Position = UDim2.new(0.05, 0, 0, 76)
-			titleLbl.BackgroundTransparency = 1
-			titleLbl.Text = cfg.titleText
-			titleLbl.TextColor3 = cfg.titleColor
-			titleLbl.Font = Enum.Font.GothamBold
-			titleLbl.TextScaled = true
-			titleLbl.ZIndex = 9
-			titleLbl.Parent = card
-
-			local titleConstraint = Instance.new("UITextSizeConstraint")
-			titleConstraint.MaxTextSize = 18
-			titleConstraint.Parent = titleLbl
-
-			-- Description
-			local descLbl = Instance.new("TextLabel")
-			descLbl.Size = UDim2.new(0.9, 0, 0, 34)
-			descLbl.Position = UDim2.new(0.05, 0, 0, 100)
-			descLbl.BackgroundTransparency = 1
-			descLbl.Text = cfg.descText
-			descLbl.TextColor3 = Color3.fromRGB(180, 180, 190)
-			descLbl.Font = Enum.Font.Gotham
-			descLbl.TextWrapped = true
-			descLbl.TextScaled = true
-			descLbl.ZIndex = 9
-			descLbl.Parent = card
-
-			local descConstraint = Instance.new("UITextSizeConstraint")
-			descConstraint.MaxTextSize = 11
-			descConstraint.Parent = descLbl
-
-			-- Buy button
+			-- Buy button (below icon, left column)
 			local buyBtn = Instance.new("TextButton")
-			buyBtn.Size = UDim2.new(0.55, 0, 0, 28)
-			buyBtn.Position = UDim2.new(0.225, 0, 0, 126)
-			buyBtn.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
-			buyBtn.Text = "🛒  Buy with Robux"
-			buyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+			buyBtn.Name = "buyBtn"
+			buyBtn.Size = UDim2.new(0, 90, 0, 28)
+			buyBtn.Position = UDim2.new(0, 8, 0, 90)
+			buyBtn.BackgroundColor3 = Color3.fromRGB(70, 130, 70)
+			buyBtn.Text = "Buy"
+			buyBtn.TextColor3 = Color3.fromRGB(255, 245, 200)
 			buyBtn.Font = Enum.Font.GothamBold
 			buyBtn.TextScaled = true
-			buyBtn.ZIndex = 9
-			buyBtn.Visible = false
+			buyBtn.ZIndex = 10
 			buyBtn.Parent = card
 
 			local buyCorner = Instance.new("UICorner")
@@ -229,19 +324,22 @@ function module.LOAD(MODULE_INFO)
 			buyCorner.Parent = buyBtn
 
 			local buyConstraint = Instance.new("UITextSizeConstraint")
-			buyConstraint.MaxTextSize = 13
+			buyConstraint.MaxTextSize = 16
 			buyConstraint.Parent = buyBtn
 
-			-- Owned badge
-			local ownedBadge = Instance.new("TextLabel")
-			ownedBadge.Size = UDim2.new(0.55, 0, 0, 28)
-			ownedBadge.Position = UDim2.new(0.225, 0, 0, 126)
+			-- Owned badge (below icon, left column, hidden by default)
+			local ownedBadge = Instance.new("TextButton")
+			ownedBadge.Name = "ownedBadge"
+			ownedBadge.Size = UDim2.new(0, 90, 0, 28)
+			ownedBadge.Position = UDim2.new(0, 8, 0, 90)
 			ownedBadge.BackgroundColor3 = Color3.fromRGB(30, 100, 40)
-			ownedBadge.Text = "✓  Active"
+			ownedBadge.Text = "✓ Active"
 			ownedBadge.TextColor3 = Color3.fromRGB(120, 255, 140)
 			ownedBadge.Font = Enum.Font.GothamBold
 			ownedBadge.TextScaled = true
-			ownedBadge.ZIndex = 9
+			ownedBadge.Active = false
+			ownedBadge.AutoButtonColor = false
+			ownedBadge.ZIndex = 10
 			ownedBadge.Visible = false
 			ownedBadge.Parent = card
 
@@ -253,22 +351,67 @@ function module.LOAD(MODULE_INFO)
 			ownedConstraint.MaxTextSize = 13
 			ownedConstraint.Parent = ownedBadge
 
-			-- Checking label
+			-- Checking label (below icon, left column)
 			local checkingLbl = Instance.new("TextLabel")
-			checkingLbl.Size = UDim2.new(0.55, 0, 0, 28)
-			checkingLbl.Position = UDim2.new(0.225, 0, 0, 126)
+			checkingLbl.Name = "checkingLbl"
+			checkingLbl.Size = UDim2.new(0, 90, 0, 28)
+			checkingLbl.Position = UDim2.new(0, 8, 0, 90)
 			checkingLbl.BackgroundTransparency = 1
 			checkingLbl.Text = "Checking..."
 			checkingLbl.TextColor3 = Color3.fromRGB(140, 140, 150)
 			checkingLbl.Font = Enum.Font.Gotham
 			checkingLbl.TextScaled = true
-			checkingLbl.ZIndex = 9
+			checkingLbl.ZIndex = 10
 			checkingLbl.Visible = true
 			checkingLbl.Parent = card
 
 			local checkingConstraint = Instance.new("UITextSizeConstraint")
 			checkingConstraint.MaxTextSize = 12
 			checkingConstraint.Parent = checkingLbl
+
+			-- Right content area (title + description only)
+			local contentFrame = Instance.new("Frame")
+			contentFrame.Size = UDim2.new(1, -116, 1, 0)
+			contentFrame.Position = UDim2.new(0, 110, 0, 0)
+			contentFrame.BackgroundTransparency = 1
+			contentFrame.ZIndex = 9
+			contentFrame.Parent = card
+
+			-- Title
+			local titleLabel = Instance.new("TextLabel")
+			titleLabel.Size = UDim2.new(1, -8, 0, 26)
+			titleLabel.Position = UDim2.new(0, 0, 0, 10)
+			titleLabel.BackgroundTransparency = 1
+			titleLabel.Text = cfg.titleText
+			titleLabel.TextColor3 = cfg.titleColor
+			titleLabel.Font = Enum.Font.GothamBold
+			titleLabel.TextScaled = true
+			titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+			titleLabel.ZIndex = 10
+			titleLabel.Parent = contentFrame
+
+			local titleConstraint = Instance.new("UITextSizeConstraint")
+			titleConstraint.MaxTextSize = 18
+			titleConstraint.Parent = titleLabel
+
+			-- Description
+			local descLabel = Instance.new("TextLabel")
+			descLabel.Size = UDim2.new(1, -8, 0, 80)
+			descLabel.Position = UDim2.new(0, 0, 0, 38)
+			descLabel.BackgroundTransparency = 1
+			descLabel.Text = cfg.descText
+			descLabel.TextColor3 = Color3.fromRGB(175, 175, 185)
+			descLabel.Font = Enum.Font.Gotham
+			descLabel.TextScaled = true
+			descLabel.TextWrapped = true
+			descLabel.TextXAlignment = Enum.TextXAlignment.Left
+			descLabel.TextYAlignment = Enum.TextYAlignment.Top
+			descLabel.ZIndex = 10
+			descLabel.Parent = contentFrame
+
+			local descConstraint = Instance.new("UITextSizeConstraint")
+			descConstraint.MaxTextSize = 18
+			descConstraint.Parent = descLabel
 
 			return {
 				card        = card,
@@ -279,60 +422,75 @@ function module.LOAD(MODULE_INFO)
 			}
 		end
 
+		-- ==================== HELPER: FETCH AND SET PRICE ON BUY BUTTON ====================
+		-- Runs in its own thread; falls back gracefully if the request fails.
+		local function fetchAndSetPrice(btn, gpId)
+			task.spawn(function()
+				local ok, info = pcall(function()
+					return MarketplaceService:GetProductInfoAsync(gpId, Enum.InfoType.GamePass)
+				end)
+				if ok and info and info.PriceInRobux then
+					btn.Text = "Buy - \u{E002}" .. info.PriceInRobux
+				end
+				-- If the call fails, the button simply keeps its default "🛒 Buy" text.
+			end)
+		end
+
 		-- ==================== BUILD CARDS ====================
-		local card1 = buildCard(premiumPanel, {
-			posY       = 200,
-			bgColor    = Color3.fromRGB(35, 30, 20),
-			strokeColor = Color3.fromRGB(200, 150, 30),
-			iconColor  = Color3.fromRGB(160, 110, 0),
-			iconEmoji  = "💰",
-			titleText  = "2x Cash",
-			titleColor = Color3.fromRGB(255, 215, 0),
-			descText   = "Permanently double all cash earned from ore deposits. Stacks with upgrades.",
-			gpId       = DOUBLE_CASH_GAMEPASS_ID,
+		local card1 = buildCard({
+			order       = 1,
+			bgColor     = Color3.fromRGB(35, 30, 20),
+			strokeColor  = Color3.fromRGB(200, 150, 30),
+			iconBgColor = Color3.fromRGB(80, 55, 0),
+			iconEmoji   = "💰",
+			titleText   = "2x Cash",
+			titleColor  = Color3.fromRGB(255, 215, 0),
+			descText    = "Permanently doubles all cash earned from ore deposits. Stacks with the Cash Bonus upgrade for massive earnings.",
 		})
 
-		local card2 = buildCard(premiumPanel, {
-			posY       = 390,
-			bgColor    = Color3.fromRGB(20, 25, 40),
-			strokeColor = Color3.fromRGB(80, 140, 220),
-			iconColor  = Color3.fromRGB(40, 80, 160),
-			iconEmoji  = "🔬",
-			titleText  = "Auto Research",
-			titleColor = Color3.fromRGB(130, 180, 255),
-			descText   = "Automatically starts all available research objectives. Toggle on/off in the Research menu.",
-			gpId       = AUTO_RESEARCH_GAMEPASS_ID,
+		local card2 = buildCard({
+			order       = 2,
+			bgColor     = Color3.fromRGB(20, 25, 40),
+			strokeColor  = Color3.fromRGB(80, 140, 220),
+			iconBgColor = Color3.fromRGB(20, 50, 110),
+			iconEmoji   = "🔬",
+			titleText   = "Auto Research",
+			titleColor  = Color3.fromRGB(130, 180, 255),
+			descText    = "Automatically starts all available research objectives whenever they become unlocked. Toggle on or off in the Research menu at any time.",
 		})
 
-		local card3 = buildCard(premiumPanel, {
-			posY        = 580,
+		local card3 = buildCard({
+			order       = 3,
 			bgColor     = Color3.fromRGB(20, 35, 35),
-			strokeColor = Color3.fromRGB(60, 180, 140),
-			iconColor   = Color3.fromRGB(30, 120, 90),
+			strokeColor  = Color3.fromRGB(60, 180, 140),
+			iconBgColor = Color3.fromRGB(15, 75, 55),
 			iconEmoji   = "⚗️",
 			titleText   = "Research Boost",
 			titleColor  = Color3.fromRGB(80, 220, 170),
-			descText    = "Ore deposits count as 2x progress on research objectives. Disabled during speedruns for fair competition.",
-			gpId        = RESEARCH_BOOST_GAMEPASS_ID,
+			descText    = "Each item deposit counts as double progress toward research objectives.\n⚠️ Disabled during speedruns to keep competition fair.",
 		})
 
-		-- Update canvas to fit all three cards
-		premiumPanel.CanvasSize = UDim2.new(0, 0, 0, 780)
+		-- Fetch live prices from Roblox and update each buy button.
+		-- All three run in parallel so there's no stacking delay.
+		fetchAndSetPrice(card1.buyBtn, DOUBLE_CASH_GAMEPASS_ID)
+		fetchAndSetPrice(card2.buyBtn, AUTO_RESEARCH_GAMEPASS_ID)
+		fetchAndSetPrice(card3.buyBtn, RESEARCH_BOOST_GAMEPASS_ID)
 
 		-- ==================== OWNERSHIP LOGIC ====================
 		local checked1, owned1 = false, false
 		local checked2, owned2 = false, false
 		local checked3, owned3 = false, false
+		local IN_SPEEDRUN = false
 
 		local function refreshCard(cardData, isOwned, ownedBgColor, ownedStrokeColor, defaultBgColor, defaultStrokeColor)
 			cardData.checkingLbl.Visible = false
 			if isOwned then
-				cardData.buyBtn.Visible    = false
+				cardData.buyBtn.Visible     = false
 				cardData.ownedBadge.Visible = true
 				cardData.card.BackgroundColor3 = ownedBgColor
 				cardData.cStroke.Color         = ownedStrokeColor
 			else
-				cardData.buyBtn.Visible    = true
+				cardData.buyBtn.Visible     = true
 				cardData.ownedBadge.Visible = false
 				cardData.card.BackgroundColor3 = defaultBgColor
 				cardData.cStroke.Color         = defaultStrokeColor
@@ -350,15 +508,47 @@ function module.LOAD(MODULE_INFO)
 				Color3.fromRGB(25, 45, 25), Color3.fromRGB(50, 180, 80),
 				Color3.fromRGB(20, 25, 40),  Color3.fromRGB(80, 140, 220))
 		end
-		
+
 		local function refreshCard3()
-			refreshCard(card3, owned3,
-				Color3.fromRGB(25, 45, 25), Color3.fromRGB(50, 180, 80),
-				Color3.fromRGB(20, 35, 35),  Color3.fromRGB(60, 180, 140))
+			card3.checkingLbl.Visible = false
+			if owned3 then
+				card3.buyBtn.Visible     = false
+				card3.ownedBadge.Visible = true
+				if IN_SPEEDRUN then
+					card3.ownedBadge.Text            = "||  Paused"
+					card3.ownedBadge.TextColor3      = Color3.fromRGB(255, 200, 80)
+					card3.ownedBadge.BackgroundColor3 = Color3.fromRGB(90, 70, 10)
+					card3.card.BackgroundColor3       = Color3.fromRGB(35, 30, 15)
+					card3.cStroke.Color               = Color3.fromRGB(180, 130, 20)
+				else
+					card3.ownedBadge.Text            = "✓ Active"
+					card3.ownedBadge.TextColor3      = Color3.fromRGB(120, 255, 140)
+					card3.ownedBadge.BackgroundColor3 = Color3.fromRGB(30, 100, 40)
+					card3.card.BackgroundColor3       = Color3.fromRGB(25, 45, 25)
+					card3.cStroke.Color               = Color3.fromRGB(50, 180, 80)
+				end
+			else
+				card3.buyBtn.Visible     = true
+				card3.ownedBadge.Visible = false
+				card3.card.BackgroundColor3 = Color3.fromRGB(20, 35, 35)
+				card3.cStroke.Color         = Color3.fromRGB(60, 180, 140)
+			end
 		end
 
 		local function checkOwnership()
-			if checked1 and checked2 then return end
+			if checked1 and checked2 and checked3 then
+				task.spawn(function()
+					local getSpeedrunData = RepStorage.Events:FindFirstChild("GetSpeedrunData")
+					if getSpeedrunData then
+						local ok, data = pcall(function() return getSpeedrunData:InvokeServer() end)
+						if ok and data then
+							IN_SPEEDRUN = data.InSpeedrunMode == true or data.IsActive == true
+							refreshCard3()
+						end
+					end
+				end)
+				return
+			end
 
 			task.spawn(function()
 				local checkRemote = RepStorage.Events:WaitForChild("CheckGamepassOwned", 5)
@@ -379,14 +569,22 @@ function module.LOAD(MODULE_INFO)
 					if ok then owned2 = result == true; checked2 = true end
 					refreshCard2()
 				end
-				
+
 				if not checked3 then
 					local ok, result = pcall(function()
 						return checkRemote:InvokeServer(RESEARCH_BOOST_GAMEPASS_ID)
 					end)
 					if ok then owned3 = result == true; checked3 = true end
-					refreshCard3()
 				end
+
+				local getSpeedrunData = RepStorage.Events:FindFirstChild("GetSpeedrunData")
+				if getSpeedrunData then
+					local ok2, data = pcall(function() return getSpeedrunData:InvokeServer() end)
+					if ok2 and data then
+						IN_SPEEDRUN = data.InSpeedrunMode == true or data.IsActive == true
+					end
+				end
+				refreshCard3()
 			end)
 		end
 
@@ -398,7 +596,7 @@ function module.LOAD(MODULE_INFO)
 		card2.buyBtn.MouseButton1Click:Connect(function()
 			MarketplaceService:PromptGamePassPurchase(Plr, AUTO_RESEARCH_GAMEPASS_ID)
 		end)
-		
+
 		card3.buyBtn.MouseButton1Click:Connect(function()
 			MarketplaceService:PromptGamePassPurchase(Plr, RESEARCH_BOOST_GAMEPASS_ID)
 		end)
@@ -420,6 +618,22 @@ function module.LOAD(MODULE_INFO)
 			end)
 		end
 
+		-- ==================== SPEEDRUN LISTENERS ====================
+		local Events = RepStorage:WaitForChild("Events")
+
+		Events:WaitForChild("EnteredSpeedrunMode").OnClientEvent:Connect(function()
+			IN_SPEEDRUN = true
+			refreshCard3()
+		end)
+		Events:WaitForChild("SpeedrunStarted").OnClientEvent:Connect(function()
+			IN_SPEEDRUN = true
+			refreshCard3()
+		end)
+		Events:WaitForChild("RestoredMainPlot").OnClientEvent:Connect(function()
+			IN_SPEEDRUN = false
+			refreshCard3()
+		end)
+
 		-- ==================== TAB SWITCHING ====================
 		premiumTabButton.MouseButton1Click:Connect(function()
 			local itemsTabBtn    = tabButtonsBackground:FindFirstChild("ItemsTab")
@@ -437,10 +651,18 @@ function module.LOAD(MODULE_INFO)
 			checkOwnership()
 		end)
 
-		-- Hide PremiumContainer when Upgrades tab is clicked
+		-- Hide PremiumContainer when other tabs are clicked
 		local upgradesTabBtn = tabButtonsBackground:WaitForChild("UpgradesTab", 10)
 		if upgradesTabBtn then
 			upgradesTabBtn.MouseButton1Click:Connect(function()
+				premiumContainer.Visible = false
+				premiumTabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+			end)
+		end
+
+		local itemsTabBtn = tabButtonsBackground:WaitForChild("ItemsTab", 10)
+		if itemsTabBtn then
+			itemsTabBtn.MouseButton1Click:Connect(function()
 				premiumContainer.Visible = false
 				premiumTabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 			end)
