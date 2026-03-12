@@ -17,7 +17,7 @@ MinerHotspotHandler.HotspotConfigs = {
 	[6] = {Id = 6, MinerName = "Copper Mine 3", Cost = 200, Description = ""},
 	[7] = {Id = 7, MinerName = "Gold Mine 2", Cost = 90, Description = ""},
 	[8] = {Id = 8, MinerName = "Gold Mine 3", Cost = 220, Description = ""},
-	[9] = {Id = 9, MinerName = "Legendary Mine 1", CashCost = 25000, RequiresFullResearch = true, Description = ""},
+	[9] = {Id = 9, MinerName = "Legendary Mine 1", CashCost = 100000, SpeedrunCashCost = 25000, RequiresFullResearch = true, Description = ""},
 	[10] = {Id = 10, MinerName = "Iron Mine 5", Cost = 0, Description = ""},
 	[11] = {Id = 11, MinerName = "Copper Mine 4", Cost = 27, Description = ""},
 	[12] = {Id = 12, MinerName = "Gold Mine 1", Cost = 1, Description = ""},
@@ -70,8 +70,8 @@ function MinerHotspotHandler.UnlockHotspot(player, hotspotId)
 			local research = session["Research"]
 			if not research then return false, "Research not loaded" end
 			for _, obj in pairs(ResearchData.Objectives) do
-				if not table.find(research.CompletedObjectives, obj.Id) then
-					return false, "Complete all research first"
+				if obj.Age <= 3 and not table.find(research.CompletedObjectives, obj.Id) then
+					return false, "Complete Ages 1, 2 and 3 first"
 				end
 			end
 		end
@@ -79,11 +79,14 @@ function MinerHotspotHandler.UnlockHotspot(player, hotspotId)
 
 	-- Payment
 	if config.CashCost then
+		local speedrun = session["Speedrun"]
+		local inSpeedrun = speedrun and speedrun.InSpeedrunMode
+		local actualCost = (inSpeedrun and config.SpeedrunCashCost) or config.CashCost
 		local cashValue = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(player.Name)
-		if not cashValue or cashValue.Value < config.CashCost then
+		if not cashValue or cashValue.Value < actualCost then
 			return false, "Not enough cash"
 		end
-		cashValue.Value -= config.CashCost
+		cashValue.Value -= actualCost
 	else
 		if player.ResearchTokens.Value < config.Cost then
 			return false, "Not enough tokens"
