@@ -1,238 +1,1678 @@
--- ServerStorage/Modules/ResearchHandler
-local ServerStorage = game:GetService("ServerStorage")
-local RepStorage    = game:GetService("ReplicatedStorage")
+-- StarterGui (ResearchGui)/ResearchGuiHandler.txt (MODERNIZED & FULLY RESPONSIVE WITH STATISTICS - NO FLICKER)
 
-local PlayerSession  = require(ServerStorage.Modules.PlayerDataManager)
-local ResearchData   = require(ServerStorage.Modules.ResearchData)
-local SpeedrunHandler = require(ServerStorage.Modules.SpeedrunHandler)
+local Players = game:GetService("Players")
+local RepStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local researchGui = script.Parent
+local SoundManager = require(RepStorage.Modules.SoundManager)
+local UserInputService = game:GetService("UserInputService")
+local MarketplaceService = game:GetService("MarketplaceService")
 
-local ResearchHandler = {}
+-- Check if player is on mobile device
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
-local function getItemNameFromId(itemId)
-	for _, item in pairs(RepStorage.Items:GetChildren()) do
-		local itemStats = item:FindFirstChild("ItemStats")
-		if itemStats then
-			local stats = require(itemStats)
-			if stats.ItemId == itemId then
-				return item.Name
+-- Scale factors based on screen size
+local CARD_WIDTH = 220
+local CARD_HEIGHT = 220
+local HORIZONTAL_SPACING = 80
+local VERTICAL_SPACING = 50
+local SCALE_FACTOR = 1
+
+-- View state tracking
+local currentAge = 1
+local currentView = "objectives" -- "objectives" or "statistics"
+local researchData = nil
+local cardReferences = {} -- Store references to cards for updating
+local statisticsReferences = {} -- Store references to statistics items for updating
+
+-- Color mapping for different item types (grouped by material)
+local ITEM_COLORS = {
+	-- COPPER ITEMS (Orange-brown copper tone)
+	["Copper Coil"] = Color3.fromRGB(184, 115, 51),
+	["Copper Gear"] = Color3.fromRGB(184, 115, 51),
+	["Copper Ingot"] = Color3.fromRGB(184, 115, 51),
+	["Copper Ore"] = Color3.fromRGB(184, 115, 51),
+	["Copper Ore_Cleaned"] = Color3.fromRGB(184, 115, 51),
+	["Copper Ore_Crushed"] = Color3.fromRGB(184, 115, 51),
+	["Copper Pipe"] = Color3.fromRGB(184, 115, 51),
+	["Copper Plate"] = Color3.fromRGB(184, 115, 51),
+
+	-- IRON ITEMS (Grey metallic tone)
+	["Iron Coil"] = Color3.fromRGB(160, 160, 170),
+	["Iron Gear"] = Color3.fromRGB(160, 160, 170),
+	["Iron Ingot"] = Color3.fromRGB(160, 160, 170),
+	["Iron Ore"] = Color3.fromRGB(160, 160, 170),
+	["Iron Ore_Cleaned"] = Color3.fromRGB(160, 160, 170),
+	["Iron Ore_Crushed"] = Color3.fromRGB(160, 160, 170),
+	["Iron Pipe"] = Color3.fromRGB(160, 160, 170),
+	["Iron Plate"] = Color3.fromRGB(160, 160, 170),
+
+	-- GOLD ITEMS (Bright gold tone)
+	["Gold Coil"] = Color3.fromRGB(255, 215, 0),
+	["Gold Gear"] = Color3.fromRGB(255, 215, 0),
+	["Gold Ingot"] = Color3.fromRGB(255, 215, 0),
+	["Gold Ore"] = Color3.fromRGB(255, 215, 0),
+	["Gold Ore_Cleaned"] = Color3.fromRGB(255, 215, 0),
+	["Gold Ore_Crushed"] = Color3.fromRGB(255, 215, 0),
+	["Gold Pipe"] = Color3.fromRGB(255, 215, 0),
+	["Gold Plate"] = Color3.fromRGB(255, 215, 0),
+
+	-- IMPURE ITEMS (Dark muddy brown)
+	["Impure Coil"] = Color3.fromRGB(168, 140, 112),
+	["Impure Gear"] = Color3.fromRGB(168, 140, 112),
+	["Impure Ingot"] = Color3.fromRGB(168, 140, 112),
+	["Impure Pipe"] = Color3.fromRGB(168, 140, 112),
+	["Impure Plate"] = Color3.fromRGB(168, 140, 112),
+
+	-- RUBY GEMS (Deep red)
+	["Ruby Gem"] = Color3.fromRGB(255, 97, 100),
+	["Polished Ruby Gem"] = Color3.fromRGB(255, 97, 100),
+
+	-- EMERALD GEMS (Vibrant green)
+	["Emerald Gem"] = Color3.fromRGB(80, 200, 120),
+	["Polished Emerald Gem"] = Color3.fromRGB(80, 200, 120),
+
+	-- DIAMOND GEMS (Bright cyan/blue)
+	["Diamond Gem"] = Color3.fromRGB(79, 223, 225),
+	["Polished Diamond Gem"] = Color3.fromRGB(79, 223, 225),
+
+	-- Default fallback
+	["Default"] = Color3.fromRGB(200, 200, 200)
+}
+
+-- Helper function to get item color
+local function getItemColor(itemName)
+	return ITEM_COLORS[itemName] or ITEM_COLORS["Default"]
+end
+
+-- Function to update scale factor based on screen size
+local function updateScaleFactor()
+	local viewport = workspace.CurrentCamera.ViewportSize
+	local screenWidth = viewport.X
+
+	-- On smaller screens, scale down more aggressively
+	if screenWidth < 500 then
+		-- Phones: very aggressive scaling (35-42%)
+		SCALE_FACTOR = screenWidth / 1000
+	elseif screenWidth < 900 then
+		-- Tablets: moderate scaling (50-57%)
+		SCALE_FACTOR = screenWidth / 1200
+	else
+		-- Desktop: full size
+		SCALE_FACTOR = 1
+	end
+
+	CARD_WIDTH = 220 * SCALE_FACTOR
+	CARD_HEIGHT = 220 * SCALE_FACTOR
+	HORIZONTAL_SPACING = 80 * SCALE_FACTOR
+	VERTICAL_SPACING = 50 * SCALE_FACTOR
+end
+
+-- Create main frame with modern styling - RESPONSIVE
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false
+mainFrame.ZIndex = 5
+mainFrame.Parent = researchGui
+
+-- UIAspectRatioConstraint to maintain proportions (1000/700 = 1.4286)
+local aspectRatio = Instance.new("UIAspectRatioConstraint")
+aspectRatio.AspectRatio = 1.4286
+aspectRatio.DominantAxis = Enum.DominantAxis.Height
+aspectRatio.Parent = mainFrame
+
+-- Blur/Glass effect background
+local blur = Instance.new("Frame")
+blur.Size = UDim2.new(1, 0, 1, 0)
+blur.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+blur.BackgroundTransparency = 0.3
+blur.BorderSizePixel = 0
+blur.ZIndex = 6
+blur.Parent = mainFrame
+
+local blurCorner = Instance.new("UICorner")
+blurCorner.CornerRadius = UDim.new(0, 15)
+blurCorner.Parent = blur
+
+-- Main frame corner
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 15)
+mainCorner.Parent = mainFrame
+
+-- Main frame stroke
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(60, 60, 80)
+mainStroke.Thickness = 2
+mainStroke.Transparency = 0.5
+mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+mainStroke.Parent = mainFrame
+
+-- Create title bar with modern styling
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0.0857, 0)  -- 60/700 = 0.0857
+titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+titleBar.BackgroundTransparency = 0.2
+titleBar.BorderSizePixel = 0
+titleBar.ZIndex = 7
+titleBar.Parent = mainFrame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 15)
+titleCorner.Parent = titleBar
+
+-- Title bar gradient
+local titleGradient = Instance.new("UIGradient")
+titleGradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(45, 45, 50)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 40))
+}
+titleGradient.Rotation = 90
+titleGradient.Parent = titleBar
+
+-- Title text
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(0.5, 0, 1, 0)
+titleText.Position = UDim2.new(0.02, 0, 0, 0)  -- 20/1000 = 0.02
+titleText.BackgroundTransparency = 1
+titleText.Text = "Research"
+titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleText.TextSize = 26
+titleText.Font = Enum.Font.GothamBold
+titleText.TextXAlignment = Enum.TextXAlignment.Left
+titleText.TextScaled = true
+titleText.ZIndex = 8
+titleText.Parent = titleBar
+
+-- Text size constraint for title
+local titleConstraint = Instance.new("UITextSizeConstraint")
+titleConstraint.MaxTextSize = 26
+titleConstraint.Parent = titleText
+
+-- Close button with modern styling (after updateScaleFactor is called)
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0.04, 0, 0.667, 0)  -- 40/1000 = 0.04 width, 40/60 = 0.667 height (scales with title bar)
+closeButton.Position = UDim2.new(0.95, 0, 0.167, 0)  -- 950/1000 = 0.95, centered in title bar
+closeButton.AnchorPoint = Vector2.new(0, 0)
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextSize = 20
+closeButton.TextScaled = true
+closeButton.Font = Enum.Font.GothamBold
+closeButton.ZIndex = 8
+closeButton.Parent = titleBar
+
+-- Text size constraint for close button
+local closeTextConstraint = Instance.new("UITextSizeConstraint")
+closeTextConstraint.MaxTextSize = 20
+closeTextConstraint.Parent = closeButton
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0.2, 0)  -- 8/40 = 0.2 for consistent rounding
+closeCorner.Parent = closeButton
+
+-- Close button hover effect
+closeButton.MouseEnter:Connect(function()
+	closeButton.BackgroundColor3 = Color3.fromRGB(220, 70, 70)
+end)
+closeButton.MouseLeave:Connect(function()
+	closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+end)
+
+-- ==================== AUTO RESEARCH TOGGLE ====================
+local autoToggleBtn = Instance.new("TextButton")
+autoToggleBtn.Name = "AutoResearchToggle"
+autoToggleBtn.Size = UDim2.new(0.12, 0, 0.6, 0)
+autoToggleBtn.Position = UDim2.new(0.82, 0, 0.2, 0)
+autoToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+autoToggleBtn.Text = "⚡ Auto"
+autoToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoToggleBtn.TextSize = 18
+autoToggleBtn.Font = Enum.Font.GothamBold
+autoToggleBtn.TextScaled = true
+autoToggleBtn.ZIndex = 8
+autoToggleBtn.Visible = true  -- always visible
+autoToggleBtn.Parent = titleBar
+
+local autoToggleCorner = Instance.new("UICorner")
+autoToggleCorner.CornerRadius = UDim.new(0, 8)
+autoToggleCorner.Parent = autoToggleBtn
+
+local autoToggleConstraint = Instance.new("UITextSizeConstraint")
+autoToggleConstraint.MaxTextSize = 18
+autoToggleConstraint.Parent = autoToggleBtn
+
+local autoToggleStroke = Instance.new("UIStroke")
+autoToggleStroke.Color = Color3.fromRGB(100, 100, 120)
+autoToggleStroke.Thickness = 1
+autoToggleStroke.Transparency = 0.4
+autoToggleStroke.Parent = autoToggleBtn
+
+-- State
+local autoResearchOwned = false
+local autoResearchChecked = false
+
+local AUTO_RESEARCH_GAMEPASS_ID = 1741387786  -- !! Must match GamepassHandler !!
+
+local function refreshToggleVisual()
+	if not autoResearchOwned then
+		-- Not owned: show a locked/promo state
+		autoToggleBtn.Text = "⚡ Auto: OFF"
+		autoToggleBtn.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
+		autoToggleStroke.Color = Color3.fromRGB(200, 80, 80)
+	else
+		local setting = player.Settings:FindFirstChild("AutoResearch")
+		local isOn = setting == nil or setting.Value == true
+		autoToggleBtn.Text = isOn and "⚡ Auto: ON" or "⚡ Auto: OFF"
+		autoToggleBtn.BackgroundColor3 = isOn
+			and Color3.fromRGB(60, 104, 60)
+			or  Color3.fromRGB(80, 40, 40)
+		autoToggleStroke.Color = isOn
+			and Color3.fromRGB(0, 0, 0)
+			or  Color3.fromRGB(0, 0, 0)
+	end
+end
+
+local function checkAutoResearchOwnership()
+	if autoResearchChecked then return end
+	task.spawn(function()
+		local passIdRemote = RepStorage.Events:WaitForChild("GetAutoResearchPassId", 5)
+		local checkRemote  = RepStorage.Events:WaitForChild("CheckGamepassOwned", 5)
+		if not passIdRemote or not checkRemote then return end
+
+		local passId = passIdRemote:InvokeServer()
+		local owned  = checkRemote:InvokeServer(passId)
+		autoResearchOwned   = owned == true
+		autoResearchChecked = true
+		refreshToggleVisual()
+	end)
+end
+
+autoToggleBtn.MouseButton1Click:Connect(function()
+	SoundManager.ButtonClick()
+	if not autoResearchOwned then
+		-- Prompt the purchase instead of toggling
+		MarketplaceService:PromptGamePassPurchase(player, AUTO_RESEARCH_GAMEPASS_ID)
+	else
+		RepStorage.Events.UpdateToggle:InvokeServer("AutoResearch")
+		refreshToggleVisual()
+
+		local setting = player.Settings:FindFirstChild("AutoResearch")
+		if setting and setting.Value == true then
+			RepStorage.Events.TriggerAutoResearch:FireServer()
+		end
+	end
+end)
+
+-- Update if they buy the pass while the research GUI is open
+local purchasedEvent = RepStorage.Events:WaitForChild("GamepassPurchased", 5)
+if purchasedEvent then
+	purchasedEvent.OnClientEvent:Connect(function(gpName)
+		if gpName == "AutoResearch" then
+			autoResearchOwned   = true
+			autoResearchChecked = true
+			refreshToggleVisual()
+		end
+	end)
+end
+
+closeButton.MouseButton1Click:Connect(function()
+	SoundManager.MenuClose()
+	local mainUi = playerGui:FindFirstChild("MainUi")
+	if mainUi then
+		if mainUi:FindFirstChild("ItemHover") then
+			local itemHover = mainUi.ItemHover
+			if itemHover.ButtonHovering.Value and itemHover.ButtonHovering.Value:IsDescendantOf(researchGui) then
+				itemHover.Visible = false
+			end
+		end
+		if mainUi:FindFirstChild("Values") and mainUi.Values:FindFirstChild("OpenedMenus") then
+			local menuTag = mainUi.Values.OpenedMenus:FindFirstChild(researchGui.Name)
+			if menuTag then
+				menuTag:Destroy()
 			end
 		end
 	end
-	return "Unknown Item"
+	if researchGui:FindFirstChild("MenuObject") then
+		researchGui.MenuObject.Value = false
+	end
+end)
+
+-- Age tabs container with modern styling (extended to fill more space)
+local ageTabsFrame = Instance.new("Frame")
+ageTabsFrame.Name = "AgeTabs"
+ageTabsFrame.Size = UDim2.new(0.2, 0, 0.80, 0)  -- 200/1000 = 0.2, reduced height to 80% to prevent overlap
+ageTabsFrame.Position = UDim2.new(0.02, 0, 0.1071, 0)  -- 20/1000 = 0.02, 75/700 = 0.1071
+ageTabsFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+ageTabsFrame.BackgroundTransparency = 0.3
+ageTabsFrame.BorderSizePixel = 0
+ageTabsFrame.ZIndex = 7
+ageTabsFrame.Parent = mainFrame
+
+local ageTabsCorner = Instance.new("UICorner")
+ageTabsCorner.CornerRadius = UDim.new(0, 12)
+ageTabsCorner.Parent = ageTabsFrame
+
+-- Age tabs stroke
+local ageTabsStroke = Instance.new("UIStroke")
+ageTabsStroke.Color = Color3.fromRGB(60, 60, 80)
+ageTabsStroke.Thickness = 1
+ageTabsStroke.Transparency = 0.6
+ageTabsStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+ageTabsStroke.Parent = ageTabsFrame
+
+local ageTabsLayout = Instance.new("UIListLayout")
+ageTabsLayout.Name = "AgeTabsLayout"
+ageTabsLayout.Padding = UDim.new(0.0164, 0)  -- 10/610 = 0.0164 (relative to container height)
+ageTabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ageTabsLayout.Parent = ageTabsFrame
+
+local ageTabsPadding = Instance.new("UIPadding")
+ageTabsPadding.PaddingTop = UDim.new(0.0164, 0)  -- 10/610
+ageTabsPadding.PaddingBottom = UDim.new(0.0164, 0)
+ageTabsPadding.PaddingLeft = UDim.new(0.05, 0)  -- 10/200
+ageTabsPadding.PaddingRight = UDim.new(0.05, 0)
+ageTabsPadding.Parent = ageTabsFrame
+
+-- Statistics button container (separate, anchored to bottom)
+local statsButtonFrame = Instance.new("Frame")
+statsButtonFrame.Name = "StatsButtonFrame"
+statsButtonFrame.Size = UDim2.new(0.221, 0, 0.08, 0)  -- Same width as age tabs, height for button
+statsButtonFrame.Position = UDim2.new(0.01, 0, 0.914, 0)  -- 20/1000 = 0.02, positioned at bottom within GUI bounds
+statsButtonFrame.BackgroundTransparency = 1
+statsButtonFrame.ZIndex = 7
+statsButtonFrame.Parent = mainFrame
+
+-- Tree container (scrollable) with modern styling
+local treeContainer = Instance.new("ScrollingFrame")
+treeContainer.Name = "TreeContainer"
+treeContainer.Size = UDim2.new(0.75, 0, 0.88, 0)  -- (1000-250)/1000 = 0.75, extended height to fill space
+treeContainer.Position = UDim2.new(0.23, 0, 0.1071, 0)  -- 230/1000 = 0.23, 75/700 = 0.1071 (right after title bar)
+treeContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+treeContainer.BackgroundTransparency = 0.3
+treeContainer.BorderSizePixel = 0
+treeContainer.ScrollBarThickness = 5  -- Will be updated dynamically
+treeContainer.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 105)
+treeContainer.CanvasSize = UDim2.new(0, 2000, 0, 2000)
+treeContainer.ZIndex = 7
+treeContainer.Parent = mainFrame
+
+local treeCorner = Instance.new("UICorner")
+treeCorner.CornerRadius = UDim.new(0, 12)
+treeCorner.Parent = treeContainer
+
+-- Mouse drag panning for desktop (add after treeStroke)
+local dragging = false
+local dragStart = nil
+local startCanvasPos = nil
+local dragConnection = nil
+
+treeContainer.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startCanvasPos = treeContainer.CanvasPosition
+
+		-- Connect to input changed to track mouse movement
+		if dragConnection then dragConnection:Disconnect() end
+		dragConnection = UserInputService.InputChanged:Connect(function(inputChanged)
+			if inputChanged.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+				local delta = dragStart - inputChanged.Position
+
+				-- Calculate max scroll values (ensure they're not negative)
+				local maxScrollX = math.max(0, treeContainer.CanvasSize.X.Offset - treeContainer.AbsoluteSize.X)
+				local maxScrollY = math.max(0, treeContainer.CanvasSize.Y.Offset - treeContainer.AbsoluteSize.Y)
+
+				local newCanvasPos = Vector2.new(
+					math.clamp(startCanvasPos.X + delta.X, 0, maxScrollX),
+					math.clamp(startCanvasPos.Y + delta.Y, 0, maxScrollY)
+				)
+				treeContainer.CanvasPosition = newCanvasPos
+			end
+		end)
+	end
+end)
+
+treeContainer.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+		if dragConnection then
+			dragConnection:Disconnect()
+			dragConnection = nil
+		end
+	end
+end)
+
+-- Tree container stroke
+local treeStroke = Instance.new("UIStroke")
+treeStroke.Color = Color3.fromRGB(60, 60, 80)
+treeStroke.Thickness = 1
+treeStroke.Transparency = 0.6
+treeStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+treeStroke.Parent = treeContainer
+
+-- Detect screen size and adjust GUI size for mobile
+local function updateMainFrameSize()
+	local viewport = workspace.CurrentCamera.ViewportSize
+	local screenWidth = viewport.X
+
+	-- Update scale factor for cards
+	updateScaleFactor()
+
+	-- Update scrollbar thickness based on scale factor (only if it exists)
+	if treeContainer then
+		treeContainer.ScrollBarThickness = math.max(6, 10 * SCALE_FACTOR)
+	end
+
+	-- Update corner radii based on scale factor (only if they exist)
+	if blurCorner then blurCorner.CornerRadius = UDim.new(0, math.max(8, 15 * SCALE_FACTOR)) end
+	if mainCorner then mainCorner.CornerRadius = UDim.new(0, math.max(8, 15 * SCALE_FACTOR)) end
+	if titleCorner then titleCorner.CornerRadius = UDim.new(0, math.max(8, 15 * SCALE_FACTOR)) end
+	if ageTabsCorner then ageTabsCorner.CornerRadius = UDim.new(0, math.max(6, 12 * SCALE_FACTOR)) end
+	if treeCorner then treeCorner.CornerRadius = UDim.new(0, math.max(6, 12 * SCALE_FACTOR)) end
+
+	-- Update stroke thickness based on scale factor (only if they exist)
+	if mainStroke then mainStroke.Thickness = math.max(1, 2 * SCALE_FACTOR) end
+	if ageTabsStroke then ageTabsStroke.Thickness = math.max(0.5, 1 * SCALE_FACTOR) end
+	if treeStroke then treeStroke.Thickness = math.max(0.5, 1 * SCALE_FACTOR) end
+
+	-- If screen width is less than 800 pixels (mobile/tablet), make GUI bigger
+	if screenWidth < 800 then
+		mainFrame.Size = UDim2.new(0.95, 0, 0.95, 0)  -- Mobile size (95% of screen)
+	else
+		mainFrame.Size = UDim2.new(0.85, 0, 0.85, 0)  -- Desktop size (85% of screen)
+	end
+
+	-- Refresh view if it's visible to apply new scaling
+	if mainFrame.Visible and researchData then
+		if currentView == "objectives" then
+			refreshTree()
+		else
+			displayStatistics()
+		end
+	end
 end
 
-function ResearchHandler.InitializePlayer(player)
-	local session = PlayerSession.Get(player)
-	if not session then return false end
+-- Update on initial load
+updateScaleFactor()  -- Initialize scale factor first
+updateMainFrameSize()
 
-	if not session["Research"] then
-		session["Research"] = {
-			CompletedObjectives = {},
-			ActiveObjectives    = {},
-			ObjectiveProgress   = {},
-			ItemsCollected      = {},
-		}
+-- Update when screen size changes (device rotation, window resize)
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateMainFrameSize)
+
+-- Connection lines frame (behind cards)
+local connectionsFrame = Instance.new("Frame")
+connectionsFrame.Name = "Connections"
+connectionsFrame.Size = UDim2.new(1, 0, 1, 0)
+connectionsFrame.BackgroundTransparency = 1
+connectionsFrame.ZIndex = 1
+connectionsFrame.Parent = treeContainer
+
+-- Cards frame (above lines)
+local cardsFrame = Instance.new("Frame")
+cardsFrame.Name = "Cards"
+cardsFrame.Size = UDim2.new(1, 0, 1, 0)
+cardsFrame.BackgroundTransparency = 1
+cardsFrame.ZIndex = 2
+cardsFrame.Parent = treeContainer
+
+-- Function to draw connection line between two objectives
+local function drawConnection(fromPos, toPos, isCompleted)
+	local startX = fromPos.X + CARD_WIDTH
+	local startY = fromPos.Y + CARD_HEIGHT / 2
+
+	-- Scale line thickness
+	local lineThickness = math.max(2, 3 * SCALE_FACTOR)
+
+	-- Check if cards are in different rows (different Y positions)
+	local differentRows = math.abs(fromPos.Y - toPos.Y) > CARD_HEIGHT / 2
+
+	local endX, endY
+
+	if differentRows then
+		-- DIFFERENT ROWS: Connect straight down from bottom-center to top-center
+		local startCenterX = fromPos.X + CARD_WIDTH / 2  -- Bottom center of parent card
+		local startBottomY = fromPos.Y + CARD_HEIGHT  -- Bottom edge of parent card
+
+		endX = toPos.X + CARD_WIDTH / 2  -- Top center of child card
+		endY = toPos.Y  -- Top edge of child card
+
+		-- Draw single vertical line straight down
+		local verticalLength = endY - startBottomY
+		local line = Instance.new("Frame")
+		line.Size = UDim2.new(0, lineThickness, 0, verticalLength)
+		line.Position = UDim2.new(0, startCenterX - lineThickness/2, 0, startBottomY)
+		line.BackgroundColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
+		line.BorderSizePixel = 0
+		line.ZIndex = 1
+		line.Parent = connectionsFrame
+
+	else
+		-- SAME ROW: Connect left to right (original 3-segment routing)
+		endX = toPos.X  -- Left side of card
+		endY = toPos.Y + CARD_HEIGHT / 2  -- Middle height
+
+		local midX = (startX + endX) / 2
+
+		-- Draw horizontal line from start to midpoint
+		local line1 = Instance.new("Frame")
+		line1.Size = UDim2.new(0, midX - startX, 0, lineThickness)
+		line1.Position = UDim2.new(0, startX, 0, startY - lineThickness/2)
+		line1.BackgroundColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
+		line1.BorderSizePixel = 0
+		line1.ZIndex = 1
+		line1.Parent = connectionsFrame
+
+		-- Draw vertical line
+		local verticalLength = math.abs(endY - startY)
+		local line2 = Instance.new("Frame")
+		line2.Size = UDim2.new(0, lineThickness, 0, verticalLength)
+		line2.Position = UDim2.new(0, midX - lineThickness/2, 0, math.min(startY, endY))
+		line2.BackgroundColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
+		line2.BorderSizePixel = 0
+		line2.ZIndex = 1
+		line2.Parent = connectionsFrame
+
+		-- Draw horizontal line from midpoint to end
+		local line3 = Instance.new("Frame")
+		line3.Size = UDim2.new(0, endX - midX, 0, lineThickness)
+		line3.Position = UDim2.new(0, midX, 0, endY - lineThickness/2)
+		line3.BackgroundColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
+		line3.BorderSizePixel = 0
+		line3.ZIndex = 1
+		line3.Parent = connectionsFrame
 	end
 
-	if not session["Research"]["ItemsCollected"] then
-		session["Research"]["ItemsCollected"] = {}
-	end
-
-	return true
+	-- Add arrow at end (scaled) - positioned based on row difference
+	local arrowSize = math.max(8, 12 * SCALE_FACTOR)
+	local arrow = Instance.new("ImageLabel")
+	arrow.Size = UDim2.new(0, arrowSize, 0, arrowSize)
+	arrow.Position = UDim2.new(0, endX - arrowSize/2, 0, endY - arrowSize/2)
+	arrow.BackgroundTransparency = 1
+	arrow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+	arrow.Rotation = differentRows and 90 or 0  -- Point down if different rows, right if same row
+	arrow.ImageColor3 = isCompleted and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 80, 90)
+	arrow.ZIndex = 1
+	arrow.Parent = connectionsFrame
 end
 
-function ResearchHandler.TrackItemCollection(player, itemName, amount)
-	if not ResearchHandler.InitializePlayer(player) then return end
+-- Function to create objective card
+local function createObjectiveCard(objectiveData, researchData, position)
+	local isCompleted = table.find(researchData.CompletedObjectives, objectiveData.Id) ~= nil
+	local isActive = table.find(researchData.ActiveObjectives, objectiveData.Id) ~= nil
+	local canStart = not isCompleted and not isActive
 
-	local session  = PlayerSession.Get(player)
-	local research = session["Research"]
-
-	if not research.ItemsCollected[itemName] then
-		research.ItemsCollected[itemName] = 0
-	end
-	research.ItemsCollected[itemName] = research.ItemsCollected[itemName] + amount
-end
-
-function ResearchHandler.StartObjective(player, objectiveId)
-	if not ResearchHandler.InitializePlayer(player) then return false end
-
-	local session  = PlayerSession.Get(player)
-	local research = session["Research"]
-	local objective = ResearchData.GetObjective(objectiveId)
-
-	if not objective then return false end
-	if table.find(research.CompletedObjectives, objectiveId) then return false, "Already completed" end
-	if table.find(research.ActiveObjectives,    objectiveId) then return false, "Already active" end
-
-	if not ResearchData.CanStartObjective(objectiveId, research.CompletedObjectives) then
-		return false, "Prerequisites not met"
-	end
-
-	table.insert(research.ActiveObjectives, objectiveId)
-	research.ObjectiveProgress[tostring(objectiveId)] = {}
-
-	for _, requirement in pairs(objective.Requirements) do
-		research.ObjectiveProgress[tostring(objectiveId)][requirement.ItemName] = 0
-	end
-
-	-- Notify SpeedrunHandler for age timer tracking
-	SpeedrunHandler.OnObjectiveStarted(player, objectiveId)
-	return true
-end
-
-function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
-	if not ResearchHandler.InitializePlayer(player) then return false end
-
-	local session = PlayerSession.Get(player)
-	local research = session["Research"]
-	local objective = ResearchData.GetObjective(objectiveId)
-
-	if not objective or not table.find(research.ActiveObjectives, objectiveId) then
-		return false
-	end
-
-	local requirement = nil
-	for _, req in pairs(objective.Requirements) do
-		if req.ItemName == itemName then
-			requirement = req
+	local prereqsMet = true
+	for _, reqId in pairs(objectiveData.RequiredObjectives) do
+		if not table.find(researchData.CompletedObjectives, reqId) then
+			prereqsMet = false
 			break
 		end
 	end
 
-	if not requirement then return false end
+	local card = Instance.new("Frame")
+	card.Name = "ObjectiveCard_" .. objectiveData.Id
+	card.Size = UDim2.new(0, CARD_WIDTH, 0, CARD_HEIGHT)
+	card.Position = UDim2.new(0, position.X, 0, position.Y)
+	card.BackgroundColor3 = isCompleted and Color3.fromRGB(40, 80, 40) or (isActive and Color3.fromRGB(60, 80, 120) or Color3.fromRGB(40, 40, 45))
+	card.BorderSizePixel = 0
+	card.ZIndex = 2
+	card.Parent = cardsFrame
 
-	local progressKey = tostring(objectiveId)
-	local currentProgress = research.ObjectiveProgress[progressKey][itemName] or 0
+	local cardCorner = Instance.new("UICorner")
+	cardCorner.CornerRadius = UDim.new(0.0545, 0)  -- 12/220 = 0.0545
+	cardCorner.Parent = card
 
-	-- Apply 2x Research Boost (disabled during speedruns for fairness)
-	local depositAmount = amount
-	if _G.PlayerHasResearchBoost and _G.PlayerHasResearchBoost(player) then
-		local speedrun = session["Speedrun"]
-		local inSpeedrun = speedrun and speedrun.IsActive == true
-		if not inSpeedrun then
-			depositAmount = amount * 2
+	-- Card stroke
+	local cardStroke = Instance.new("UIStroke")
+	cardStroke.Color = Color3.fromRGB(60, 60, 80)
+	cardStroke.Thickness = 1
+	cardStroke.Transparency = 0.6
+	cardStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	cardStroke.Parent = card
+
+	-- Status icon
+	local statusIcon = Instance.new("TextLabel")
+	statusIcon.Size = UDim2.new(0.1364, 0, 0.1364, 0)  -- 30/220 = 0.1364
+	statusIcon.Position = UDim2.new(0.8273, 0, 0.0227, 0)  -- (220-38)/220 = 0.8273, 5/220 = 0.0227
+	statusIcon.BackgroundTransparency = 1
+	statusIcon.Text = isCompleted and "✓" or (isActive and "⏳" or "")
+	statusIcon.TextColor3 = isCompleted and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 200, 100)
+	statusIcon.TextSize = 20
+	statusIcon.Font = Enum.Font.GothamBold
+	statusIcon.TextScaled = true
+	statusIcon.ZIndex = 3
+	statusIcon.Parent = card
+
+	local statusConstraint = Instance.new("UITextSizeConstraint")
+	statusConstraint.MaxTextSize = 20
+	statusConstraint.Parent = statusIcon
+
+	-- Title
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(0.7727, 0, 0.1364, 0)  -- (220-50)/220 = 0.7727, 30/220 = 0.1364
+	title.Position = UDim2.new(0.0364, 0, 0.0364, 0)  -- 8/220 = 0.0364
+	title.BackgroundTransparency = 1
+	title.Text = objectiveData.Name
+	title.TextColor3 = Color3.fromRGB(255, 255, 255)
+	title.TextSize = 24
+	title.Font = Enum.Font.GothamBold
+	title.TextWrapped = true
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.TextYAlignment = Enum.TextYAlignment.Top
+	title.TextScaled = true
+	title.ZIndex = 3
+	title.Parent = card
+
+	local titleConstraint = Instance.new("UITextSizeConstraint")
+	titleConstraint.MaxTextSize = 24
+	titleConstraint.Parent = title
+
+	-- Description
+	local desc = Instance.new("TextLabel")
+	desc.Size = UDim2.new(0.9273, 0, 0.18, 0)  -- (220-16)/220 = 0.9273, 30/220 = 0.1364
+	desc.Position = UDim2.new(0.0364, 0, 0.15, 0)  -- 8/220 = 0.0364, 43/220 = 0.1955
+	desc.BackgroundTransparency = 1
+	desc.Text = objectiveData.Description
+	desc.TextColor3 = Color3.fromRGB(180, 180, 180)
+	desc.TextSize = 20
+	desc.Font = Enum.Font.Gotham
+	desc.TextWrapped = true
+	desc.TextXAlignment = Enum.TextXAlignment.Left
+	desc.TextYAlignment = Enum.TextYAlignment.Top
+	desc.TextScaled = true
+	desc.ZIndex = 3
+	desc.Parent = card
+
+	local descConstraint = Instance.new("UITextSizeConstraint")
+	descConstraint.MaxTextSize = 20
+	descConstraint.Parent = desc
+
+	-- Requirements Container Frame
+	local requirementsContainer = Instance.new("Frame")
+	requirementsContainer.Name = "RequirementsContainer"
+	requirementsContainer.Size = UDim2.new(0.9273, 0, 0.3182, 0)  -- Width: (220-16)/220, Height: ~70px/220
+	requirementsContainer.Position = UDim2.new(0.0364, 0, 0.3545, 0)  -- 8/220 horizontal, 78/220 vertical
+	requirementsContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+	requirementsContainer.BackgroundTransparency = 0.3
+	requirementsContainer.BorderSizePixel = 0
+	requirementsContainer.ZIndex = 3
+	requirementsContainer.Parent = card
+
+	local reqCorner = Instance.new("UICorner")
+	reqCorner.CornerRadius = UDim.new(0.0545, 0)  -- 12/220 = 0.0545 for consistency
+	reqCorner.Parent = requirementsContainer
+
+	local reqStroke = Instance.new("UIStroke")
+	reqStroke.Color = Color3.fromRGB(60, 60, 80)
+	reqStroke.Thickness = 1
+	reqStroke.Transparency = 0.6
+	reqStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	reqStroke.Parent = requirementsContainer
+
+	-- Padding for requirements container
+	local reqPadding = Instance.new("UIPadding")
+	reqPadding.PaddingTop = UDim.new(0.05, 0)
+	reqPadding.PaddingBottom = UDim.new(0.05, 0)
+	reqPadding.PaddingLeft = UDim.new(0.04, 0)
+	reqPadding.PaddingRight = UDim.new(0.04, 0)
+	reqPadding.Parent = requirementsContainer
+
+	-- UIListLayout for automatic spacing
+	local reqLayout = Instance.new("UIListLayout")
+	reqLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	reqLayout.Padding = UDim.new(0.05, 0)  -- Small spacing between items
+	reqLayout.Parent = requirementsContainer
+
+	-- Requirements header
+	local reqHeader = Instance.new("TextLabel")
+	reqHeader.Name = "Header"
+	reqHeader.Size = UDim2.new(1, 0, 0.2, 0)
+	reqHeader.BackgroundTransparency = 1
+	reqHeader.Text = "Requirements:"
+	reqHeader.TextColor3 = Color3.fromRGB(255, 255, 255)
+	reqHeader.TextSize = 12
+	reqHeader.Font = Enum.Font.GothamBold
+	reqHeader.TextXAlignment = Enum.TextXAlignment.Left
+	reqHeader.TextScaled = true
+	reqHeader.ZIndex = 4
+	reqHeader.LayoutOrder = 0
+	reqHeader.Parent = requirementsContainer
+
+	local headerConstraint = Instance.new("UITextSizeConstraint")
+	headerConstraint.MaxTextSize = 12
+	headerConstraint.Parent = reqHeader
+
+	-- Create requirement labels
+	local requirementLabels = {}
+	for i, requirement in pairs(objectiveData.Requirements) do
+		local progress = 0
+		if researchData.ObjectiveProgress[objectiveData.Id] then
+			progress = researchData.ObjectiveProgress[objectiveData.Id][requirement.ItemName] or 0
+		end
+
+		-- Get base color for this item type
+		local baseColor = getItemColor(requirement.ItemName)
+
+		-- Determine text color based on completion
+		local textColor
+		if progress >= requirement.Amount then
+			-- Completed: Use green
+			textColor = Color3.fromRGB(100, 255, 100)
+		else
+			-- Not completed: Use item's base color
+			textColor = baseColor
+		end
+
+		local reqText = Instance.new("TextLabel")
+		reqText.Name = "Req_" .. i
+		reqText.Size = UDim2.new(1, 0, 0.2, 0)
+		reqText.BackgroundTransparency = 1
+
+		-- Add checkmark for completed requirements
+		local completionMark = progress >= requirement.Amount and "✓ " or "• "
+		reqText.Text = string.format("%s%s: %d/%d", completionMark, requirement.ItemName:gsub("OreModel", ""):gsub("_", " "), progress, requirement.Amount)
+
+		reqText.TextColor3 = textColor
+		reqText.TextSize = 11
+		reqText.Font = Enum.Font.Gotham
+		reqText.TextXAlignment = Enum.TextXAlignment.Left
+		reqText.TextTruncate = Enum.TextTruncate.AtEnd
+		reqText.TextScaled = true
+		reqText.ZIndex = 4
+		reqText.LayoutOrder = i
+		reqText.Parent = requirementsContainer
+
+		local reqConstraint = Instance.new("UITextSizeConstraint")
+		reqConstraint.MaxTextSize = 14
+		reqConstraint.Parent = reqText
+
+		-- Store reference for updating
+		requirementLabels[requirement.ItemName] = {label = reqText, amount = requirement.Amount, baseColor = baseColor}
+	end
+
+	-- Store card reference
+	cardReferences[objectiveData.Id] = {
+		card = card,
+		requirements = requirementLabels,
+		statusIcon = statusIcon
+	}
+
+	-- TOKEN REWARD DISPLAY (show for objectives with tokens, but NOT if it's just an age unlock with machines)
+	local hasTokens = objectiveData.Rewards and objectiveData.Rewards.ResearchTokens and objectiveData.Rewards.ResearchTokens > 0
+	local isMainObjective = objectiveData.IsMainObjective or false
+	local hasMachineUnlocks = objectiveData.Rewards and objectiveData.Rewards.UnlockMachines and #objectiveData.Rewards.UnlockMachines > 0
+
+	-- Only show token reward label if there are tokens, or if it's a main objective WITHOUT machine unlocks
+	if hasTokens or (isMainObjective and not hasMachineUnlocks) then
+		local rewardLabel = Instance.new("TextLabel")
+		rewardLabel.Size = UDim2.new(0.9273, 0, 0.0909, 0)
+		rewardLabel.Position = UDim2.new(0.0364, 0, 0.7, 0)
+		rewardLabel.BackgroundTransparency = 1
+
+		-- Build reward text
+		local rewardText = ""
+
+		-- Add token text if there are tokens
+		if hasTokens then
+			rewardText = "+" .. objectiveData.Rewards.ResearchTokens .. " Research Tokens"
+		end
+
+		-- Add "unlock next age" text only if NO machine unlocks
+		if isMainObjective and not hasMachineUnlocks then
+			local nextAgeId = objectiveData.Age + 1
+			local ageNames = {
+				[2] = "Second Age",
+				[3] = "Third Age",
+				[4] = "Fourth Age",
+			}
+
+			if ageNames[nextAgeId] then
+				if rewardText ~= "" then
+					rewardText = rewardText .. " + " .. ageNames[nextAgeId]
+				else
+					rewardText = "🔓 Unlock " .. ageNames[nextAgeId]
+				end
+			end
+		end
+
+		rewardLabel.Text = rewardText
+		rewardLabel.TextColor3 = Color3.fromRGB(150, 220, 255)
+		rewardLabel.TextSize = 12
+		rewardLabel.Font = Enum.Font.GothamBold
+		rewardLabel.TextXAlignment = Enum.TextXAlignment.Left
+		rewardLabel.TextYAlignment = Enum.TextYAlignment.Center
+		rewardLabel.TextScaled = true
+		rewardLabel.ZIndex = 3
+		rewardLabel.Parent = card
+
+		local rewardConstraint = Instance.new("UITextSizeConstraint")
+		rewardConstraint.MaxTextSize = 14
+		rewardConstraint.Parent = rewardLabel
+	end
+
+	-- Unlocks section (machines + age unlock on same line)
+	-- Wrap in pcall to prevent errors from stopping card creation
+	local unlocksSuccess = pcall(function()
+		if hasMachineUnlocks then
+			local unlocksLabel = Instance.new("TextLabel")
+			unlocksLabel.Size = UDim2.new(0.32, 0, 0.18, 0)
+			unlocksLabel.Position = UDim2.new(0.0364, 0, 0.67, 0)
+			unlocksLabel.BackgroundTransparency = 1
+			unlocksLabel.Text = "🔓Unlocks:"
+			unlocksLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
+			unlocksLabel.TextSize = 12
+			unlocksLabel.Font = Enum.Font.GothamBold
+			unlocksLabel.TextXAlignment = Enum.TextXAlignment.Left
+			unlocksLabel.TextYAlignment = Enum.TextYAlignment.Center
+			unlocksLabel.TextScaled = true
+			unlocksLabel.ZIndex = 3
+			unlocksLabel.Parent = card
+
+			local unlocksConstraint = Instance.new("UITextSizeConstraint")
+			unlocksConstraint.MaxTextSize = 24
+			unlocksConstraint.Parent = unlocksLabel
+
+			-- Display unlocked machines (next to the label)
+			local iconStartX = 0.38
+			local iconSpacing = 0.1682
+			local iconSize = 0.14
+			local currentIconX = iconStartX
+
+			for _, machineId in pairs(objectiveData.Rewards.UnlockMachines) do
+				local machineFound = false
+
+				-- Find the machine in RepStorage.Items
+				for _, item in pairs(RepStorage.Items:GetChildren()) do
+					if not machineFound then
+						local success, itemInfo = pcall(function()
+							return require(item.ItemStats)
+						end)
+
+						if success and itemInfo and itemInfo.ItemId == machineId then
+							machineFound = true
+
+							-- Create icon button for hover detection
+							local iconButton = Instance.new("ImageButton")
+							iconButton.Size = UDim2.new(iconSize, 0, iconSize, 0)
+							iconButton.Position = UDim2.new(currentIconX, 0, 0.685, 0)  -- Adjusted position
+							iconButton.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+							iconButton.BorderSizePixel = 0
+							iconButton.Image = itemInfo.ThumbnailId
+							iconButton.ZIndex = 3
+							iconButton.AutoButtonColor = false
+							iconButton.Parent = card
+
+							local iconCorner = Instance.new("UICorner")
+							iconCorner.CornerRadius = UDim.new(0.15, 0)  -- 6/32 = 0.1875, use 0.15 for slightly less rounding
+							iconCorner.Parent = iconButton
+
+							-- Create tooltip (scaled for screen size)
+							local tooltipWidth = math.max(150, 200 * SCALE_FACTOR)
+							local tooltipHeight = math.max(60, 80 * SCALE_FACTOR)
+
+							local tooltip = Instance.new("Frame")
+							tooltip.Name = "Tooltip"
+							tooltip.Size = UDim2.new(0, tooltipWidth, 0, tooltipHeight)
+							tooltip.Position = UDim2.new(0.5, 0, 0, -(tooltipHeight + 5))
+							tooltip.AnchorPoint = Vector2.new(0.5, 0)
+							tooltip.BackgroundColor3 = Color3.fromRGB(29, 29, 33)
+							tooltip.BorderSizePixel = 0
+							tooltip.Visible = false
+							tooltip.ZIndex = 10
+							tooltip.Parent = iconButton
+
+							local tooltipCorner = Instance.new("UICorner")
+							tooltipCorner.CornerRadius = UDim.new(0.04, 0)  -- 8/200 = 0.04
+							tooltipCorner.Parent = tooltip
+
+							-- Item name
+							local tooltipName = Instance.new("TextLabel")
+							tooltipName.Size = UDim2.new(0.95, 0, 0.25, 0)  -- (200-10)/200 = 0.95, 20/80 = 0.25
+							tooltipName.Position = UDim2.new(0.025, 0, 0.0625, 0)  -- 5/200 = 0.025, 5/80 = 0.0625
+							tooltipName.BackgroundTransparency = 1
+							tooltipName.Text = item.Name
+							tooltipName.TextColor3 = Color3.fromRGB(255, 255, 255)
+							tooltipName.TextSize = math.max(10, 13 * SCALE_FACTOR)
+							tooltipName.Font = Enum.Font.GothamBold
+							tooltipName.TextXAlignment = Enum.TextXAlignment.Left
+							tooltipName.TextScaled = true
+							tooltipName.ZIndex = 10
+							tooltipName.Parent = tooltip
+
+							local tooltipNameConstraint = Instance.new("UITextSizeConstraint")
+							tooltipNameConstraint.MaxTextSize = math.max(10, 13 * SCALE_FACTOR)
+							tooltipNameConstraint.Parent = tooltipName
+
+							-- Get tier info from MainLib
+							local MainLib = require(RepStorage.Modules.MainLib)
+							local tierName, tierData = MainLib.GET_ITEM_TIER_INFO(item.Name)
+
+							-- Tier info
+							local tooltipTier = Instance.new("TextLabel")
+							tooltipTier.Size = UDim2.new(0.95, 0, 0.1875, 0)  -- 15/80 = 0.1875
+							tooltipTier.Position = UDim2.new(0.025, 0, 0.3375, 0)  -- 27/80 = 0.3375
+							tooltipTier.BackgroundTransparency = 1
+							tooltipTier.Text = tierName or ("Tier " .. itemInfo.TierId)
+							tooltipTier.TextColor3 = tierData and tierData["TIER_COLOR"] or Color3.fromRGB(150, 150, 150)
+							tooltipTier.TextSize = math.max(8, 11 * SCALE_FACTOR)
+							tooltipTier.Font = Enum.Font.GothamBold
+							tooltipTier.TextXAlignment = Enum.TextXAlignment.Left
+							tooltipTier.TextScaled = true
+							tooltipTier.ZIndex = 10
+							tooltipTier.Parent = tooltip
+
+							local tooltipTierConstraint = Instance.new("UITextSizeConstraint")
+							tooltipTierConstraint.MaxTextSize = math.max(8, 11 * SCALE_FACTOR)
+							tooltipTierConstraint.Parent = tooltipTier
+
+							-- Description
+							local tooltipDesc = Instance.new("TextLabel")
+							tooltipDesc.Size = UDim2.new(0.95, 0, 0.4375, 0)  -- 35/80 = 0.4375
+							tooltipDesc.Position = UDim2.new(0.025, 0, 0.525, 0)  -- 42/80 = 0.525
+							tooltipDesc.BackgroundTransparency = 1
+							tooltipDesc.Text = itemInfo.Description
+							tooltipDesc.TextColor3 = Color3.fromRGB(200, 200, 200)
+							tooltipDesc.TextSize = math.max(7, 10 * SCALE_FACTOR)
+							tooltipDesc.Font = Enum.Font.Gotham
+							tooltipDesc.TextWrapped = true
+							tooltipDesc.TextXAlignment = Enum.TextXAlignment.Left
+							tooltipDesc.TextYAlignment = Enum.TextYAlignment.Top
+							tooltipDesc.TextScaled = true
+							tooltipDesc.ZIndex = 10
+							tooltipDesc.Parent = tooltip
+
+							local tooltipDescConstraint = Instance.new("UITextSizeConstraint")
+							tooltipDescConstraint.MaxTextSize = math.max(7, 10 * SCALE_FACTOR)
+							tooltipDescConstraint.Parent = tooltipDesc
+
+							-- Hover events
+							iconButton.MouseEnter:Connect(function()
+								tooltip.Visible = true
+							end)
+
+							iconButton.MouseLeave:Connect(function()
+								tooltip.Visible = false
+							end)
+
+							currentIconX = currentIconX + iconSpacing
+							break
+						end
+					end
+				end
+			end
+
+			-- Add age unlock text after the machine icons (if this is a main objective)
+			if isMainObjective then
+				local nextAgeId = objectiveData.Age + 1
+				local ageNames = {
+					[2] = "Second Age",
+					[3] = "Third Age",
+					[4] = "Fourth Age",
+				}
+
+				if ageNames[nextAgeId] then
+					local ageUnlockLabel = Instance.new("TextLabel")
+					ageUnlockLabel.Size = UDim2.new(0.4, 0, 0.1, 0)
+					ageUnlockLabel.Position = UDim2.new(currentIconX, 0, 0.71, 0)
+					ageUnlockLabel.BackgroundTransparency = 1
+					ageUnlockLabel.Text = "+ " .. ageNames[nextAgeId]
+					ageUnlockLabel.TextColor3 = Color3.fromRGB(134, 207, 255)
+					ageUnlockLabel.TextSize = 8
+					ageUnlockLabel.Font = Enum.Font.GothamBold
+					ageUnlockLabel.TextXAlignment = Enum.TextXAlignment.Left
+					ageUnlockLabel.TextYAlignment = Enum.TextYAlignment.Center
+					ageUnlockLabel.TextScaled = true
+					ageUnlockLabel.ZIndex = 3
+					ageUnlockLabel.Parent = card
+
+					local ageUnlockConstraint = Instance.new("UITextSizeConstraint")
+					ageUnlockConstraint.MaxTextSize = 14
+					ageUnlockConstraint.Parent = ageUnlockLabel
+				end
+			end
+		end
+	end)
+
+	if not unlocksSuccess then
+		warn("Error creating unlocks section for objective:", objectiveData.Id)
+	end
+
+	-- Action button
+	if not isCompleted then
+		local actionButton = Instance.new("TextButton")
+		actionButton.Size = UDim2.new(0.9273, 0, 0.1364, 0)  -- (220-16)/220 = 0.9273, 30/220 = 0.1364
+		actionButton.Position = UDim2.new(0.0364, 0, 0.8273, 0)  -- 8/220 = 0.0364, (220-38)/220 = 0.8273
+		actionButton.BackgroundColor3 = isActive and Color3.fromRGB(70, 70, 75) or (prereqsMet and Color3.fromRGB(80, 140, 80) or Color3.fromRGB(100, 50, 50))
+		actionButton.Text = isActive and "Active" or (prereqsMet and "Start Research" or "🔒 Locked")
+		actionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		actionButton.TextSize = 13
+		actionButton.Font = Enum.Font.GothamBold
+		actionButton.TextScaled = true
+		actionButton.ZIndex = 3
+		actionButton.Parent = card
+
+		local actionConstraint = Instance.new("UITextSizeConstraint")
+		actionConstraint.MaxTextSize = 13
+		actionConstraint.Parent = actionButton
+
+		local btnCorner = Instance.new("UICorner")
+		btnCorner.CornerRadius = UDim.new(0.0364, 0)  -- 8/220 = 0.0364
+		btnCorner.Parent = actionButton
+
+		if canStart and prereqsMet then
+			actionButton.MouseButton1Click:Connect(function()
+				SoundManager.ButtonClick()
+				local success = RepStorage.Events.StartObjective:InvokeServer(objectiveData.Id)
+				if success then
+					refreshTree() -- Rebuild tree when objective starts
+				end
+			end)
+		else
+			actionButton.MouseButton1Click:Connect(function()
+				SoundManager.Error()  -- Play error sound for locked research
+			end)
 		end
 	end
-	
-	-- ⭐ Apply Stonepeak Studios group benefit (5% chance to count as double)  <-- ADD HERE
-	if _G.PlayerInStonepeak and _G.PlayerInStonepeak(player) then
-		if math.random() < 0.05 then
-			depositAmount = depositAmount * 2
-		end
-	end
 
-	local newProgress = math.min(currentProgress + depositAmount, requirement.Amount)
-	research.ObjectiveProgress[progressKey][itemName] = newProgress
-
-	if ResearchHandler.CheckObjectiveComplete(player, objectiveId) then
-		ResearchHandler.CompleteObjective(player, objectiveId)
-	end
-
-	return true, newProgress
+	return card, {X = position.X, Y = position.Y}
 end
 
-function ResearchHandler.CheckObjectiveComplete(player, objectiveId)
-	local session = PlayerSession.Get(player)
-	if not session then return false end
+-- Function to update progress numbers only (no rebuild)
+function updateProgress()
+	if not researchData then return end
 
-	local research  = session["Research"]
-	local objective = ResearchData.GetObjective(objectiveId)
+	-- Get fresh research data
+	local freshData = RepStorage.Events.GetResearchData:InvokeServer()
 
-	if not objective or not research.ObjectiveProgress[tostring(objectiveId)] then
-		return false
-	end
+	-- Update each card's progress
+	for objectiveId, cardData in pairs(cardReferences) do
+		if cardData.requirements then
+			for itemName, reqData in pairs(cardData.requirements) do
+				local progress = 0
+				if freshData.ObjectiveProgress[tostring(objectiveId)] then
+					progress = freshData.ObjectiveProgress[tostring(objectiveId)][itemName] or 0
+				end
 
-	for _, requirement in pairs(objective.Requirements) do
-		local progress = research.ObjectiveProgress[tostring(objectiveId)][requirement.ItemName] or 0
-		if progress < requirement.Amount then
-			return false
+				-- Determine text color based on completion
+				local textColor
+				if progress >= reqData.amount then
+					-- Completed: Use green
+					textColor = Color3.fromRGB(100, 255, 100)
+				else
+					-- Not completed: Use stored base color
+					textColor = reqData.baseColor
+				end
+
+				-- Add checkmark for completed requirements
+				local completionMark = progress >= reqData.amount and "✓ " or "• "
+				reqData.label.Text = string.format("%s%s: %d/%d", completionMark, itemName:gsub("OreModel", ""):gsub("_", " "), progress, reqData.amount)
+				reqData.label.TextColor3 = textColor
+			end
+		end
+
+		-- Update status icon
+		local isCompleted = table.find(freshData.CompletedObjectives, objectiveId) ~= nil
+		local isActive = table.find(freshData.ActiveObjectives, objectiveId) ~= nil
+
+		if cardData.statusIcon then
+			cardData.statusIcon.Text = isCompleted and "✓" or (isActive and "⏳" or "")
+			cardData.statusIcon.TextColor3 = isCompleted and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 200, 100)
 		end
 	end
 
-	return true
+	researchData = freshData
 end
 
-function ResearchHandler.CompleteObjective(player, objectiveId)
-	local session = PlayerSession.Get(player)
-	if not session then return false end
-
-	local research  = session["Research"]
-	local objective = ResearchData.GetObjective(objectiveId)
-
-	if not objective then return false end
-
-	table.insert(research.CompletedObjectives, objectiveId)
-
-	local index = table.find(research.ActiveObjectives, objectiveId)
-	if index then table.remove(research.ActiveObjectives, index) end
-
-	local tokenReward = objective.Rewards.ResearchTokens or 0
-	if tokenReward > 0 then
-		player.ResearchTokens.Value = player.ResearchTokens.Value + tokenReward
+-- Function to refresh tree display
+function refreshTree()
+	-- Clear existing content
+	for _, child in pairs(cardsFrame:GetChildren()) do
+		child:Destroy()
+	end
+	for _, child in pairs(connectionsFrame:GetChildren()) do
+		child:Destroy()
 	end
 
-	local unlockedMachines = {}
-	if objective.Rewards.UnlockMachines then
-		for _, machineId in pairs(objective.Rewards.UnlockMachines) do
-			local itemKey = tostring(machineId)
-			if session["Items"][itemKey] then
-				session["Items"][itemKey]["Unlocked"] = true
-				table.insert(unlockedMachines, getItemNameFromId(machineId))
+	-- Clear card references
+	cardReferences = {}
+
+	-- Get research data
+	researchData = RepStorage.Events.GetResearchData:InvokeServer()
+
+	-- Get objectives for current age
+	local objectives = {}
+	for _, obj in pairs(researchData.AllObjectives) do
+		if obj.Age == currentAge then
+			table.insert(objectives, obj)
+		end
+	end
+
+	-- Sort by tree position
+	table.sort(objectives, function(a, b)
+		if a.TreePosition.Y == b.TreePosition.Y then
+			return a.TreePosition.X < b.TreePosition.X
+		end
+		return a.TreePosition.Y < b.TreePosition.Y
+	end)
+
+	-- Calculate positions and create cards
+	local cardPositions = {}
+	local maxX, maxY = 0, 0
+
+	for _, obj in pairs(objectives) do
+		local posX = 50 + (obj.TreePosition.X - 1) * (CARD_WIDTH + HORIZONTAL_SPACING)
+		local posY = 50 + (obj.TreePosition.Y - 1) * (CARD_HEIGHT + VERTICAL_SPACING)
+
+		local card, pos = createObjectiveCard(obj, researchData, {X = posX, Y = posY})
+		cardPositions[obj.Id] = pos
+
+		maxX = math.max(maxX, posX + CARD_WIDTH)
+		maxY = math.max(maxY, posY + CARD_HEIGHT)
+	end
+
+	-- Draw connections
+	for _, obj in pairs(objectives) do
+		for _, reqId in pairs(obj.RequiredObjectives) do
+			if cardPositions[reqId] and cardPositions[obj.Id] then
+				local isCompleted = table.find(researchData.CompletedObjectives, reqId) ~= nil
+				drawConnection(cardPositions[reqId], cardPositions[obj.Id], isCompleted)
 			end
 		end
 	end
 
-	local notificationMessage = objective.Name .. " completed!"
-	if tokenReward > 0 then
-		notificationMessage = notificationMessage .. " +" .. tokenReward .. " Research Tokens"
-	elseif #unlockedMachines > 0 then
-		notificationMessage = notificationMessage .. " 🔓 Unlocked: " .. table.concat(unlockedMachines, ", ")
+	-- Update canvas size
+	treeContainer.CanvasSize = UDim2.new(0, maxX + 50, 0, maxY + 50)
+end
+
+-- Function to display statistics (INITIAL BUILD ONLY)
+function displayStatistics()
+	-- Clear existing content
+	for _, child in pairs(cardsFrame:GetChildren()) do
+		child:Destroy()
+	end
+	for _, child in pairs(connectionsFrame:GetChildren()) do
+		child:Destroy()
 	end
 
-	RepStorage.Events.MessageClient:FireClient(player, "screen", {
-		message = notificationMessage
-	})
+	-- Clear statistics references
+	statisticsReferences = {}
 
-	-- Notify SpeedrunHandler for age splits and unlock detection
-	SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
+	-- Get research data (contains ItemsCollected table)
+	researchData = RepStorage.Events.GetResearchData:InvokeServer()
 
-	-- ✅ Auto-start any objectives that just became available
-	task.defer(ResearchHandler.AutoStartAvailableObjectives, player)
+	-- Create scrollable statistics display
+	local statsContainer = Instance.new("Frame")
+	statsContainer.Name = "StatsContainer"
+	statsContainer.Size = UDim2.new(0.95, 0, 0.95, 0)
+	statsContainer.Position = UDim2.new(0.025, 0, 0.025, 0)
+	statsContainer.BackgroundTransparency = 1
+	statsContainer.ZIndex = 2
+	statsContainer.Parent = cardsFrame
 
-	return true
+	local statsLayout = Instance.new("UIListLayout")
+	statsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	statsLayout.Padding = UDim.new(0, 10 * SCALE_FACTOR)
+	statsLayout.Parent = statsContainer
+
+	-- Header
+	local header = Instance.new("TextLabel")
+	header.Name = "Header"
+	header.Size = UDim2.new(1, 0, 0, 50 * SCALE_FACTOR)
+	header.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+	header.BorderSizePixel = 0
+	header.Text = "Total Items Deposited"
+	header.TextColor3 = Color3.fromRGB(134, 207, 255)
+	header.TextSize = 24
+	header.Font = Enum.Font.GothamBold
+	header.TextScaled = true
+	header.ZIndex = 3
+	header.LayoutOrder = 0
+	header.Parent = statsContainer
+
+	local headerCorner = Instance.new("UICorner")
+	headerCorner.CornerRadius = UDim.new(0, 12 * SCALE_FACTOR)
+	headerCorner.Parent = header
+
+	local headerConstraint = Instance.new("UITextSizeConstraint")
+	headerConstraint.MaxTextSize = 24
+	headerConstraint.Parent = header
+
+	-- Sort items by collection count (highest first)
+	local sortedItems = {}
+	if researchData.ItemsCollected then
+		for itemName, count in pairs(researchData.ItemsCollected) do
+			table.insert(sortedItems, {name = itemName, count = count})
+		end
+		table.sort(sortedItems, function(a, b) return a.count > b.count end)
+	end
+
+	-- Create item entries
+	if #sortedItems > 0 then
+		for i, itemData in ipairs(sortedItems) do
+			local itemFrame = Instance.new("Frame")
+			itemFrame.Name = "Item_" .. i
+			itemFrame.Size = UDim2.new(1, 0, 0, 40 * SCALE_FACTOR)
+			itemFrame.BackgroundColor3 = i % 2 == 0 and Color3.fromRGB(35, 35, 40) or Color3.fromRGB(40, 40, 45)
+			itemFrame.BorderSizePixel = 0
+			itemFrame.ZIndex = 3
+			itemFrame.LayoutOrder = i
+			itemFrame.Parent = statsContainer
+
+			local itemCorner = Instance.new("UICorner")
+			itemCorner.CornerRadius = UDim.new(0, 8 * SCALE_FACTOR)
+			itemCorner.Parent = itemFrame
+
+			-- Item name
+			local nameLabel = Instance.new("TextLabel")
+			nameLabel.Size = UDim2.new(0.6, 0, 1, 0)
+			nameLabel.Position = UDim2.new(0.02, 0, 0, 0)
+			nameLabel.BackgroundTransparency = 1
+			nameLabel.Text = itemData.name:gsub("OreModel", ""):gsub("_", " ")
+			nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+			nameLabel.TextSize = 18
+			nameLabel.Font = Enum.Font.Gotham
+			nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+			nameLabel.TextScaled = true
+			nameLabel.ZIndex = 4
+			nameLabel.Parent = itemFrame
+
+			local nameConstraint = Instance.new("UITextSizeConstraint")
+			nameConstraint.MaxTextSize = 18
+			nameConstraint.Parent = nameLabel
+
+			-- Count
+			local countLabel = Instance.new("TextLabel")
+			countLabel.Size = UDim2.new(0.35, 0, 1, 0)
+			countLabel.Position = UDim2.new(0.63, 0, 0, 0)
+			countLabel.BackgroundTransparency = 1
+			countLabel.Text = tostring(itemData.count)
+			countLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+			countLabel.TextSize = 20
+			countLabel.Font = Enum.Font.GothamBold
+			countLabel.TextXAlignment = Enum.TextXAlignment.Right
+			countLabel.TextScaled = true
+			countLabel.ZIndex = 4
+			countLabel.Parent = itemFrame
+
+			local countConstraint = Instance.new("UITextSizeConstraint")
+			countConstraint.MaxTextSize = 20
+			countConstraint.Parent = countLabel
+
+			-- Store reference for updating
+			statisticsReferences[itemData.name] = {
+				countLabel = countLabel,
+				layoutOrder = i
+			}
+		end
+	else
+		-- No items collected yet
+		local noDataLabel = Instance.new("TextLabel")
+		noDataLabel.Name = "NoData"
+		noDataLabel.Size = UDim2.new(1, 0, 0, 100 * SCALE_FACTOR)
+		noDataLabel.BackgroundTransparency = 1
+		noDataLabel.Text = "No items deposited yet.\nStart depositing to see statistics!"
+		noDataLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+		noDataLabel.TextSize = 18
+		noDataLabel.Font = Enum.Font.Gotham
+		noDataLabel.TextWrapped = true
+		noDataLabel.TextScaled = true
+		noDataLabel.ZIndex = 3
+		noDataLabel.LayoutOrder = 1
+		noDataLabel.Parent = statsContainer
+
+		local noDataConstraint = Instance.new("UITextSizeConstraint")
+		noDataConstraint.MaxTextSize = 18
+		noDataConstraint.Parent = noDataLabel
+	end
+
+	-- Update canvas size to fit all content
+	local contentHeight = statsLayout.AbsoluteContentSize.Y + 50
+	treeContainer.CanvasSize = UDim2.new(0, 0, 0, contentHeight)
 end
 
-function ResearchHandler.GetPlayerResearch(player)
-	ResearchHandler.InitializePlayer(player)
-	local session = PlayerSession.Get(player)
-	return session and session["Research"]
+-- NEW: Function to update statistics numbers only (no rebuild)
+function updateStatistics()
+	if not researchData then return end
+
+	-- Get fresh research data
+	local freshData = RepStorage.Events.GetResearchData:InvokeServer()
+
+	-- Check if the number of items changed (new items collected)
+	local currentItemCount = 0
+	local newItemCount = 0
+
+	for _ in pairs(statisticsReferences) do
+		currentItemCount = currentItemCount + 1
+	end
+
+	if freshData.ItemsCollected then
+		for _ in pairs(freshData.ItemsCollected) do
+			newItemCount = newItemCount + 1
+		end
+	end
+
+	-- If item count changed, rebuild the display
+	if currentItemCount ~= newItemCount then
+		displayStatistics()
+		researchData = freshData
+		return
+	end
+
+	-- Update the numbers AND re-sort by count
+	if freshData.ItemsCollected then
+		-- Sort items by count (highest first)
+		local sortedItems = {}
+		for itemName, count in pairs(freshData.ItemsCollected) do
+			table.insert(sortedItems, {name = itemName, count = count})
+		end
+		table.sort(sortedItems, function(a, b) return a.count > b.count end)
+
+		-- Update both the count text AND the layout order (for sorting)
+		for i, itemData in ipairs(sortedItems) do
+			if statisticsReferences[itemData.name] then
+				statisticsReferences[itemData.name].countLabel.Text = tostring(itemData.count)
+				statisticsReferences[itemData.name].countLabel.Parent.LayoutOrder = i
+			end
+		end
+	end
+
+	researchData = freshData
 end
 
--- ============================================================
--- ✅ AUTO RESEARCH (Gamepass feature)
--- ============================================================
-function ResearchHandler.AutoStartAvailableObjectives(player)
-	-- Only run if the player owns the pass
-	if not _G.PlayerHasAutoResearch or not _G.PlayerHasAutoResearch(player) then return end
+-- Function to create age tab button
+local function createAgeTab(ageData, researchData)
+	-- Calculate progress for this age
+	local totalObjectives = 0
+	local completedObjectives = 0
 
-	-- Only run if the player has the setting enabled
-	local autoSetting = player.Settings:FindFirstChild("AutoResearch")
-	if autoSetting and autoSetting.Value == false then return end
+	for _, obj in pairs(researchData.AllObjectives) do
+		if obj.Age == ageData.Id then
+			totalObjectives = totalObjectives + 1
+			if table.find(researchData.CompletedObjectives, obj.Id) then
+				completedObjectives = completedObjectives + 1
+			end
+		end
+	end
 
-	local session = PlayerSession.Get(player)
-	if not session then return end
+	local isUnlocked = true
+	local isSelected = ageData.Id == currentAge and currentView == "objectives"
+	local isCompleted = completedObjectives == totalObjectives and totalObjectives > 0
 
-	local available = ResearchData.GetAvailableObjectives(
-		session["Research"].CompletedObjectives,
-		session["Research"].ActiveObjectives
-	)
+	local button = Instance.new("TextButton")
+	button.Name = "AgeTab_" .. ageData.Id
+	button.Size = UDim2.new(1, 0, 0, 80 * SCALE_FACTOR)
+	-- Green if completed, selected color if selected, default otherwise
+	button.BackgroundColor3 = isCompleted and Color3.fromRGB(40, 80, 40) or (isSelected and ageData.Color or Color3.fromRGB(40, 40, 45))
+	button.BorderSizePixel = 0
+	button.LayoutOrder = ageData.Id
+	button.AutoButtonColor = false
+	button.Text = ""
+	button.ZIndex = 8
+	button.Parent = ageTabsFrame
 
-	for _, objective in pairs(available) do
-		ResearchHandler.StartObjective(player, objective.Id)
+	local btnCorner = Instance.new("UICorner")
+	btnCorner.CornerRadius = UDim.new(0.125, 0)  -- 10/80 = 0.125
+	btnCorner.Parent = button
+
+	-- Button stroke
+	local btnStroke = Instance.new("UIStroke")
+	btnStroke.Color = Color3.fromRGB(60, 60, 80)
+	btnStroke.Thickness = 1
+	btnStroke.Transparency = 0.6
+	btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	btnStroke.Parent = button
+
+	-- Icon
+	local icon = Instance.new("TextLabel")
+	icon.Size = UDim2.new(0.2, 0, 0.5, 0)  -- 40/200 = 0.2, 40/80 = 0.5
+	icon.Position = UDim2.new(0.05, 0, 0.125, 0)  -- 10/200 = 0.05, 10/80 = 0.125
+	icon.BackgroundTransparency = 1
+	icon.Text = ageData.Icon
+	icon.TextSize = 30
+	icon.TextScaled = true
+	icon.ZIndex = 9
+	icon.Parent = button
+
+	local iconConstraint = Instance.new("UITextSizeConstraint")
+	iconConstraint.MaxTextSize = 30
+	iconConstraint.Parent = icon
+
+	-- Name
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(0.55, 0, 0.3125, 0)  -- Increased from 0.4 to 0.55 for full name on one line
+	nameLabel.Position = UDim2.new(0.275, 0, 0.1, 0)  -- 55/200 = 0.275, 8/80 = 0.1
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = ageData.Name
+	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	nameLabel.TextSize = 16
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.TextScaled = true
+	nameLabel.ZIndex = 9
+	nameLabel.Parent = button
+
+	local nameConstraint = Instance.new("UITextSizeConstraint")
+	nameConstraint.MaxTextSize = 16
+	nameConstraint.Parent = nameLabel
+
+	-- Progress label (X/Y objectives) - aligned right next to name
+	local progressLabel = Instance.new("TextLabel")
+	progressLabel.Size = UDim2.new(0.15, 0, 0.3125, 0)  -- Reduced from 0.25 to 0.15 for smaller text
+	progressLabel.Position = UDim2.new(0.825, 0, 0.1, 0)  -- Adjusted position (0.275 + 0.55 = 0.825)
+	progressLabel.BackgroundTransparency = 1
+	progressLabel.Text = completedObjectives .. "/" .. totalObjectives
+	progressLabel.TextColor3 = isCompleted and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(134, 207, 255)
+	progressLabel.TextSize = 12
+	progressLabel.Font = Enum.Font.GothamBold
+	progressLabel.TextXAlignment = Enum.TextXAlignment.Right
+	progressLabel.TextYAlignment = Enum.TextYAlignment.Center
+	progressLabel.TextScaled = true
+	progressLabel.ZIndex = 9
+	progressLabel.Parent = button
+
+	local progressConstraint = Instance.new("UITextSizeConstraint")
+	progressConstraint.MaxTextSize = 12
+	progressConstraint.Parent = progressLabel
+
+	-- Description
+	local descLabel = Instance.new("TextLabel")
+	descLabel.Size = UDim2.new(0.7, 0, 0.5, 0)  -- Back to original size
+	descLabel.Position = UDim2.new(0.275, 0, 0.4375, 0)  -- Back to original position
+	descLabel.BackgroundTransparency = 1
+	descLabel.Text = ageData.Description
+	descLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+	descLabel.TextSize = 11
+	descLabel.Font = Enum.Font.Gotham
+	descLabel.TextWrapped = true
+	descLabel.TextXAlignment = Enum.TextXAlignment.Left
+	descLabel.TextYAlignment = Enum.TextYAlignment.Top
+	descLabel.TextScaled = true
+	descLabel.ZIndex = 9
+	descLabel.Parent = button
+
+	local descConstraint = Instance.new("UITextSizeConstraint")
+	descConstraint.MaxTextSize = 11
+	descConstraint.Parent = descLabel
+
+	button.MouseButton1Click:Connect(function()
+		if isUnlocked then
+			SoundManager.ButtonClick()
+			currentAge = ageData.Id
+			currentView = "objectives"
+			refreshAgeTabsAndTree()
+		else
+			SoundManager.Error()
+		end
+	end)
+
+	return button
+end
+
+-- Function to create statistics button
+local function createStatisticsButton()
+	local isSelected = currentView == "statistics"
+
+	local button = Instance.new("TextButton")
+	button.Name = "StatisticsButton"
+	button.Size = UDim2.new(0.9, 0, 0.8, 0)  -- 90% width, 80% height (percentage-based for scaling)
+	button.Position = UDim2.new(0.05, 0, 0.1, 0)  -- Centered with 5% padding
+	button.BackgroundColor3 = isSelected and Color3.fromRGB(39, 39, 45) or Color3.fromRGB(30, 30, 35)  -- Match age frame color
+	button.BackgroundTransparency = isSelected and 0 or 0.3  -- Match age frame transparency when not selected
+	button.BorderSizePixel = 0
+	button.AutoButtonColor = false
+	button.Text = ""
+	button.ZIndex = 8
+	button.Parent = statsButtonFrame
+
+	local btnCorner = Instance.new("UICorner")
+	btnCorner.CornerRadius = UDim.new(0, 12 * SCALE_FACTOR)  -- Match age frame corner radius
+	btnCorner.Parent = button
+
+	-- Button stroke (match age frame)
+	local btnStroke = Instance.new("UIStroke")
+	btnStroke.Color = Color3.fromRGB(60, 60, 80)
+	btnStroke.Thickness = 1
+	btnStroke.Transparency = 0.6
+	btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	btnStroke.Parent = button
+
+	-- Icon
+	local icon = Instance.new("TextLabel")
+	icon.Size = UDim2.new(0.25, 0, 0.6, 0)  -- Adjusted for smaller button
+	icon.Position = UDim2.new(0.05, 0, 0.2, 0)  -- Centered vertically
+	icon.BackgroundTransparency = 1
+	icon.Text = "📊"
+	icon.TextSize = 24
+	icon.TextScaled = true
+	icon.ZIndex = 9
+	icon.Parent = button
+
+	local iconConstraint = Instance.new("UITextSizeConstraint")
+	iconConstraint.MaxTextSize = 24
+	iconConstraint.Parent = icon
+
+	-- Name
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(0.6, 0, 0.8, 0)  -- Adjusted for smaller button
+	nameLabel.Position = UDim2.new(0.35, 0, 0.1, 0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = "Statistics"
+	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	nameLabel.TextSize = 14
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.TextYAlignment = Enum.TextYAlignment.Center
+	nameLabel.TextScaled = true
+	nameLabel.ZIndex = 9
+	nameLabel.Parent = button
+
+	local nameConstraint = Instance.new("UITextSizeConstraint")
+	nameConstraint.MaxTextSize = 14
+	nameConstraint.Parent = nameLabel
+
+	button.MouseButton1Click:Connect(function()
+		SoundManager.ButtonClick()
+		currentView = "statistics"
+		refreshAgeTabsAndTree()
+	end)
+
+	return button
+end
+
+-- Function to refresh age tabs and tree
+function refreshAgeTabsAndTree()
+	-- Clear age tabs
+	for _, child in pairs(ageTabsFrame:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+
+	-- Clear statistics button
+	for _, child in pairs(statsButtonFrame:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+
+	-- Get research data
+	local data = RepStorage.Events.GetResearchData:InvokeServer()
+
+	-- Create age tabs
+	local ages = {
+		{Id = 1, Name = "First Age", Description = "Master the basics", Icon = "⛏", Color = Color3.fromRGB(56, 63, 68)},
+		{Id = 2, Name = "Second Age", Description = "Powerful automation", Icon = "🔧", Color = Color3.fromRGB(76, 72, 21)},
+		{Id = 3, Name = "Third Age", Description = "Advanced production", Icon = "⚙️", Color = Color3.fromRGB(42, 1, 76)},
+		{Id = 4, Name = "Fourth Age", Description = "Bulk processing", Icon = "🏗", Color = Color3.fromRGB(12, 12, 12)},
+	}
+
+	for _, age in pairs(ages) do
+		createAgeTab(age, data)
+	end
+
+	-- Create statistics button
+	createStatisticsButton()
+
+	-- Show appropriate view
+	if currentView == "statistics" then
+		displayStatistics()
+	else
+		refreshTree()
 	end
 end
 
--- Expose as global so GamepassHandler and ResearchServer can call it
-_G.AutoStartAvailableObjectives = ResearchHandler.AutoStartAvailableObjectives
+-- Make the GUI compatible with the menu system
+local menuObject = Instance.new("BoolValue")
+menuObject.Name = "MenuObject"
+menuObject.Value = false
+menuObject.Parent = researchGui
 
-return ResearchHandler
+-- Handle menu visibility
+menuObject.Changed:Connect(function()
+	--print("ResearchGui MenuObject changed to:", menuObject.Value)
+	mainFrame.Visible = menuObject.Value
+	if mainFrame.Visible then
+		SoundManager.MenuOpen()
+		updateScaleFactor()
+		refreshAgeTabsAndTree()
+		checkAutoResearchOwnership()
+	end
+end)
+
+-- Initially hide
+mainFrame.Visible = false
+
+-- Auto-refresh progress only (no flicker)
+spawn(function()
+	while task.wait(1) do
+		if mainFrame.Visible and researchData then
+			if currentView == "objectives" then
+				-- Check if objectives changed (completed or started)
+				local freshData = RepStorage.Events.GetResearchData:InvokeServer()
+				local objectivesChanged = #freshData.CompletedObjectives ~= #researchData.CompletedObjectives or
+					#freshData.ActiveObjectives ~= #researchData.ActiveObjectives
+
+				if objectivesChanged then
+					-- Rebuild tree AND age tabs if objectives changed
+					refreshAgeTabsAndTree()
+				else
+					-- Just update progress numbers
+					updateProgress()
+				end
+			elseif currentView == "statistics" then
+				-- NEW: Just update statistics numbers (no rebuild)
+				updateStatistics()
+			end
+		end
+	end
+end)
