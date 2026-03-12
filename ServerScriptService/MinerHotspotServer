@@ -51,7 +51,7 @@ RepStorage.Events.GetHotspotInfo.OnServerInvoke = function(player, hotspotId)
 			local research = session["Research"]
 			if research then
 				for _, obj in pairs(ResearchData.Objectives) do
-					if not table.find(research.CompletedObjectives, obj.Id) then
+					if obj.Age <= 3 and not table.find(research.CompletedObjectives, obj.Id) then
 						isResearchLocked = true
 						break
 					end
@@ -67,6 +67,7 @@ RepStorage.Events.GetHotspotInfo.OnServerInvoke = function(player, hotspotId)
 		IsUnlocked = isUnlocked,
 		IsResearchLocked = isResearchLocked,
 		PlayerTokens = session.ResearchTokens,
+		InSpeedrun = session["Speedrun"] and session["Speedrun"].InSpeedrunMode or false,
 	}
 end
 
