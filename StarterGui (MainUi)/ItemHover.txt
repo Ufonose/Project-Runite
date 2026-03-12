@@ -54,9 +54,9 @@ function module.LOAD(MODULE_INFO)
 				end
 
 				if unlockResearch then
-					descText = "🔒 LOCKED: Requires " .. unlockResearch.Name .. "\n\n" .. ITEM_INFO.Description
+					descText = "🔒 LOCKED: Requires " .. unlockResearch.Name .. "\n" .. ITEM_INFO.Description
 				else
-					descText = "🔒 LOCKED\n\n" .. ITEM_INFO.Description
+					descText = "🔒 LOCKED\n" .. ITEM_INFO.Description
 				end
 			end
 
