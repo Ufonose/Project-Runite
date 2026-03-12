@@ -214,6 +214,21 @@ local function performReset(player)
 		session["Upgrades"] = {}
 	end
 
+	-- If player owns Max All Upgrades gamepass, re-apply after reset
+	if session.Gamepasses and session.Gamepasses.MaxAllUpgrades == true then
+		local attempts = 0
+		while not _G.MaxUpgradeForPlayer and attempts < 10 do
+			task.wait(0.5)
+			attempts += 1
+		end
+		if _G.MaxUpgradeForPlayer then
+			local UpgradesData = require(RepStorage.Modules.UpgradesData)
+			for upgradeId in pairs(UpgradesData.Upgrades) do
+				_G.MaxUpgradeForPlayer(player, upgradeId)
+			end
+		end
+	end
+
 	-- 9. Reset research (preserve ItemsCollected)
 	local savedCollected = session["Research"] and session["Research"]["ItemsCollected"] or {}
 	session["Research"] = {
@@ -533,7 +548,22 @@ function SpeedrunHandler.ReturnToMainPlot(player)
 	session["UnlockedBarriers"] = deepCopy(snapshot.UnlockedBarriers)
 	session["MinerHotspots"]    = deepCopy(snapshot.MinerHotspots)
 	session["Research"]         = deepCopy(snapshot.Research)
-	session["Upgrades"]         = deepCopy(snapshot.Upgrades)
+	session["Upgrades"] = deepCopy(snapshot.Upgrades)
+
+	-- If player owns Max All Upgrades gamepass, re-apply after snapshot restore
+	if session.Gamepasses and session.Gamepasses.MaxAllUpgrades == true then
+		local attempts = 0
+		while not _G.MaxUpgradeForPlayer and attempts < 10 do
+			task.wait(0.5)
+			attempts += 1
+		end
+		if _G.MaxUpgradeForPlayer then
+			local UpgradesData = require(RepStorage.Modules.UpgradesData)
+			for upgradeId in pairs(UpgradesData.Upgrades) do
+				_G.MaxUpgradeForPlayer(player, upgradeId)
+			end
+		end
+	end
 
 	-- Put the accumulated statistics back (they already include pre-speedrun counts as base)
 	session["Research"]["ItemsCollected"] = survivingCollected
