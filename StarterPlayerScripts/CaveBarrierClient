@@ -312,6 +312,15 @@ end)
 local SpeedrunStarted = ReplicatedStorage:WaitForChild("Events"):WaitForChild("SpeedrunStarted")
 SpeedrunStarted.OnClientEvent:Connect(function()
 	barrierGUIs = {}
+	playerPlot = nil
+	task.wait(0.5)
+	setupBarrierGUIs()
+end)
+
+local RestoredMainPlot = ReplicatedStorage:WaitForChild("Events"):WaitForChild("RestoredMainPlot")
+RestoredMainPlot.OnClientEvent:Connect(function()
+	barrierGUIs = {}
+	playerPlot = nil        -- clear cache so getPlayerPlot() re-reads SetPlot
 	task.wait(0.5)
 	setupBarrierGUIs()
 end)
