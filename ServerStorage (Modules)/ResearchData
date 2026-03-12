@@ -979,7 +979,7 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 63, 
-		Name = "Copper Master 2",
+		Name = "Gold Master 2",
 		Description = "Deposit gold",
 		Age = 4,
 		RequiredObjectives = {62}, 
@@ -1051,9 +1051,8 @@ ResearchData.Objectives = {
 		Age = 4,
 		RequiredObjectives = {55}, 
 		Requirements = {
-			{ItemName = "Impure Gear", Amount = 500},
-			{ItemName = "Impure Coil", Amount = 500},
-			{ItemName = "Impure Pipe", Amount = 500},
+			{ItemName = "Impure Ingot", Amount = 300},
+			{ItemName = "Impure Plate", Amount = 300},
 		},
 		Rewards = {
 			ResearchTokens = 100,
