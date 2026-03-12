@@ -5,29 +5,29 @@ ResearchData.Ages = {
 	{
 		Id = 1,
 		Name = "First Age",
-		Description = "Master the basics of stone processing",
-		Icon = "🏔️",
+		Description = "Master the basics",
+		Icon = "⛏",
 		Color = Color3.fromRGB(120, 100, 80),
 	},
 	{
 		Id = 2,
 		Name = "Second Age",
-		Description = "Advance your production capabilities",
-		Icon = "⚙️",
+		Description = "Powerful automation",
+		Icon = "🔧",
 		Color = Color3.fromRGB(100, 120, 140),
 	},
 	{
 		Id = 3,
 		Name = "Third Age",
-		Description = "Unlock powerful automation",
-		Icon = "⚡",
+		Description = "Advanced production",
+		Icon = "⚙️",
 		Color = Color3.fromRGB(140, 100, 140),
 	},
 	{
 		Id = 4,
 		Name = "Fourth Age",
-		Description = "Master ultimate production",  -- Your description
-		Icon = "🔮",  -- Choose your icon
+		Description = "Bulk processing",  -- Your description
+		Icon = "🏗",  -- Choose your icon
 		Color = Color3.fromRGB(143, 143, 0),  -- Choose your color
 	},
 }
@@ -39,8 +39,8 @@ ResearchData.Objectives = {
 	-- ============================================
 	{
 		Id = 1,
-		Name = "Iron Collector 1",
-		Description = "Deposit raw iron ore",
+		Name = "Raw Beginnings",
+		Description = "Your mining operation starts here, collect your first iron ore",
 		Age = 1,
 		RequiredObjectives = {},
 		Requirements = {
@@ -54,8 +54,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 2,
-		Name = "Iron Collector 2",
-		Description = "Deposit raw iron ore",
+		Name = "Iron Surplus",
+		Description = "Keep the iron flowing, there is plenty more to mine",
 		Age = 1,
 		RequiredObjectives = {1},
 		Requirements = {
@@ -69,8 +69,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 3,
-		Name = "Gem Collector 1",
-		Description = "Deposit an emerald gem",
+		Name = "Shiny Discovery",
+		Description = "Your miners uncovered something valuable, an emerald from the deep",
 		Age = 1,
 		RequiredObjectives = {1},
 		Requirements = {
@@ -84,8 +84,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 4,
-		Name = "Crush it 1",
-		Description = "Crush raw iron ore in an ore crusher",
+		Name = "Rock Breaker",
+		Description = "Feed your iron ore into the crusher and start refining it",
 		Age = 1,
 		RequiredObjectives = {2},
 		Requirements = {
@@ -99,8 +99,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 5,
-		Name = "Crush It 2",
-		Description = "Crush raw iron ore in an ore crusher",
+		Name = "Keep Crushing",
+		Description = "The crusher needs more, push through a larger batch of iron",
 		Age = 1,
 		RequiredObjectives = {4},
 		Requirements = {
@@ -114,8 +114,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 6,
-		Name = "Iron Collector 3",
-		Description = "Deposit raw and crushed iron ore",
+		Name = "Dual Haul",
+		Description = "Your mine produces more than just raw ore now, collect both forms",
 		Age = 1,
 		RequiredObjectives = {5},
 		Requirements = {
@@ -131,8 +131,8 @@ ResearchData.Objectives = {
 
 	{
 		Id = 7,
-		Name = "Gem Collector 2",
-		Description = "Deposit a ruby gem",
+		Name = "Ruby Rush",
+		Description = "A glint of red in the rock, a ruby surfaces from your mine",
 		Age = 1,
 		RequiredObjectives = {4},
 		Requirements = {
@@ -146,8 +146,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 8,
-		Name = "Iron Collector 4",
-		Description = "Deposit raw and crushed iron ore",
+		Name = "Iron Haul",
+		Description = "Deposit a healthy amount of raw and crushed iron ore",
 		Age = 1,
 		RequiredObjectives = {6},
 		Requirements = {
@@ -162,8 +162,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 9,
-		Name = "Ore Cleaner 1",
-		Description = "Pass crushed iron ores through the ore cleaner",
+		Name = "Wash It Down",
+		Description = "Run your crushed iron through the ore cleaner to remove impurities",
 		Age = 1,
 		RequiredObjectives = {8},
 		Requirements = {
@@ -177,8 +177,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 10,
-		Name = "Iron Collector 5",
-		Description = "Deposit clean and crushed iron ore",
+		Name = "Refined Supply",
+		Description = "Deposit crushed and cleaned iron ore from your processing line",
 		Age = 1,
 		RequiredObjectives = {9},
 		Requirements = {
@@ -194,7 +194,7 @@ ResearchData.Objectives = {
 	{
 		Id = 12,
 		Name = "First Age Master",
-		Description = "Master the first age",
+		Description = "You have mastered iron from raw ore to clean form, the Second Age awaits",
 		Age = 1,
 		RequiredObjectives = {10},
 		IsMainObjective = true,
@@ -215,8 +215,8 @@ ResearchData.Objectives = {
 	-- ============================================
 	{
 		Id = 13,
-		Name = "Copper Collector 1",
-		Description = "Deposit raw copper ore",
+		Name = "Copper Discovery",
+		Description = "A new ore appears in your mine, collect your first copper ore",
 		Age = 2,
 		RequiredObjectives = {12}, 
 		Requirements = {
@@ -230,8 +230,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 14,
-		Name = "Crush It 3",
-		Description = "Crush raw copper ore in an ore crusher",
+		Name = "Copper Crusher",
+		Description = "Put your copper ore through the crusher, same process, new material",
 		Age = 2,
 		RequiredObjectives = {13}, 
 		Requirements = {
@@ -245,8 +245,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 15,
-		Name = "Ore Cleaner 2",
-		Description = "Pass crushed copper ores through the ore cleaner",
+		Name = "Copper Cleaned",
+		Description = "The cleaner works on copper too, wash away the impurities",
 		Age = 2,
 		RequiredObjectives = {14}, 
 		Requirements = {
@@ -260,8 +260,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 16,
-		Name = "Gem Collector 3",
-		Description = "Deposit gems",
+		Name = "Gem Hoarder",
+		Description = "Your gem collection is growing, deposit a mix of emeralds and rubies",
 		Age = 2,
 		RequiredObjectives = {15}, 
 		Requirements = {
@@ -276,8 +276,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 17,
-		Name = "Ore Collector 1",
-		Description = "Deposit raw ores",
+		Name = "Two Ore Operation",
+		Description = "Your mine now produces both iron and copper, collect a batch of each",
 		Age = 2,
 		RequiredObjectives = {14}, 
 		Requirements = {
@@ -292,8 +292,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 18,
-		Name = "Crush It 4",
-		Description = "Crush raw ores in an ore crusher",
+		Name = "Double Crush",
+		Description = "Run both iron and copper ore through the crusher",
 		Age = 2,
 		RequiredObjectives = {17}, 
 		Requirements = {
@@ -308,8 +308,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 19,
-		Name = "Ore Collector 2",
-		Description = "Deposit raw ores",
+		Name = "Full Haul",
+		Description = "A larger collection of both ores, your operation is scaling up",
 		Age = 2,
 		RequiredObjectives = {17}, 
 		Requirements = {
@@ -324,8 +324,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 20,
-		Name = "The Smelter 1",
-		Description = "Process cleaned iron ores in the blast furnace",
+		Name = "First Ingot",
+		Description = "Feed your cleaned iron into the blast furnace and produce your first iron ingot",
 		Age = 2,
 		RequiredObjectives = {19}, 
 		Requirements = {
@@ -339,8 +339,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 21,
-		Name = "The Smelter 2",
-		Description = "Process cleaned copper ores in the blast furnace",
+		Name = "Copper Ingot",
+		Description = "The blast furnace handles copper too, smelt your first copper ingots",
 		Age = 2,
 		RequiredObjectives = {20}, 
 		Requirements = {
@@ -354,8 +354,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 22,
-		Name = "The Smelter 3",
-		Description = "Process cleaned ores in the blast furnace",
+		Name = "Dual Smelter",
+		Description = "Put your blast furnaces to work smelting both iron and copper ingots",
 		Age = 2,
 		RequiredObjectives = {21}, 
 		Requirements = {
@@ -370,8 +370,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 23,
-		Name = "Iron Collector 6",
-		Description = "Deposit iron ores and ingots",
+		Name = "Iron and Ingots",
+		Description = "Collect both raw iron ore and the ingots your furnace is producing",
 		Age = 2,
 		RequiredObjectives = {20}, 
 		Requirements = {
@@ -386,8 +386,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 24,
-		Name = "Copper Collector 2",
-		Description = "Deposit copper ores and ingots",
+		Name = "Copper and Ingots",
+		Description = "Collect both raw copper ore and the ingots your furnace is producing",
 		Age = 2,
 		RequiredObjectives = {23}, 
 		Requirements = {
@@ -402,8 +402,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 25,
-		Name = "Gem Collector 4",
-		Description = "Deposit a diamond gem",
+		Name = "Diamond Found",
+		Description = "Something rare glints in the dark, your first diamond surfaces",
 		Age = 2,
 		RequiredObjectives = {24}, 
 		Requirements = {
@@ -417,8 +417,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 26,
-		Name = "Impure Collector 1",
-		Description = "Mix iron and copper cleaned ores together in the blast furnace",
+		Name = "Happy Accident",
+		Description = "Mix cleaned iron and copper ore in the blast furnace to produce something unexpected",
 		Age = 2,
 		RequiredObjectives = {23}, 
 		Requirements = {
@@ -432,8 +432,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 27,
-		Name = "Ingot Collector 1",
-		Description = "Deposit impure and iron ingots",
+		Name = "Impure and Iron",
+		Description = "Deposit a mix of impure and iron ingots from your furnace",
 		Age = 2,
 		RequiredObjectives = {26}, 
 		Requirements = {
@@ -448,8 +448,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 28,
-		Name = "Ingot Collector 2",
-		Description = "Deposit impure and copper ingots",
+		Name = "Impure and Copper",
+		Description = "Deposit a mix of impure and copper ingots from your furnace",
 		Age = 2,
 		RequiredObjectives = {27}, 
 		Requirements = {
@@ -464,8 +464,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 29,
-		Name = "Gem Colletor 5",
-		Description = "Deposit gems",
+		Name = "Gem Trio",
+		Description = "You have found all three gem types, deposit a collection of each",
 		Age = 2,
 		RequiredObjectives = {27}, 
 		Requirements = {
@@ -481,8 +481,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 30,
-		Name = "Gem Collector 6",
-		Description = "Process gems through the gem polisher",
+		Name = "Polished Collection",
+		Description = "Run your gems through the polisher and see them shine",
 		Age = 2,
 		RequiredObjectives = {29}, 
 		Requirements = {
@@ -499,7 +499,7 @@ ResearchData.Objectives = {
 	{
 		Id = 33,
 		Name = "Second Age Master",
-		Description = "Master the second age",
+		Description = "Iron, copper and impure ingots mastered, the Third Age is within reach",
 		Age = 2,
 		RequiredObjectives = {26}, 
 		IsMainObjective = true,
@@ -523,8 +523,8 @@ ResearchData.Objectives = {
 	-- ============================================
 	{
 		Id = 34,
-		Name = "Gold Collector 1",
-		Description = "Deposit raw gold ore",
+		Name = "Gold Discovery",
+		Description = "A gleaming new ore appears in your mine, collect your first gold ore",
 		Age = 3,
 		RequiredObjectives = {33},
 		Requirements = {
@@ -538,8 +538,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 35,
-		Name = "Crush It 5",
-		Description = "Crush raw gold ore in an ore crusher",
+		Name = "Gold Crusher",
+		Description = "Put your gold ore through the crusher",
 		Age = 3,
 		RequiredObjectives = {34},
 		Requirements = {
@@ -553,8 +553,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 36,
-		Name = "Ore Cleaner 3",
-		Description = "Pass crushed gold ores through the ore cleaner",
+		Name = "Gold Cleaned",
+		Description = "Clean your crushed gold ore and prepare it for the furnace",
 		Age = 3,
 		RequiredObjectives = {35},
 		Requirements = {
@@ -568,8 +568,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 37,
-		Name = "The Smelter 4",
-		Description = "Process cleaned gold ores in the blast furnace",
+		Name = "Gold Ingot",
+		Description = "Smelt your cleaned gold ore into ingots, a valuable new product",
 		Age = 3,
 		RequiredObjectives = {34},
 		Requirements = {
@@ -583,8 +583,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 38,
-		Name = "Plate Collector 1",
-		Description = "Process gold ingots through the rolling mill",
+		Name = "First Plates",
+		Description = "Feed your gold ingots through the rolling mill to produce gold plates",
 		Age = 3,
 		RequiredObjectives = {37},
 		Requirements = {
@@ -598,8 +598,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 39,
-		Name = "Plate Collector 2",
-		Description = "Process ingots through the rolling mill",
+		Name = "Iron and Copper Plates",
+		Description = "Your rolling mill handles more than gold, produce iron and copper plates too",
 		Age = 3,
 		RequiredObjectives = {38},
 		Requirements = {
@@ -614,8 +614,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 40,
-		Name = "Plate Collector 3",
-		Description = "Process impure ingots through the rolling mill",
+		Name = "Impure Plates",
+		Description = "Roll your impure ingots into plates, nothing goes to waste",
 		Age = 3,
 		RequiredObjectives = {39},
 		Requirements = {
@@ -629,8 +629,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 42,
-		Name = "Plate Collector 4",
-		Description = "Process ingots through the rolling mill",
+		Name = "Mixed Plate Batch",
+		Description = "Produce a mix of iron, copper and gold plates from the rolling mill",
 		Age = 3,
 		RequiredObjectives = {38},
 		Requirements = {
@@ -646,8 +646,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 43,
-		Name = "Plate Processor 1",
-		Description = "Make iron gears in the component assembler",
+		Name = "First Gears",
+		Description = "Feed your iron plates into the component assembler to produce your first gears",
 		Age = 3,
 		RequiredObjectives = {42},
 		Requirements = {
@@ -661,8 +661,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 44,
-		Name = "Gem Collector 7",
-		Description = "Process gems through the gem polisher",
+		Name = "Polished Trio",
+		Description = "Polish all three gem types, your collection is getting impressive",
 		Age = 3,
 		RequiredObjectives = {43},
 		Requirements = {
@@ -678,8 +678,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 45,
-		Name = "Copper Collector 3",
-		Description = "Deposit copper plates and gears",
+		Name = "Copper Components",
+		Description = "Your rolling mill and assembler work on copper too, collect copper plates and gears",
 		Age = 3,
 		RequiredObjectives = {43},
 		Requirements = {
@@ -694,8 +694,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 46,
-		Name = "Copper Collector 4",
-		Description = "Deposit copper plates and ingots",
+		Name = "Copper Stockpile",
+		Description = "Deposit a solid batch of copper ingots and plates from your processing line",
 		Age = 3,
 		RequiredObjectives = {45},
 		Requirements = {
@@ -710,8 +710,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 47,
-		Name = "Plate Processor 2",
-		Description = "Deposit iron, copper and gold gears",
+		Name = "Gear Collection",
+		Description = "Your assembler is busy, deposit iron, copper and gold gears",
 		Age = 3,
 		RequiredObjectives = {45},
 		Requirements = {
@@ -727,8 +727,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 48,
-		Name = "Plate Processor 3",
-		Description = "Make copper coils in the component assembler",
+		Name = "First Coils",
+		Description = "Feed copper plates into the assembler to produce your first copper coils",
 		Age = 3,
 		RequiredObjectives = {47},
 		Requirements = {
@@ -742,8 +742,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 49,
-		Name = "Iron Collector 7",
-		Description = "Deposit iron plates and ingots",
+		Name = "Iron Refined",
+		Description = "Deposit a batch of iron ingots and plates from your processing line",
 		Age = 3,
 		RequiredObjectives = {48},
 		Requirements = {
@@ -758,8 +758,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 50,
-		Name = "Plate Processor 4",
-		Description = "Make impure coils in the component assembler",
+		Name = "Impure Coils",
+		Description = "Roll and assemble your impure materials into coils",
 		Age = 3,
 		RequiredObjectives = {48},
 		Requirements = {
@@ -773,8 +773,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 51,
-		Name = "Plate Processor 5",
-		Description = "Make gold pipes in the component assembler",
+		Name = "Gold Pipes",
+		Description = "Your assembler can produce gold pipes too, deposit a batch of them",
 		Age = 3,
 		RequiredObjectives = {50},
 		Requirements = {
@@ -788,8 +788,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 52,
-		Name = "Plate Processor 6",
-		Description = "Make iron gears and coper coils in the component assembler",
+		Name = "Gears and Coils",
+		Description = "Your assembler is running at full capacity, deposit iron gears and copper coils",
 		Age = 3,
 		RequiredObjectives = {51},
 		Requirements = {
@@ -804,8 +804,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 53,
-		Name = "Gold Collector 2",
-		Description = "Deposit various gold items",
+		Name = "Gold Mastery",
+		Description = "Deposit gold in every form your operation produces",
 		Age = 3,
 		RequiredObjectives = {52},
 		Requirements = {
@@ -821,8 +821,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 54,
-		Name = "Gem Collector 8",
-		Description = "Process gems through the gem polisher",
+		Name = "Gem Mastery",
+		Description = "Your gem collection reaches new heights, polish and deposit them all",
 		Age = 3,
 		RequiredObjectives = {53},
 		Requirements = {
@@ -839,7 +839,7 @@ ResearchData.Objectives = {
 	{
 		Id = 55,
 		Name = "Third Age Master",
-		Description = "Master the third age",
+		Description = "Gears, coils and pipes mastered, the Fourth Age awaits",
 		Age = 3,
 		RequiredObjectives = {53},
 		IsMainObjective = true,
@@ -862,8 +862,8 @@ ResearchData.Objectives = {
 
 	{
 		Id = 56, 
-		Name = "Iron Master 1",
-		Description = "Deposit iron",
+		Name = "Iron in Bulk",
+		Description = "Your iron operation needs to work overtime, deposit ore in every form",
 		Age = 4,
 		RequiredObjectives = {55}, 
 		Requirements = {
@@ -879,8 +879,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 57, 
-		Name = "Iron Master 2",
-		Description = "Deposit iron",
+		Name = "Iron Processed",
+		Description = "Smelt and roll your iron into ingots and plates by the hundreds",
 		Age = 4,
 		RequiredObjectives = {56}, 
 		Requirements = {
@@ -895,8 +895,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 58, 
-		Name = "The Iron Master",
-		Description = "Deposit iron",
+		Name = "Iron Perfected",
+		Description = "Gears, coils and pipes, deposit iron components in massive quantities to prove your mastery",
 		Age = 4,
 		RequiredObjectives = {57}, 
 		Requirements = {
@@ -912,8 +912,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 59, 
-		Name = "Copper Master 1",
-		Description = "Deposit copper",
+		Name = "Copper in Bulk",
+		Description = "Put your copper operation to the test, deposit ore in every form",
 		Age = 4,
 		RequiredObjectives = {55}, 
 		Requirements = {
@@ -929,8 +929,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 60, 
-		Name = "Copper Master 2",
-		Description = "Deposit copper",
+		Name = "Copper Processed",
+		Description = "Smelt and roll your copper into ingots and plates by the hundreds",
 		Age = 4,
 		RequiredObjectives = {59}, 
 		Requirements = {
@@ -945,8 +945,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 61, 
-		Name = "The Copper Master",
-		Description = "Deposit copper",
+		Name = "Copper Perfected",
+		Description = "Gears, coils and pipes, deposit copper components in massive quantities to prove your mastery",
 		Age = 4,
 		RequiredObjectives = {60}, 
 		Requirements = {
@@ -962,8 +962,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 62, 
-		Name = "Gold Master 1",
-		Description = "Deposit gold",
+		Name = "Gold in Bulk",
+		Description = "Your gold operation needs to match the rest, deposit ore in every form",
 		Age = 4,
 		RequiredObjectives = {55}, 
 		Requirements = {
@@ -979,8 +979,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 63, 
-		Name = "Gold Master 2",
-		Description = "Deposit gold",
+		Name = "Gold Processed",
+		Description = "Smelt and roll your gold into ingots and plates by the hundreds",
 		Age = 4,
 		RequiredObjectives = {62}, 
 		Requirements = {
@@ -995,8 +995,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 64, 
-		Name = "The Gold Master",
-		Description = "Deposit gold",
+		Name = "Gold Perfected",
+		Description = "Gears, coils and pipes, deposit gold components in massive quantities to prove your mastery",
 		Age = 4,
 		RequiredObjectives = {63}, 
 		Requirements = {
@@ -1012,8 +1012,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 65, 
-		Name = "Gem Master 1",
-		Description = "Deposit gems",
+		Name = "Gem Haul",
+		Description = "Your mines have been generous, deposit gems of every type in large quantities",
 		Age = 4,
 		RequiredObjectives = {55}, 
 		Requirements = {
@@ -1029,8 +1029,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 66, 
-		Name = "The Gem Master",
-		Description = "Deposit polished gems",
+		Name = "Gem Perfected",
+		Description = "Polish and deposit every gem type in bulk, the finest collection in the deep",
 		Age = 4,
 		RequiredObjectives = {65}, 
 		Requirements = {
@@ -1046,8 +1046,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 67, 
-		Name = "Impure Master 1",
-		Description = "Deposit impure",
+		Name = "Impure Processed",
+		Description = "Smelt and roll your impure materials into ingots and plates by the hundreds",
 		Age = 4,
 		RequiredObjectives = {55}, 
 		Requirements = {
@@ -1062,8 +1062,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 68, 
-		Name = "The Impure Master",
-		Description = "Deposit impure",
+		Name = "Impure Perfected",
+		Description = "Gears, coils and pipes, deposit impure components in massive quantities to prove your mastery",
 		Age = 4,
 		RequiredObjectives = {67}, 
 		Requirements = {
