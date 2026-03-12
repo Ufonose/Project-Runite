@@ -380,9 +380,7 @@ function module.LOAD(MODULE_INFO)
 		maxAllButton.Visible = not IN_SPEEDRUN
 
 		maxAllButton_Click.MouseButton1Click:Connect(function()
-			if not IN_SPEEDRUN then
-				MarketplaceService:PromptGamePassPurchase(Plr, MAX_ALL_UPGRADES_GAMEPASS_ID)
-			end
+			MarketplaceService:PromptGamePassPurchase(Plr, MAX_ALL_UPGRADES_GAMEPASS_ID)
 		end)
 
 		-- Refresh after Max All gamepass purchase
@@ -670,7 +668,7 @@ function module.LOAD(MODULE_INFO)
 					break
 				end
 			end
-			maxAllButton.Visible = not IN_SPEEDRUN and not allMaxed
+			maxAllButton.Visible = not allMaxed
 
 			for _, child in pairs(upgradesScroll:GetChildren()) do
 				if child:IsA("Frame") then child:Destroy() end
@@ -886,6 +884,9 @@ function module.LOAD(MODULE_INFO)
 				if success then
 					SoundManager.Purchase()
 					LOAD_UPGRADES()
+					if _G.NotifyPremiumShopUpgradePurchased then  -- ← ADD THIS
+						task.spawn(_G.NotifyPremiumShopUpgradePurchased)
+					end
 
 					local newLevel = SELECTED_UPGRADE.CurrentLevel + 1
 					local newCost = SELECTED_UPGRADE.Data.BaseCost * (SELECTED_UPGRADE.Data.CostMultiplier ^ newLevel)
