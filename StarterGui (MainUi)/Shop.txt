@@ -968,9 +968,9 @@ function module.LOAD(MODULE_INFO)
 					else
 						local unlockResearch = RepStorage.Events.GetItemUnlockRequirement:InvokeServer(ITEM_INFO.ItemId)
 						if unlockResearch then
-							selectedDesc.Text = "🔒 LOCKED: Requires " .. unlockResearch.Name .. "\n\n" .. ITEM_INFO.Description
+							selectedDesc.Text = "🔒 LOCKED: Requires " .. unlockResearch.Name .. "\n" .. ITEM_INFO.Description
 						else
-							selectedDesc.Text = "🔒 LOCKED\n\n" .. ITEM_INFO.Description
+							selectedDesc.Text = "🔒 LOCKED\n" .. ITEM_INFO.Description
 						end
 					end
 
