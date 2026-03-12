@@ -164,7 +164,7 @@ function module.LOAD(MODULE_INFO)
 		-- Mini pass indicators (icon + name, one per pass)
 		local passEntries = {
 			{ icon = "", name = "2x Cash",              color = Color3.fromRGB(255, 215, 0)   },
-			{ icon = "", name = "Auto Research",        color = Color3.fromRGB(130, 180, 255) },
+			{ icon = "", name = "Auto-Start Research",        color = Color3.fromRGB(130, 180, 255) },
 			{ icon = "", name = "Research Boost",       color = Color3.fromRGB(80, 220, 170)  },
 			{ icon = "", name = "Max All Upgrades",     color = Color3.fromRGB(255, 140, 50)  },
 			{ icon = "", name = "Speedrun Early Unlock", color = Color3.fromRGB(200, 140, 255) },
@@ -452,7 +452,7 @@ function module.LOAD(MODULE_INFO)
 			strokeColor = Color3.fromRGB(80, 140, 220),
 			iconBgColor = Color3.fromRGB(20, 50, 110),
 			iconImage   = "rbxassetid://91678049278979",
-			titleText   = "Auto Research",
+			titleText   = "Auto-Start Research",
 			titleColor  = Color3.fromRGB(130, 180, 255),
 			descText    = "Automatically starts all available research objectives whenever they become unlocked. Toggle on or off in the Research menu at any time.",
 		})
