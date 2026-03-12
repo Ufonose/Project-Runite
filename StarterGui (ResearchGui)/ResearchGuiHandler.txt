@@ -679,8 +679,8 @@ local function createObjectiveCard(objectiveData, researchData, position)
 
 	-- Description
 	local desc = Instance.new("TextLabel")
-	desc.Size = UDim2.new(0.9273, 0, 0.1364, 0)  -- (220-16)/220 = 0.9273, 30/220 = 0.1364
-	desc.Position = UDim2.new(0.0364, 0, 0.1955, 0)  -- 8/220 = 0.0364, 43/220 = 0.1955
+	desc.Size = UDim2.new(0.9273, 0, 0.18, 0)  -- (220-16)/220 = 0.9273, 30/220 = 0.1364
+	desc.Position = UDim2.new(0.0364, 0, 0.15, 0)  -- 8/220 = 0.0364, 43/220 = 0.1955
 	desc.BackgroundTransparency = 1
 	desc.Text = objectiveData.Description
 	desc.TextColor3 = Color3.fromRGB(180, 180, 180)
