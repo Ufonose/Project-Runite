@@ -163,7 +163,7 @@ ResearchData.Objectives = {
 	{
 		Id = 9,
 		Name = "Ore Cleaner 1",
-		Description = "Pass crushed iron ores through a cleaning station",
+		Description = "Pass crushed iron ores through the ore cleaner",
 		Age = 1,
 		RequiredObjectives = {8},
 		Requirements = {
@@ -246,7 +246,7 @@ ResearchData.Objectives = {
 	{
 		Id = 15,
 		Name = "Ore Cleaner 2",
-		Description = "Pass crushed copper ores through a cleaning station",
+		Description = "Pass crushed copper ores through the ore cleaner",
 		Age = 2,
 		RequiredObjectives = {14}, 
 		Requirements = {
@@ -325,7 +325,7 @@ ResearchData.Objectives = {
 	{
 		Id = 20,
 		Name = "The Smelter 1",
-		Description = "Process cleaned iron ore in the blast furnace",
+		Description = "Process cleaned iron ores in the blast furnace",
 		Age = 2,
 		RequiredObjectives = {19}, 
 		Requirements = {
@@ -340,7 +340,7 @@ ResearchData.Objectives = {
 	{
 		Id = 21,
 		Name = "The Smelter 2",
-		Description = "Process cleaned copper ore in the blast furnace",
+		Description = "Process cleaned copper ores in the blast furnace",
 		Age = 2,
 		RequiredObjectives = {20}, 
 		Requirements = {
@@ -355,7 +355,7 @@ ResearchData.Objectives = {
 	{
 		Id = 22,
 		Name = "The Smelter 3",
-		Description = "Process cleaned ore in the blast furnace",
+		Description = "Process cleaned ores in the blast furnace",
 		Age = 2,
 		RequiredObjectives = {21}, 
 		Requirements = {
@@ -481,8 +481,8 @@ ResearchData.Objectives = {
 	},
 	{
 		Id = 30,
-		Name = "Gem Colletor 6",
-		Description = "Process gems through the polishing machine",
+		Name = "Gem Collector 6",
+		Description = "Process gems through the gem polisher",
 		Age = 2,
 		RequiredObjectives = {29}, 
 		Requirements = {
@@ -554,7 +554,7 @@ ResearchData.Objectives = {
 	{
 		Id = 36,
 		Name = "Ore Cleaner 3",
-		Description = "Pass crushed gold ores through a cleaning station",
+		Description = "Pass crushed gold ores through the ore cleaner",
 		Age = 3,
 		RequiredObjectives = {35},
 		Requirements = {
@@ -569,7 +569,7 @@ ResearchData.Objectives = {
 	{
 		Id = 37,
 		Name = "The Smelter 4",
-		Description = "Process cleaned gold ore in the blast furnace",
+		Description = "Process cleaned gold ores in the blast furnace",
 		Age = 3,
 		RequiredObjectives = {34},
 		Requirements = {
@@ -647,7 +647,7 @@ ResearchData.Objectives = {
 	{
 		Id = 43,
 		Name = "Plate Processor 1",
-		Description = "Make iron gears in the plate processor",
+		Description = "Make iron gears in the component assembler",
 		Age = 3,
 		RequiredObjectives = {42},
 		Requirements = {
@@ -662,7 +662,7 @@ ResearchData.Objectives = {
 	{
 		Id = 44,
 		Name = "Gem Collector 7",
-		Description = "Process gems through the polishing machine",
+		Description = "Process gems through the gem polisher",
 		Age = 3,
 		RequiredObjectives = {43},
 		Requirements = {
@@ -728,7 +728,7 @@ ResearchData.Objectives = {
 	{
 		Id = 48,
 		Name = "Plate Processor 3",
-		Description = "Make copper coils in the plate processor",
+		Description = "Make copper coils in the component assembler",
 		Age = 3,
 		RequiredObjectives = {47},
 		Requirements = {
@@ -759,7 +759,7 @@ ResearchData.Objectives = {
 	{
 		Id = 50,
 		Name = "Plate Processor 4",
-		Description = "Make impure coils in the plate processor",
+		Description = "Make impure coils in the component assembler",
 		Age = 3,
 		RequiredObjectives = {48},
 		Requirements = {
@@ -774,7 +774,7 @@ ResearchData.Objectives = {
 	{
 		Id = 51,
 		Name = "Plate Processor 5",
-		Description = "Make gold pipes in the plate processor",
+		Description = "Make gold pipes in the component assembler",
 		Age = 3,
 		RequiredObjectives = {50},
 		Requirements = {
@@ -789,7 +789,7 @@ ResearchData.Objectives = {
 	{
 		Id = 52,
 		Name = "Plate Processor 6",
-		Description = "Make iron gears and coper coils in the plate processor",
+		Description = "Make iron gears and coper coils in the component assembler",
 		Age = 3,
 		RequiredObjectives = {51},
 		Requirements = {
@@ -805,7 +805,7 @@ ResearchData.Objectives = {
 	{
 		Id = 53,
 		Name = "Gold Collector 2",
-		Description = "Make iron gears and coper coils in the plate processor",
+		Description = "Deposit various gold items",
 		Age = 3,
 		RequiredObjectives = {52},
 		Requirements = {
@@ -822,7 +822,7 @@ ResearchData.Objectives = {
 	{
 		Id = 54,
 		Name = "Gem Collector 8",
-		Description = "Process gems through the polishing machine",
+		Description = "Process gems through the gem polisher",
 		Age = 3,
 		RequiredObjectives = {53},
 		Requirements = {
