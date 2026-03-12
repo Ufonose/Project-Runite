@@ -10,10 +10,11 @@ function module.LOAD(MODULE_INFO)
 	local MarketplaceService = game:GetService("MarketplaceService")
 
 	-- !! Must match GamepassHandler !!
-	local DOUBLE_CASH_GAMEPASS_ID      = 1745379165
-	local AUTO_RESEARCH_GAMEPASS_ID    = 1741387786
-	local RESEARCH_BOOST_GAMEPASS_ID   = 1744553461
-	local MAX_ALL_UPGRADES_GAMEPASS_ID = 1745314478
+	local DOUBLE_CASH_GAMEPASS_ID           = 1745379165
+	local AUTO_RESEARCH_GAMEPASS_ID         = 1741387786
+	local RESEARCH_BOOST_GAMEPASS_ID        = 1744553461
+	local MAX_ALL_UPGRADES_GAMEPASS_ID      = 1745314478
+	local SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID = 1744113516
 
 	task.spawn(function()
 		local shopFolder = script.Parent
@@ -160,12 +161,13 @@ function module.LOAD(MODULE_INFO)
 		passesConstraint.MaxTextSize = 11
 		passesConstraint.Parent = passesLabel
 
-		-- Mini pass indicators (icon + name, one per pass) — now includes Max All
+		-- Mini pass indicators (icon + name, one per pass)
 		local passEntries = {
-			{ icon = "", name = "2x Cash",        color = Color3.fromRGB(255, 215, 0)   },
-			{ icon = "", name = "Auto Research",  color = Color3.fromRGB(130, 180, 255) },
-			{ icon = "", name = "Research Boost", color = Color3.fromRGB(80, 220, 170)  },
-			{ icon = "", name = "Max All Upgrades",        color = Color3.fromRGB(255, 140, 50)  },
+			{ icon = "", name = "2x Cash",              color = Color3.fromRGB(255, 215, 0)   },
+			{ icon = "", name = "Auto Research",        color = Color3.fromRGB(130, 180, 255) },
+			{ icon = "", name = "Research Boost",       color = Color3.fromRGB(80, 220, 170)  },
+			{ icon = "", name = "Max All Upgrades",     color = Color3.fromRGB(255, 140, 50)  },
+			{ icon = "", name = "Speedrun Early Unlock", color = Color3.fromRGB(200, 140, 255) },
 		}
 
 		for i, entry in ipairs(passEntries) do
@@ -477,18 +479,32 @@ function module.LOAD(MODULE_INFO)
 			descText    = "Instantly maxes every upgrade to its highest level. A permanent one-time boost.",
 		})
 
+		local card5 = buildCard({
+			order       = 5,
+			bgColor     = Color3.fromRGB(25, 20, 40),
+			strokeColor = Color3.fromRGB(160, 80, 255),
+			iconBgColor = Color3.fromRGB(70, 20, 120),
+			iconImage   = "rbxassetid://82189845051917",  -- ← swap for a speedrun/timer icon when ready
+			titleText   = "Speedrun Early Unlock",
+			titleColor  = Color3.fromRGB(200, 140, 255),
+			descText    = "Skip the full research requirement to enter Speedrun Mode at any time.",
+		})
+
 		-- Fetch live prices from Roblox and update each buy button.
 		fetchAndSetPrice(card1.buyBtn, DOUBLE_CASH_GAMEPASS_ID)
 		fetchAndSetPrice(card2.buyBtn, AUTO_RESEARCH_GAMEPASS_ID)
 		fetchAndSetPrice(card3.buyBtn, RESEARCH_BOOST_GAMEPASS_ID)
 		fetchAndSetPrice(card4.buyBtn, MAX_ALL_UPGRADES_GAMEPASS_ID)
+		fetchAndSetPrice(card5.buyBtn, SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID)
 
 		-- ==================== OWNERSHIP LOGIC ====================
 		local checked1, owned1 = false, false
 		local checked2, owned2 = false, false
 		local checked3, owned3 = false, false
 		local checked4, owned4 = false, false
-		local allMaxedByGrind  = false  -- true if every upgrade is already at max level
+		local checked5, owned5 = false, false
+		local allMaxedByGrind     = false  -- true if every upgrade is already at max level
+		local allResearchComplete = false  -- true if all research objectives are done
 		local IN_SPEEDRUN = false
 
 		local function refreshCard(cardData, isOwned, ownedBgColor, ownedStrokeColor, defaultBgColor, defaultStrokeColor)
@@ -582,8 +598,38 @@ function module.LOAD(MODULE_INFO)
 			end
 		end
 
+		local function checkCard5ResearchStatus()
+			local ok, data = pcall(function()
+				return RepStorage.Events.GetSpeedrunData:InvokeServer()
+			end)
+			if ok and data then
+				-- GetData returns Unlocked=true once all research objectives are done
+				allResearchComplete = data.Unlocked == true
+			end
+		end
+
+		local refreshCard5  -- forward declaration so checkCard5ResearchStatus can call it
+
+		refreshCard5 = function()
+			local isUnlocked = owned5 or allResearchComplete
+			refreshCard(card5, isUnlocked,
+				Color3.fromRGB(25, 45, 25), Color3.fromRGB(50, 180, 80),
+				Color3.fromRGB(25, 20, 40),  Color3.fromRGB(160, 80, 255))
+			if isUnlocked then
+				card5.ownedBadge.Text             = "✓ Unlocked"
+				card5.ownedBadge.TextColor3       = Color3.fromRGB(120, 255, 140)
+				card5.ownedBadge.BackgroundColor3 = Color3.fromRGB(30, 100, 40)
+			end
+		end
+
+		-- Expose so ResearchHandler/SpeedrunHandler can notify us when research finishes
+		_G.NotifyPremiumShopResearchCompleted = function()
+			allResearchComplete = true
+			if premiumContainer.Visible then refreshCard5() end
+		end
+
 		local function checkOwnership()
-			if checked1 and checked2 and checked3 and checked4 then
+			if checked1 and checked2 and checked3 and checked4 and checked5 then
 				task.spawn(function()
 					local getSpeedrunData = RepStorage.Events:FindFirstChild("GetSpeedrunData")
 					if getSpeedrunData then
@@ -631,8 +677,19 @@ function module.LOAD(MODULE_INFO)
 					if ok then owned4 = result == true; checked4 = true end
 				end
 
+				if not checked5 then
+					local ok, result = pcall(function()
+						return checkRemote:InvokeServer(SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID)
+					end)
+					if ok then owned5 = result == true; checked5 = true end
+				end
+
 				-- Check if all upgrades are already maxed by grinding
 				checkCard4MaxStatus()
+
+				-- Check if all research is complete (unlocks card5 for free)
+				checkCard5ResearchStatus()
+				refreshCard5()
 
 				local getSpeedrunData = RepStorage.Events:FindFirstChild("GetSpeedrunData")
 				if getSpeedrunData then
@@ -662,6 +719,10 @@ function module.LOAD(MODULE_INFO)
 			MarketplaceService:PromptGamePassPurchase(Plr, MAX_ALL_UPGRADES_GAMEPASS_ID)
 		end)
 
+		card5.buyBtn.MouseButton1Click:Connect(function()
+			MarketplaceService:PromptGamePassPurchase(Plr, SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID)
+		end)
+
 		-- Listen for purchases to refresh UI without reopening the shop
 		local purchasedEvent = RepStorage.Events:WaitForChild("GamepassPurchased", 5)
 		if purchasedEvent then
@@ -678,6 +739,9 @@ function module.LOAD(MODULE_INFO)
 				elseif gpName == "MaxAllUpgrades" then
 					owned4 = true; checked4 = true
 					if premiumContainer.Visible then refreshCard4() end
+				elseif gpName == "SpeedrunEarlyAccess" then
+					owned5 = true; checked5 = true
+					if premiumContainer.Visible then refreshCard5() end
 				end
 			end)
 		end
@@ -703,6 +767,10 @@ function module.LOAD(MODULE_INFO)
 		Events:WaitForChild("RestoredMainPlot").OnClientEvent:Connect(function()
 			IN_SPEEDRUN = false
 			refreshCard3()
+		end)
+		Events:WaitForChild("AllResearchCompleted").OnClientEvent:Connect(function()
+			allResearchComplete = true
+			refreshCard5()
 		end)
 
 		-- ==================== TAB SWITCHING ====================
