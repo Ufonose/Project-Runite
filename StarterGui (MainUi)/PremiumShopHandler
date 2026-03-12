@@ -10,9 +10,10 @@ function module.LOAD(MODULE_INFO)
 	local MarketplaceService = game:GetService("MarketplaceService")
 
 	-- !! Must match GamepassHandler !!
-	local DOUBLE_CASH_GAMEPASS_ID    = 1745379165
-	local AUTO_RESEARCH_GAMEPASS_ID  = 1741387786
-	local RESEARCH_BOOST_GAMEPASS_ID = 1744553461
+	local DOUBLE_CASH_GAMEPASS_ID      = 1745379165
+	local AUTO_RESEARCH_GAMEPASS_ID    = 1741387786
+	local RESEARCH_BOOST_GAMEPASS_ID   = 1744553461
+	local MAX_ALL_UPGRADES_GAMEPASS_ID = 1745314478
 
 	task.spawn(function()
 		local shopFolder = script.Parent
@@ -159,11 +160,12 @@ function module.LOAD(MODULE_INFO)
 		passesConstraint.MaxTextSize = 11
 		passesConstraint.Parent = passesLabel
 
-		-- Mini pass indicators (icon + name, one per pass)
+		-- Mini pass indicators (icon + name, one per pass) — now includes Max All
 		local passEntries = {
-			{ icon = "💰", name = "2x Cash",        color = Color3.fromRGB(255, 215, 0)   },
-			{ icon = "🔬", name = "Auto Research",  color = Color3.fromRGB(130, 180, 255) },
-			{ icon = "⚗️", name = "Research Boost", color = Color3.fromRGB(80, 220, 170)  },
+			{ icon = "", name = "2x Cash",        color = Color3.fromRGB(255, 215, 0)   },
+			{ icon = "", name = "Auto Research",  color = Color3.fromRGB(130, 180, 255) },
+			{ icon = "", name = "Research Boost", color = Color3.fromRGB(80, 220, 170)  },
+			{ icon = "", name = "Max All Upgrades",        color = Color3.fromRGB(255, 140, 50)  },
 		}
 
 		for i, entry in ipairs(passEntries) do
@@ -294,17 +296,13 @@ function module.LOAD(MODULE_INFO)
 			iconCorner.CornerRadius = UDim.new(1, 0)
 			iconCorner.Parent = iconCircle
 
-			local iconLabel = Instance.new("TextLabel")
+			local iconLabel = Instance.new("ImageLabel")
 			iconLabel.Size = UDim2.new(1, 0, 1, 0)
 			iconLabel.BackgroundTransparency = 1
-			iconLabel.Text = cfg.iconEmoji
-			iconLabel.TextScaled = true
+			iconLabel.Image = cfg.iconImage or ""
+			iconLabel.ScaleType = Enum.ScaleType.Fit
 			iconLabel.ZIndex = 10
 			iconLabel.Parent = iconCircle
-
-			local iconConstraint = Instance.new("UITextSizeConstraint")
-			iconConstraint.MaxTextSize = 32
-			iconConstraint.Parent = iconLabel
 
 			-- Buy button (below icon, left column)
 			local buyBtn = Instance.new("TextButton")
@@ -423,7 +421,6 @@ function module.LOAD(MODULE_INFO)
 		end
 
 		-- ==================== HELPER: FETCH AND SET PRICE ON BUY BUTTON ====================
-		-- Runs in its own thread; falls back gracefully if the request fails.
 		local function fetchAndSetPrice(btn, gpId)
 			task.spawn(function()
 				local ok, info = pcall(function()
@@ -432,7 +429,6 @@ function module.LOAD(MODULE_INFO)
 				if ok and info and info.PriceInRobux then
 					btn.Text = "Buy - \u{E002}" .. info.PriceInRobux
 				end
-				-- If the call fails, the button simply keeps its default "🛒 Buy" text.
 			end)
 		end
 
@@ -440,9 +436,9 @@ function module.LOAD(MODULE_INFO)
 		local card1 = buildCard({
 			order       = 1,
 			bgColor     = Color3.fromRGB(35, 30, 20),
-			strokeColor  = Color3.fromRGB(200, 150, 30),
+			strokeColor = Color3.fromRGB(200, 150, 30),
 			iconBgColor = Color3.fromRGB(80, 55, 0),
-			iconEmoji   = "💰",
+			iconImage   = "rbxassetid://133328167380961",
 			titleText   = "2x Cash",
 			titleColor  = Color3.fromRGB(255, 215, 0),
 			descText    = "Permanently doubles all cash earned from ore deposits. Stacks with the Cash Bonus upgrade for massive earnings.",
@@ -451,9 +447,9 @@ function module.LOAD(MODULE_INFO)
 		local card2 = buildCard({
 			order       = 2,
 			bgColor     = Color3.fromRGB(20, 25, 40),
-			strokeColor  = Color3.fromRGB(80, 140, 220),
+			strokeColor = Color3.fromRGB(80, 140, 220),
 			iconBgColor = Color3.fromRGB(20, 50, 110),
-			iconEmoji   = "🔬",
+			iconImage   = "rbxassetid://91678049278979",
 			titleText   = "Auto Research",
 			titleColor  = Color3.fromRGB(130, 180, 255),
 			descText    = "Automatically starts all available research objectives whenever they become unlocked. Toggle on or off in the Research menu at any time.",
@@ -462,24 +458,37 @@ function module.LOAD(MODULE_INFO)
 		local card3 = buildCard({
 			order       = 3,
 			bgColor     = Color3.fromRGB(20, 35, 35),
-			strokeColor  = Color3.fromRGB(60, 180, 140),
+			strokeColor = Color3.fromRGB(60, 180, 140),
 			iconBgColor = Color3.fromRGB(15, 75, 55),
-			iconEmoji   = "⚗️",
+			iconImage   = "rbxassetid://85034664110052",
 			titleText   = "Research Boost",
 			titleColor  = Color3.fromRGB(80, 220, 170),
 			descText    = "Each item deposit counts as double progress toward research objectives.\n⚠️ Disabled during speedruns to keep competition fair.",
 		})
 
+		local card4 = buildCard({
+			order       = 4,
+			bgColor     = Color3.fromRGB(35, 20, 10),
+			strokeColor = Color3.fromRGB(220, 100, 30),
+			iconBgColor = Color3.fromRGB(90, 40, 0),
+			iconImage   = "rbxassetid://96808672936857",  -- ← swap in your asset ID when ready
+			titleText   = "Max All Upgrades",
+			titleColor  = Color3.fromRGB(255, 140, 50),
+			descText    = "Instantly maxes every upgrade to its highest level. A permanent one-time boost.",
+		})
+
 		-- Fetch live prices from Roblox and update each buy button.
-		-- All three run in parallel so there's no stacking delay.
 		fetchAndSetPrice(card1.buyBtn, DOUBLE_CASH_GAMEPASS_ID)
 		fetchAndSetPrice(card2.buyBtn, AUTO_RESEARCH_GAMEPASS_ID)
 		fetchAndSetPrice(card3.buyBtn, RESEARCH_BOOST_GAMEPASS_ID)
+		fetchAndSetPrice(card4.buyBtn, MAX_ALL_UPGRADES_GAMEPASS_ID)
 
 		-- ==================== OWNERSHIP LOGIC ====================
 		local checked1, owned1 = false, false
 		local checked2, owned2 = false, false
 		local checked3, owned3 = false, false
+		local checked4, owned4 = false, false
+		local allMaxedByGrind  = false  -- true if every upgrade is already at max level
 		local IN_SPEEDRUN = false
 
 		local function refreshCard(cardData, isOwned, ownedBgColor, ownedStrokeColor, defaultBgColor, defaultStrokeColor)
@@ -515,17 +524,17 @@ function module.LOAD(MODULE_INFO)
 				card3.buyBtn.Visible     = false
 				card3.ownedBadge.Visible = true
 				if IN_SPEEDRUN then
-					card3.ownedBadge.Text            = "||  Paused"
-					card3.ownedBadge.TextColor3      = Color3.fromRGB(255, 200, 80)
+					card3.ownedBadge.Text             = "||  Paused"
+					card3.ownedBadge.TextColor3       = Color3.fromRGB(255, 200, 80)
 					card3.ownedBadge.BackgroundColor3 = Color3.fromRGB(90, 70, 10)
-					card3.card.BackgroundColor3       = Color3.fromRGB(35, 30, 15)
-					card3.cStroke.Color               = Color3.fromRGB(180, 130, 20)
+					card3.card.BackgroundColor3        = Color3.fromRGB(35, 30, 15)
+					card3.cStroke.Color                = Color3.fromRGB(180, 130, 20)
 				else
-					card3.ownedBadge.Text            = "✓ Active"
-					card3.ownedBadge.TextColor3      = Color3.fromRGB(120, 255, 140)
+					card3.ownedBadge.Text             = "✓ Active"
+					card3.ownedBadge.TextColor3       = Color3.fromRGB(120, 255, 140)
 					card3.ownedBadge.BackgroundColor3 = Color3.fromRGB(30, 100, 40)
-					card3.card.BackgroundColor3       = Color3.fromRGB(25, 45, 25)
-					card3.cStroke.Color               = Color3.fromRGB(50, 180, 80)
+					card3.card.BackgroundColor3        = Color3.fromRGB(25, 45, 25)
+					card3.cStroke.Color                = Color3.fromRGB(50, 180, 80)
 				end
 			else
 				card3.buyBtn.Visible     = true
@@ -535,8 +544,46 @@ function module.LOAD(MODULE_INFO)
 			end
 		end
 
+		local refreshCard4  -- forward declaration so checkCard4MaxStatus can call it
+
+		-- Re-queries the server and refreshes card4; called externally via _G too
+		local function checkCard4MaxStatus()
+			local ok, upgradesData, playerUpgrades = pcall(function()
+				local ud = RepStorage.Events.GetUpgradesData:InvokeServer()
+				local pu = RepStorage.Events.GetPlayerUpgrades:InvokeServer()
+				return ud, pu
+			end)
+			if ok and upgradesData and playerUpgrades then
+				allMaxedByGrind = true
+				for upgradeId, upgradeData in pairs(upgradesData) do
+					local lvl = playerUpgrades[upgradeId] or 0
+					if lvl < (upgradeData.MaxLevel or 10) then
+						allMaxedByGrind = false
+						break
+					end
+				end
+			end
+			refreshCard4()
+		end
+
+		-- Expose so UpgradeShopHandler can notify us after any cash purchase
+		_G.NotifyPremiumShopUpgradePurchased = checkCard4MaxStatus
+
+		-- Max All: green if owned OR if every upgrade is already maxed by grinding
+		refreshCard4 = function()
+			local isMaxed = owned4 or allMaxedByGrind
+			refreshCard(card4, isMaxed,
+				Color3.fromRGB(25, 45, 25), Color3.fromRGB(50, 180, 80),
+				Color3.fromRGB(35, 20, 10),  Color3.fromRGB(220, 100, 30))
+			if isMaxed then
+				card4.ownedBadge.Text             = "✓ Maxed"
+				card4.ownedBadge.TextColor3       = Color3.fromRGB(120, 255, 140)
+				card4.ownedBadge.BackgroundColor3 = Color3.fromRGB(30, 100, 40)
+			end
+		end
+
 		local function checkOwnership()
-			if checked1 and checked2 and checked3 then
+			if checked1 and checked2 and checked3 and checked4 then
 				task.spawn(function()
 					local getSpeedrunData = RepStorage.Events:FindFirstChild("GetSpeedrunData")
 					if getSpeedrunData then
@@ -577,6 +624,16 @@ function module.LOAD(MODULE_INFO)
 					if ok then owned3 = result == true; checked3 = true end
 				end
 
+				if not checked4 then
+					local ok, result = pcall(function()
+						return checkRemote:InvokeServer(MAX_ALL_UPGRADES_GAMEPASS_ID)
+					end)
+					if ok then owned4 = result == true; checked4 = true end
+				end
+
+				-- Check if all upgrades are already maxed by grinding
+				checkCard4MaxStatus()
+
 				local getSpeedrunData = RepStorage.Events:FindFirstChild("GetSpeedrunData")
 				if getSpeedrunData then
 					local ok2, data = pcall(function() return getSpeedrunData:InvokeServer() end)
@@ -601,6 +658,10 @@ function module.LOAD(MODULE_INFO)
 			MarketplaceService:PromptGamePassPurchase(Plr, RESEARCH_BOOST_GAMEPASS_ID)
 		end)
 
+		card4.buyBtn.MouseButton1Click:Connect(function()
+			MarketplaceService:PromptGamePassPurchase(Plr, MAX_ALL_UPGRADES_GAMEPASS_ID)
+		end)
+
 		-- Listen for purchases to refresh UI without reopening the shop
 		local purchasedEvent = RepStorage.Events:WaitForChild("GamepassPurchased", 5)
 		if purchasedEvent then
@@ -614,9 +675,19 @@ function module.LOAD(MODULE_INFO)
 				elseif gpName == "ResearchBoost" then
 					owned3 = true; checked3 = true
 					if premiumContainer.Visible then refreshCard3() end
+				elseif gpName == "MaxAllUpgrades" then
+					owned4 = true; checked4 = true
+					if premiumContainer.Visible then refreshCard4() end
 				end
 			end)
 		end
+
+		-- Refresh card4 after any dev product "Instant Max" purchase
+		MarketplaceService.PromptProductPurchaseFinished:Connect(function(_, _, wasPurchased)
+			if wasPurchased then
+				task.spawn(checkCard4MaxStatus)
+			end
+		end)
 
 		-- ==================== SPEEDRUN LISTENERS ====================
 		local Events = RepStorage:WaitForChild("Events")
