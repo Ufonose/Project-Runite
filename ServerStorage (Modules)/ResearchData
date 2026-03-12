@@ -77,7 +77,7 @@ ResearchData.Objectives = {
 			{ItemName = "Emerald Gem", Amount = 1},
 		},
 		Rewards = {
-			ResearchTokens = 3,
+			ResearchTokens = 7,
 			UnlockMachines = {},
 		},
 		TreePosition = {X = 1, Y = 2}, -- (column 1, row 1)
@@ -139,8 +139,8 @@ ResearchData.Objectives = {
 			{ItemName = "Ruby Gem", Amount = 1},
 		},
 		Rewards = {
-			ResearchTokens = 4,
-			UnlockMachines = {},
+			ResearchTokens = 0,
+			UnlockMachines = {26},
 		},
 		TreePosition = {X = 3, Y = 2}, -- (column 1, row 1)
 	},
