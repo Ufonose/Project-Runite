@@ -382,17 +382,7 @@ function module.LOAD(MODULE_INFO)
 		maxAllButton_Click.MouseButton1Click:Connect(function()
 			MarketplaceService:PromptGamePassPurchase(Plr, MAX_ALL_UPGRADES_GAMEPASS_ID)
 		end)
-
-		-- Refresh after Max All gamepass purchase
-		MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(_, gamepassId, wasPurchased)
-			if not wasPurchased then return end
-			if gamepassId == MAX_ALL_UPGRADES_GAMEPASS_ID then
-				LOAD_UPGRADES()
-				selectedPanel.Visible = false
-				SELECTED_UPGRADE = nil
-			end
-		end)
-
+		
 		-- Refresh after individual Max purchase
 		MarketplaceService.PromptProductPurchaseFinished:Connect(function(_, productId, wasPurchased)
 			if not wasPurchased then return end
@@ -481,6 +471,16 @@ function module.LOAD(MODULE_INFO)
 		selectedPanel.Visible = false
 		selectedPanel.ZIndex = 7
 		selectedPanel.Parent = upgradesContainer
+
+		-- Refresh after Max All gamepass purchase
+		MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(_, gamepassId, wasPurchased)
+			if not wasPurchased then return end
+			if gamepassId == MAX_ALL_UPGRADES_GAMEPASS_ID then
+				LOAD_UPGRADES()
+				selectedPanel.Visible = false
+				SELECTED_UPGRADE = nil
+			end
+		end)
 
 		local selectedCorner = Instance.new("UICorner")
 		selectedCorner.CornerRadius = UDim.new(0, 12)
