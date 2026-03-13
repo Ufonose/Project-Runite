@@ -410,28 +410,30 @@ startStep2 = function()
 	if not placedFolder then warn("[Tutorial] Could not find PlacedItems folder"); return end
 
 	local conn = placedFolder.ChildAdded:Connect(function(child)
-		local isConveyor = child.Name:lower():find("conveyor") or child.Name:lower():find("basic")
-		if not isConveyor and child:FindFirstChild("ItemStats") then
-			local ok2, stats = pcall(require, child.ItemStats)
-			if ok2 and stats and (stats.ItemType == "ConveyorTab" or stats.ItemType == "Conveyor") then
-				isConveyor = true
+		task.defer(function()  -- ← let the model fully replicate before reading positions
+			local isConveyor = child.Name:lower():find("conveyor") or child.Name:lower():find("basic")
+			if not isConveyor and child:FindFirstChild("ItemStats") then
+				local ok2, stats = pcall(require, child.ItemStats)
+				if ok2 and stats and (stats.ItemType == "ConveyorTab" or stats.ItemType == "Conveyor") then
+					isConveyor = true
+				end
 			end
-		end
-		if not isConveyor then return end
+			if not isConveyor then return end
 
-		local hitbox = child:FindFirstChild("Hitbox") or child.PrimaryPart
-		if not hitbox then return end
+			local hitbox = child:WaitForChild("Hitbox", 5) or child.PrimaryPart  -- ← wait for it
+			if not hitbox then return end
 
-		local allFilled = checkGhostSlot(filled, ghostConveyors, GHOST_CONVEYOR_POSITIONS, hitbox.Position, 3)
-		pcall(function() Events:WaitForChild("SetTutorialSlots"):FireServer(filled) end)
+			local allFilled = checkGhostSlot(filled, ghostConveyors, GHOST_CONVEYOR_POSITIONS, hitbox.Position, 3)
+			pcall(function() Events:WaitForChild("SetTutorialSlots"):FireServer(filled) end)
 
-		if allFilled then
-			cleanStepConns()
-			destroyGhosts(ghostConveyors)
-			pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(3) end)
-			pcall(function() Events:WaitForChild("SetTutorialSlots"):FireServer({}) end)
-			startStep3()
-		end
+			if allFilled then
+				cleanStepConns()
+				destroyGhosts(ghostConveyors)
+				pcall(function() Events:WaitForChild("SetTutorialStep"):FireServer(3) end)
+				pcall(function() Events:WaitForChild("SetTutorialSlots"):FireServer({}) end)
+				startStep3()
+			end
+		end)
 	end)
 	table.insert(stepConns, conn)
 end
@@ -451,18 +453,20 @@ startStep3 = function()
 
 	local filled = {}
 	local conn = placedFolder.ChildAdded:Connect(function(child)
-		local isCorner = child.Name:lower():find("corner")
-		if not isCorner then return end
+		task.defer(function()
+			local isCorner = child.Name:lower():find("corner")
+			if not isCorner then return end
 
-		local hitbox = child:FindFirstChild("Hitbox") or child.PrimaryPart
-		if not hitbox then return end
+			local hitbox = child:WaitForChild("Hitbox", 5) or child.PrimaryPart
+			if not hitbox then return end
 
-		local allFilled = checkGhostSlot(filled, ghostCorners, GHOST_CORNER_POSITIONS, hitbox.Position, 3)
-		if allFilled then
-			cleanStepConns()
-			destroyGhosts(ghostCorners)
-			startStep4()
-		end
+			local allFilled = checkGhostSlot(filled, ghostCorners, GHOST_CORNER_POSITIONS, hitbox.Position, 3)
+			if allFilled then
+				cleanStepConns()
+				destroyGhosts(ghostCorners)
+				startStep4()
+			end
+		end)
 	end)
 	table.insert(stepConns, conn)
 end
