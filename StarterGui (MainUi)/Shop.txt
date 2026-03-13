@@ -305,7 +305,7 @@ function module.LOAD(MODULE_INFO)
 	-- ==================== LEFT SIDEBAR - CATEGORIES WITH SEARCH ====================
 	local categoryFrame = Instance.new("Frame")
 	categoryFrame.Name = "CategorySidebar"
-	categoryFrame.Size = UDim2.new(0.15, 0, 0.915, 0)  -- Taller to fill more space
+	categoryFrame.Size = UDim2.new(0.15, 0, 0.733, 0) -- Taller to fill more space
 	categoryFrame.Position = UDim2.new(0.0357, 0, 0.065, 0)  -- Moved up
 	categoryFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 	categoryFrame.BackgroundTransparency = 0.3
@@ -334,7 +334,7 @@ function module.LOAD(MODULE_INFO)
 	-- Layout for all items including search bar
 	local categoryLayout = Instance.new("UIListLayout")
 	categoryLayout.FillDirection = Enum.FillDirection.Vertical
-	categoryLayout.Padding = UDim.new(0.01, 0)  -- Small gap between items
+	categoryLayout.Padding = UDim.new(0.013, 0)  -- Small gap between items
 	categoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	categoryLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	categoryLayout.Parent = categoryFrame
@@ -342,7 +342,7 @@ function module.LOAD(MODULE_INFO)
 	-- Search bar inside category sidebar (now part of layout)
 	local searchFrame = Instance.new("Frame")
 	searchFrame.Name = "SearchFrame"
-	searchFrame.Size = UDim2.new(0.9, 0, 0.045, 0)  -- Scale-based height
+	searchFrame.Size = UDim2.new(0.9, 0, 0.057, 0)  -- Scale-based height
 	searchFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 	searchFrame.BorderSizePixel = 0
 	searchFrame.ZIndex = 8
@@ -422,7 +422,7 @@ function module.LOAD(MODULE_INFO)
 	-- "All" button
 	local allButton = Instance.new("TextButton")
 	allButton.Name = "AllTab"
-	allButton.Size = UDim2.new(0.9, 0, 0.045, 0)  -- Scale-based height
+	allButton.Size = UDim2.new(0.9, 0, 0.057, 0)  -- Scale-based height
 	allButton.BackgroundColor3 = Color3.fromRGB(100, 70, 140)
 	allButton.Text = "All"
 	allButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -461,7 +461,7 @@ function module.LOAD(MODULE_INFO)
 	for i, category in pairs(categories) do
 		local tabButton = Instance.new("TextButton")
 		tabButton.Name = category.Name
-		tabButton.Size = UDim2.new(0.9, 0, 0.045, 0)  -- Scale-based height
+		tabButton.Size = UDim2.new(0.9, 0, 0.057, 0)  -- Scale-based height
 		tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 		tabButton.Text = category.Display
 		tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -510,6 +510,209 @@ function module.LOAD(MODULE_INFO)
 		end
 		LOAD_SHOP()
 	end)
+	
+	-- ==================== GROUP BENEFITS CARD ====================
+	local GroupService = game:GetService("GroupService")
+	local GROUP_ID = 165526802
+	local isInGroup = false
+	local ok, result = pcall(function()
+		return Plr:IsInGroup(GROUP_ID)
+	end)
+	if ok then isInGroup = result end
+
+	local perksCard = Instance.new("Frame")
+	perksCard.Name = "GroupBenefitsCard"
+	perksCard.Size = UDim2.new(0.15, 0, 0.17, 0)
+	perksCard.Position = UDim2.new(0.0357, 0, 0.810, 0)
+	perksCard.BackgroundColor3 = isInGroup and Color3.fromRGB(22, 32, 22) or Color3.fromRGB(32, 22, 22)
+	perksCard.BackgroundTransparency = 0.15
+	perksCard.BorderSizePixel = 0
+	perksCard.ZIndex = 7
+	perksCard.Parent = itemsContainer
+
+	local perksCorner = Instance.new("UICorner")
+	perksCorner.CornerRadius = UDim.new(0, 12)
+	perksCorner.Parent = perksCard
+
+	local perksStroke = Instance.new("UIStroke")
+	perksStroke.Color = isInGroup and Color3.fromRGB(55, 90, 55) or Color3.fromRGB(90, 55, 55)
+	perksStroke.Thickness = 1
+	perksStroke.Transparency = 0.3
+	perksStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	perksStroke.Parent = perksCard
+
+	local perksPadding = Instance.new("UIPadding")
+	perksPadding.PaddingTop    = UDim.new(0.08, 0)
+	perksPadding.PaddingBottom = UDim.new(0.08, 0)
+	perksPadding.PaddingLeft   = UDim.new(0.08, 0)
+	perksPadding.PaddingRight  = UDim.new(0.08, 0)
+	perksPadding.Parent = perksCard
+
+	local perksLayout = Instance.new("UIListLayout")
+	perksLayout.FillDirection = Enum.FillDirection.Vertical
+	perksLayout.Padding = UDim.new(0.04, 0)
+	perksLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	perksLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	perksLayout.Parent = perksCard
+
+	local headerLabel = Instance.new("TextLabel")
+	headerLabel.Name = "Header"
+	headerLabel.Size = UDim2.new(1, 0, 0.28, 0)
+	headerLabel.BackgroundTransparency = 1
+	headerLabel.Text = "Group Benefits"
+	headerLabel.TextColor3 = isInGroup and Color3.fromRGB(213, 174, 67) or Color3.fromRGB(140, 140, 150)
+	headerLabel.Font = Enum.Font.GothamBold
+	headerLabel.TextScaled = true
+	headerLabel.TextXAlignment = Enum.TextXAlignment.Center
+	headerLabel.LayoutOrder = 1
+	headerLabel.ZIndex = 8
+	headerLabel.Parent = perksCard
+
+	local headerConstraint = Instance.new("UITextSizeConstraint")
+	headerConstraint.MaxTextSize = 15
+	headerConstraint.Parent = headerLabel
+
+	if isInGroup then
+		local perk1 = Instance.new("TextLabel")
+		perk1.Name = "Perk1"
+		perk1.Size = UDim2.new(1, 0, 0.24, 0)
+		perk1.BackgroundTransparency = 1
+		perk1.Text = "+10% Cash"
+		perk1.TextColor3 = Color3.fromRGB(120, 220, 120)
+		perk1.Font = Enum.Font.GothamBold
+		perk1.TextScaled = true
+		perk1.TextXAlignment = Enum.TextXAlignment.Center
+		perk1.LayoutOrder = 2
+		perk1.ZIndex = 8
+		perk1.Parent = perksCard
+
+		local perk1Constraint = Instance.new("UITextSizeConstraint")
+		perk1Constraint.MaxTextSize = 13
+		perk1Constraint.Parent = perk1
+
+		local perk2 = Instance.new("TextLabel")
+		perk2.Name = "Perk2"
+		perk2.Size = UDim2.new(1, 0, 0.24, 0)
+		perk2.BackgroundTransparency = 1
+		perk2.Text = "5% Double Progress Chance"
+		perk2.TextColor3 = Color3.fromRGB(120, 180, 255)
+		perk2.Font = Enum.Font.GothamBold
+		perk2.TextScaled = true
+		perk2.TextXAlignment = Enum.TextXAlignment.Center
+		perk2.LayoutOrder = 3
+		perk2.ZIndex = 8
+		perk2.Parent = perksCard
+
+		local perk2Constraint = Instance.new("UITextSizeConstraint")
+		perk2Constraint.MaxTextSize = 13
+		perk2Constraint.Parent = perk2
+	else
+		-- Greyed out perk lines with lock icons
+		local perk1Locked = Instance.new("TextLabel")
+		perk1Locked.Size = UDim2.new(1, 0, 0.2, 0)
+		perk1Locked.BackgroundTransparency = 1
+		perk1Locked.Text = "🔒 +10% Cash"
+		perk1Locked.TextColor3 = Color3.fromRGB(47, 86, 47)
+		perk1Locked.Font = Enum.Font.GothamBold
+		perk1Locked.TextScaled = true
+		perk1Locked.TextXAlignment = Enum.TextXAlignment.Center
+		perk1Locked.LayoutOrder = 2
+		perk1Locked.ZIndex = 8
+		perk1Locked.Parent = perksCard
+
+		local p1c = Instance.new("UITextSizeConstraint")
+		p1c.MaxTextSize = 13
+		p1c.Parent = perk1Locked
+
+		local perk2Locked = Instance.new("TextLabel")
+		perk2Locked.Size = UDim2.new(1, 0, 0.2, 0)
+		perk2Locked.BackgroundTransparency = 1
+		perk2Locked.Text = "🔒 5% Double Progress Chance"
+		perk2Locked.TextColor3 = Color3.fromRGB(48, 72, 102)
+		perk2Locked.Font = Enum.Font.GothamBold
+		perk2Locked.TextScaled = true
+		perk2Locked.TextXAlignment = Enum.TextXAlignment.Center
+		perk2Locked.LayoutOrder = 3
+		perk2Locked.ZIndex = 8
+		perk2Locked.Parent = perksCard
+
+		local p2c = Instance.new("UITextSizeConstraint")
+		p2c.MaxTextSize = 13
+		p2c.Parent = perk2Locked
+
+		local joinButton = Instance.new("TextButton")
+		joinButton.Name = "JoinButton"
+		joinButton.Size = UDim2.new(0.85, 0, 0.22, 0)
+		joinButton.BackgroundColor3 = Color3.fromRGB(45, 80, 130)
+		joinButton.Text = "+ Join Group"
+		joinButton.TextColor3 = Color3.fromRGB(214, 214, 214)
+		joinButton.Font = Enum.Font.GothamBold
+		joinButton.TextScaled = true
+		joinButton.LayoutOrder = 4
+		joinButton.ZIndex = 8
+		joinButton.Parent = perksCard
+
+		local joinBtnCorner = Instance.new("UICorner")
+		joinBtnCorner.CornerRadius = UDim.new(0, 8)
+		joinBtnCorner.Parent = joinButton
+
+		local joinBtnConstraint = Instance.new("UITextSizeConstraint")
+		joinBtnConstraint.MaxTextSize = 12
+		joinBtnConstraint.Parent = joinButton
+
+		local RefreshGroupStatus = RepStorage.Events:WaitForChild("RefreshGroupStatus")
+
+		joinButton.MouseButton1Click:Connect(function()
+			joinButton.Text = "Opening..."
+			local success, result = pcall(function()
+				return GroupService:PromptJoinAsync(GROUP_ID)
+			end)
+			if success and result == Enum.GroupMembershipStatus.Joined then
+				RefreshGroupStatus:FireServer()
+
+				-- Update background and border to green
+				perksCard.BackgroundColor3 = Color3.fromRGB(22, 32, 22)
+				perksStroke.Color = Color3.fromRGB(55, 90, 55)
+
+				-- Remove locked elements
+				perk1Locked:Destroy()
+				perk2Locked:Destroy()
+				joinButton:Destroy()
+
+				-- Update header colour
+				headerLabel.TextColor3 = Color3.fromRGB(255, 210, 80)
+
+				-- Add lit-up perk lines
+				local perk1 = Instance.new("TextLabel")
+				perk1.Size = UDim2.new(1, 0, 0.24, 0)
+				perk1.BackgroundTransparency = 1
+				perk1.Text = "+10% Cash"
+				perk1.TextColor3 = Color3.fromRGB(120, 220, 120)
+				perk1.Font = Enum.Font.GothamBold
+				perk1.TextScaled = true
+				perk1.TextXAlignment = Enum.TextXAlignment.Center
+				perk1.LayoutOrder = 2
+				perk1.ZIndex = 8
+				perk1.Parent = perksCard
+				Instance.new("UITextSizeConstraint", perk1).MaxTextSize = 13
+
+				local perk2 = Instance.new("TextLabel")
+				perk2.Size = UDim2.new(1, 0, 0.24, 0)
+				perk2.BackgroundTransparency = 1
+				perk2.Text = "5% Double Progress Chance"
+				perk2.TextColor3 = Color3.fromRGB(120, 180, 255)
+				perk2.Font = Enum.Font.GothamBold
+				perk2.TextScaled = true
+				perk2.TextXAlignment = Enum.TextXAlignment.Center
+				perk2.LayoutOrder = 3
+				perk2.ZIndex = 8
+				perk2.Parent = perksCard
+				Instance.new("UITextSizeConstraint", perk2).MaxTextSize = 13
+			else
+				joinButton.Text = "+ Join Group"
+			end
+		end)
+	end
 
 	-- ==================== ITEMS SCROLL (RIGHT SIDE) ====================
 	local itemsScroll = Instance.new("ScrollingFrame")
