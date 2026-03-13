@@ -57,7 +57,7 @@ function module.LOAD(MODULE_INFO)
 
 		local sidebarStroke = Instance.new("UIStroke")
 		sidebarStroke.Color = Color3.fromRGB(180, 140, 0)
-		sidebarStroke.Thickness = 1.5
+		sidebarStroke.Thickness = 1
 		sidebarStroke.Transparency = 0.5
 		sidebarStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		sidebarStroke.Parent = sidebarFrame
@@ -243,7 +243,7 @@ function module.LOAD(MODULE_INFO)
 
 		local ppStroke = Instance.new("UIStroke")
 		ppStroke.Color = Color3.fromRGB(180, 140, 0)
-		ppStroke.Thickness = 1.5
+		ppStroke.Thickness = 1
 		ppStroke.Transparency = 0.4
 		ppStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		ppStroke.Parent = premiumPanel
