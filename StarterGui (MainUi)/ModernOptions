@@ -549,35 +549,6 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 	local machineSoundsToggle = createToggle(soundContent, "Machine Ambience Sounds", "MachineSounds", 2)
 	local ambienceMusicToggle = createToggle(soundContent, "Background Ambience Sounds", "AmbienceMusic", 3)
 
-	-- 4. Deluxe Section (Placeholder)
-	local deluxeSection, deluxeContent = createSection("Deluxe", "💎", 4)
-
-	-- Placeholder message
-	local placeholderFrame = Instance.new("Frame")
-	placeholderFrame.Size = UDim2.new(1, 0, 0, 80)  -- Fixed height
-	placeholderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-	placeholderFrame.BorderSizePixel = 0
-	placeholderFrame.LayoutOrder = 1
-	placeholderFrame.ZIndex = 13
-	placeholderFrame.Parent = deluxeContent
-
-	local placeholderCorner = Instance.new("UICorner")
-	placeholderCorner.CornerRadius = UDim.new(0, 8)
-	placeholderCorner.Parent = placeholderFrame
-
-	local placeholderLabel = Instance.new("TextLabel")
-	placeholderLabel.Size = UDim2.new(0.962, 0, 0.75, 0)  -- (520-20)/520 = 0.962, (80-20)/80 = 0.75
-	placeholderLabel.Position = UDim2.new(0.019, 0, 0.125, 0)  -- 10/520 = 0.019, 10/80 = 0.125
-	placeholderLabel.BackgroundTransparency = 1
-	placeholderLabel.Text = "🛒 Premium items and features coming soon!\n\nStay tuned for exclusive content."
-	placeholderLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
-	placeholderLabel.TextSize = 14
-	placeholderLabel.Font = Enum.Font.Gotham
-	placeholderLabel.TextWrapped = true
-	placeholderLabel.TextYAlignment = Enum.TextYAlignment.Top
-	placeholderLabel.ZIndex = 14
-	placeholderLabel.Parent = placeholderFrame
-
 	-- Update canvas size when content changes
 	contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 		content.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 15)
