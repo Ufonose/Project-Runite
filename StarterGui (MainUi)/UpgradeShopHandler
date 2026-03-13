@@ -381,27 +381,7 @@ function module.LOAD(MODULE_INFO)
 
 		maxAllButton_Click.MouseButton1Click:Connect(function()
 			MarketplaceService:PromptGamePassPurchase(Plr, MAX_ALL_UPGRADES_GAMEPASS_ID)
-		end)
-		
-		-- Refresh after individual Max purchase
-		MarketplaceService.PromptProductPurchaseFinished:Connect(function(_, productId, wasPurchased)
-			if not wasPurchased then return end
-			for upgradeId, pid in pairs(MAX_UPGRADE_PRODUCT_IDS) do
-				if pid == productId then
-					LOAD_UPGRADES()
-					if SELECTED_UPGRADE and SELECTED_UPGRADE.Id == upgradeId then
-						local maxLevel = SELECTED_UPGRADE.Data.MaxLevel
-						SELECTED_UPGRADE.CurrentLevel = maxLevel
-						SELECTED_UPGRADE.IsMaxLevel = true
-						selectedLevel.Text = "MAX LEVEL"
-						upgradeButton.Text = "MAX LEVEL"
-						upgradeButton.BackgroundColor3 = Color3.fromRGB(130, 100, 50)
-						maxButton.Visible = false
-					end
-					break
-				end
-			end
-		end)
+		end)		
 
 		allButton.MouseButton1Click:Connect(function()
 			CURRENT_CATEGORY = "AllCategory"
