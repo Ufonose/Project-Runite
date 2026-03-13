@@ -3,6 +3,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RefreshGroupStatus = ReplicatedStorage.Events:WaitForChild("RefreshGroupStatus")
 
 local PlayerDataManager = require(ServerStorage.Modules.PlayerDataManager)
 
@@ -82,6 +83,10 @@ _G.PlayerInStonepeak = function(player)
 	_groupCache[player.UserId] = inGroup
 	return inGroup
 end
+
+RefreshGroupStatus.OnServerEvent:Connect(function(player)
+	_groupCache[player.UserId] = true
+end)
 
 -- Clear cache when player leaves
 game:GetService("Players").PlayerRemoving:Connect(function(player)
