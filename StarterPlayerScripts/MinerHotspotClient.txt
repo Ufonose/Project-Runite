@@ -293,9 +293,9 @@ local function setupHotspot(hotspot)
 				resetCostDisplay()
 				pulseTween:Play()
 
-			elseif errorMsg == "Complete all research first" then
+			elseif errorMsg == "Complete Ages 1, 2 and 3 first" then
 				SoundManager.Error()
-				costLabel.Text = "🔒 Complete all research first!"
+				costLabel.Text = "Complete Ages 1, 2 and 3 first"
 				costLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 				costLabel.TextSize = Camera.ViewportSize.X < 900 and 8 or 11
 				-- Prompt Robux purchase immediately
