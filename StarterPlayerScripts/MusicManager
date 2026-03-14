@@ -7,10 +7,10 @@ local Plr = Players.LocalPlayer
 
 -- ── CONFIG ────────────────────────────────────────────────────────────────
 local MUSIC_TRACKS = {
-	{ id = "rbxassetid://139120583920442", volume = 1 },
-	{ id = "rbxassetid://133805412283632", volume = 1 },
-	{ id = "rbxassetid://138776806074364", volume = 1 },
-	{ id = "rbxassetid://113282525407063", volume = 0.4 },
+	{ id = "rbxassetid://139120583920442", volume = 1.4 },
+	{ id = "rbxassetid://133805412283632", volume = 1.4 },
+	{ id = "rbxassetid://138776806074364", volume = 1.4 },
+	{ id = "rbxassetid://113282525407063", volume = 0.6 },
 }
 
 local FADE_TIME   = 2.0
