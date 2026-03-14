@@ -70,11 +70,10 @@ local function assembleItem(ITEM)
 		return true 
 	end
 
-	-- Trigger Sound on valid plate entry
 	if CRUSH_SOUND and os.clock() - lastSoundTime > SOUND_COOLDOWN then
 		lastSoundTime = os.clock()
 		CRUSH_SOUND:Stop()
-		CRUSH_SOUND.PlaybackSpeed = math.random(105, 125) / 100 -- Higher pitch for assembly clicks
+		CRUSH_SOUND.PlaybackSpeed = math.random(105, 125) / 100
 		CRUSH_SOUND:Play()
 	end
 
@@ -95,6 +94,12 @@ local function assembleItem(ITEM)
 
 	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
 	newItem:PivotTo(ASSEMBLY_OUTPUT.CFrame * CFrame.new(randomX, 0, 0))
+
+	for _, part in ipairs(newItem:GetDescendants()) do
+		if part:IsA("BasePart") then part.CollisionGroup = "Ores" end
+	end
+	if newItem:IsA("BasePart") then newItem.CollisionGroup = "Ores" end
+
 	newItem.Parent = ITEM.Parent
 
 	local p = (newItem:IsA("Model") and newItem.PrimaryPart) or newItem
@@ -140,4 +145,4 @@ task.spawn(function()
 	end
 end)
 
-print("Plate Processor Scanning Logic Loaded!")
+--print("Plate Processor Scanning Logic Loaded!")
