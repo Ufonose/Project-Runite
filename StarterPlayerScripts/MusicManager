@@ -1,0 +1,130 @@
+-- StarterPlayerScripts/MusicManager.lua
+local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+
+local Plr = Players.LocalPlayer
+
+-- ── CONFIG ────────────────────────────────────────────────────────────────
+local MUSIC_TRACKS = {
+	{ id = "rbxassetid://139120583920442", volume = 1 },
+	{ id = "rbxassetid://133805412283632", volume = 1 },
+	{ id = "rbxassetid://138776806074364", volume = 1 },
+	{ id = "rbxassetid://113282525407063", volume = 0.4 },
+}
+
+local FADE_TIME   = 2.0
+local GAP_BETWEEN = 0 -- seconds of silence between tracks
+
+-- ── STATE ─────────────────────────────────────────────────────────────────
+local currentSound = nil
+local playbackTask = nil
+
+-- ── HELPERS ───────────────────────────────────────────────────────────────
+local function musicEnabled()
+	local settings = Plr:FindFirstChild("Settings")
+	if not settings then return true end
+	local s = settings:FindFirstChild("Music")
+	return s == nil or s.Value
+end
+
+local function shuffle(t)
+	local copy = table.clone(t)
+	for i = #copy, 2, -1 do
+		local j = math.random(1, i)
+		copy[i], copy[j] = copy[j], copy[i]
+	end
+	return copy
+end
+
+local function fadeVolume(sound, target, duration)
+	local tween = TweenService:Create(
+		sound,
+		TweenInfo.new(duration, Enum.EasingStyle.Sine),
+		{ Volume = target }
+	)
+	tween:Play()
+	return tween
+end
+
+-- ── PLAYBACK LOOP ─────────────────────────────────────────────────────────
+local function startLoop()
+	if playbackTask then
+		task.cancel(playbackTask)
+		playbackTask = nil
+	end
+
+	playbackTask = task.spawn(function()
+		local queue = {}
+		while true do
+			if #queue == 0 then
+				queue = shuffle(MUSIC_TRACKS)
+			end
+
+			if not musicEnabled() then
+				task.wait(1)
+				continue
+			end
+
+			local track = table.remove(queue, 1)
+
+			local sound = Instance.new("Sound")
+			sound.SoundId = track.id
+			sound.Volume = 0
+			sound.Looped = false
+			sound.Parent = SoundService
+			currentSound = sound
+
+			sound:Play()
+			fadeVolume(sound, track.volume, FADE_TIME)
+
+			local finished = false
+			sound.Ended:Connect(function()
+				finished = true
+			end)
+
+			while not finished do
+				if not musicEnabled() then
+					fadeVolume(sound, 0, FADE_TIME)
+					task.wait(FADE_TIME)
+					sound:Stop()
+					sound:Destroy()
+					currentSound = nil
+					while not musicEnabled() do
+						task.wait(1)
+					end
+					finished = true
+					break
+				end
+				task.wait(0.5)
+			end
+
+			if currentSound then
+				currentSound:Destroy()
+				currentSound = nil
+			end
+
+			task.wait(GAP_BETWEEN)
+		end
+	end)
+end
+
+-- ── SETTING TOGGLE ────────────────────────────────────────────────────────
+local settings = Plr:WaitForChild("Settings")
+local musicSetting = settings:WaitForChild("Music", 10)
+if musicSetting then
+	musicSetting.Changed:Connect(function()
+		if musicEnabled() then
+			startLoop()
+		elseif currentSound and currentSound.IsPlaying then
+			fadeVolume(currentSound, 0, FADE_TIME)
+		end
+	end)
+end
+
+-- ── STARTUP ───────────────────────────────────────────────────────────────
+task.delay(2, function()
+	if musicEnabled() then
+		startLoop()
+	end
+end)
