@@ -40,7 +40,6 @@ local function isAcceptedOre(oreModelName)
 end
 
 local function crushOre(ORE)
-	-- 1. VALIDATION
 	if not ORE or crushedOres[ORE] then return end
 	crushedOres[ORE] = true
 
@@ -57,7 +56,6 @@ local function crushOre(ORE)
 		return
 	end
 
-	-- 2. PREPARE REFINED MODEL
 	local oreFolder = RepStorage:FindFirstChild("OreModels")
 	local refinedModelName = originalModelName .. "_Crushed"
 	local refinedModel = oreFolder and oreFolder:FindFirstChild(refinedModelName)
@@ -68,7 +66,6 @@ local function crushOre(ORE)
 		return
 	end
 
-	-- 3. CLONE AND SETUP
 	local newOre = refinedModel:Clone()
 	newOre.Name = ORE.Name
 
@@ -94,7 +91,6 @@ local function crushOre(ORE)
 		end
 	end
 
-	-- 4. POSITIONING & PHYSICS
 	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
 
 	if newOre:IsA("Model") then
@@ -104,6 +100,11 @@ local function crushOre(ORE)
 		newOre.CFrame = CRUSH_OUTPUT.CFrame * CFrame.new(randomX, 0, 0)
 		newOre.Anchored = false
 	end
+
+	for _, part in ipairs(newOre:GetDescendants()) do
+		if part:IsA("BasePart") then part.CollisionGroup = "Ores" end
+	end
+	if newOre:IsA("BasePart") then newOre.CollisionGroup = "Ores" end
 
 	newOre.Parent = ORE.Parent
 
@@ -115,7 +116,6 @@ local function crushOre(ORE)
 		end
 	end
 
-	-- 5. CLEANUP
 	local oldOreRef = ORE
 	ORE:Destroy()
 
@@ -130,7 +130,7 @@ task.spawn(function()
 	local overlapParams = OverlapParams.new()
 	overlapParams.FilterType = Enum.RaycastFilterType.Include
 
-	print(MODEL.Name .. " Logic Loaded with Input-Triggered Audio")
+--	print(MODEL.Name .. " Logic Loaded with Input-Triggered Audio")
 
 	while true do
 		task.wait(DETECT_INTERVAL)
