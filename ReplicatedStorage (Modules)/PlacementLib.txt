@@ -181,7 +181,7 @@ local function cacheCurrentPlotCaveWalls()
 			end
 		end
 
-		print("Cached", #cachedCaveWalls, "cave walls for placement detection")
+		--print("Cached", #cachedCaveWalls, "cave walls for placement detection")
 	end
 end
 
@@ -394,6 +394,14 @@ local function inputCapture()
 		-- Exclude the player character too
 		if player.Character then
 			table.insert(excludeList, player.Character)
+		end
+		
+		-- Exclude all OresDropped folders so ores don't interfere with placement raycasts
+		for _, plot in ipairs(workspace.Plots:GetChildren()) do
+			local folder = plot:FindFirstChild("OresDropped")
+			if folder then
+				table.insert(excludeList, folder)
+			end
 		end
 
 		-- Use Exclude mode so raycast ignores placed items and only hits base
