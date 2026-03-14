@@ -3,7 +3,32 @@ local RunService = game:GetService("RunService")
 
 local conveyorParts = {}
 
+local Players = game:GetService("Players")
+
+-- OverlapParams filtered to Ores collision group only
+local overlapParams = OverlapParams.new()
+overlapParams.FilterType = Enum.RaycastFilterType.Include
+overlapParams.CollisionGroup = "Ores"
+
+-- Cache plot owner per SideStuck part to avoid walking up hierarchy every frame
+local partOwnerCache = {}
+
 -- Find the root item model that holds the ConveyorReversed attribute
+local function getPlotOwner(part)
+	local ancestor = part.Parent
+	while ancestor and ancestor ~= workspace do
+		if ancestor.Parent == workspace.Plots then
+			local ownerVal = ancestor:FindFirstChild("Owner")
+			if ownerVal then
+				return Players:FindFirstChild(ownerVal.Value)
+			end
+			return nil
+		end
+		ancestor = ancestor.Parent
+	end
+	return nil
+end
+
 local function getRootItem(part)
 	local ancestor = part.Parent
 	while ancestor and ancestor ~= workspace do
@@ -42,10 +67,11 @@ local function registerConveyor(conveyorPart)
 	end
 
 	table.insert(conveyorParts, {
-		part = conveyorPart,
+		part      = conveyorPart,
 		baseSpeed = baseSpeed,
-		rootItem = getRootItem(conveyorPart),
-		noFlip = isNoFlip, -- NEW: store the flag here
+		rootItem  = getRootItem(conveyorPart),
+		noFlip    = isNoFlip,
+		owner     = getPlotOwner(conveyorPart), -- cached at register time
 	})
 end
 
@@ -89,17 +115,14 @@ RunService.Heartbeat:Connect(function()
 			local part = data.part
 			if part and part.Parent then
 				local speed = getSpeed(data)
+				part.AssemblyLinearVelocity = part.CFrame.LookVector * speed
 
-				local forwardVelo = part.CFrame.LookVector * speed
-
-				part.AssemblyLinearVelocity = forwardVelo
-
-				local touching = part:GetTouchingParts()
-				for _, hit in pairs(touching) do
-					if hit.Name == "Ore" or hit:GetAttribute("IsOre") then
-						if hit:CanSetNetworkOwnership() then
-							hit:SetNetworkOwner(nil)
-						end
+				-- Slightly shrink search volume to avoid false positives from adjacent belts
+				local searchSize = part.Size - Vector3.new(0.2, 0, 0.2)
+				local hits = workspace:GetPartBoundsInBox(part.CFrame, searchSize, overlapParams)
+				for _, hit in ipairs(hits) do
+					if hit:CanSetNetworkOwnership() then
+						hit:SetNetworkOwner(data.owner) -- plot owner, nil if they left
 					end
 				end
 			end
