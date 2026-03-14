@@ -545,9 +545,10 @@ function module.CREATE_MODERN_OPTIONS_UI(parent)
 
 	-- 3. Sound Settings Section
 	local soundSection, soundContent = createSection("Sound Settings", "🔊", 3)
-	local uiSoundsToggle = createToggle(soundContent, "UI & Placement Sounds", "UISounds", 1)
-	local machineSoundsToggle = createToggle(soundContent, "Machine Ambience Sounds", "MachineSounds", 2)
-	local ambienceMusicToggle = createToggle(soundContent, "Background Ambience Sounds", "AmbienceMusic", 3)
+	local uiSoundsToggle = createToggle(soundContent, "UI & Placement", "UISounds", 1)
+	local musicToggle = createToggle(soundContent, "Background Music", "Music", 2)
+	local machineSoundsToggle = createToggle(soundContent, "Machine Ambience", "MachineSounds", 3)
+	local ambienceMusicToggle = createToggle(soundContent, "Background Ambience", "AmbienceMusic", 4)
 
 	-- Update canvas size when content changes
 	contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
