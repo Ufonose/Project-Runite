@@ -9,6 +9,7 @@ PLAYER_DATA.SETTINGS_VALUES = {
 	["UISounds"]         = { ["VALUE_TYPE"] = "BoolValue", ["DEFAULT"] = true  },
 	["MachineSounds"]    = { ["VALUE_TYPE"] = "BoolValue", ["DEFAULT"] = true  },
 	["AmbienceMusic"]    = { ["VALUE_TYPE"] = "BoolValue", ["DEFAULT"] = true  },
+	["Music"]            = { ["VALUE_TYPE"] = "BoolValue", ["DEFAULT"] = true },
 	["OreLimit"]         = { ["VALUE_TYPE"] = "NumberValue", ["DEFAULT"] = 250 },
 	["AutoResearch"]     = { ["VALUE_TYPE"] = "BoolValue", ["DEFAULT"] = true },
 }
