@@ -152,6 +152,12 @@ local function createIngot()
 
 	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
 	newIngot:PivotTo(SMELT_OUTPUT.CFrame * CFrame.new(randomX, 0, 0))
+
+	for _, part in ipairs(newIngot:GetDescendants()) do
+		if part:IsA("BasePart") then part.CollisionGroup = "Ores" end
+	end
+	if newIngot:IsA("BasePart") then newIngot.CollisionGroup = "Ores" end
+
 	newIngot.Parent = PLOT.MiscInfo.OresDropped
 
 	local p = (newIngot:IsA("Model") and newIngot.PrimaryPart) or newIngot
