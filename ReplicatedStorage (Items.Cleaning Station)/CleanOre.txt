@@ -24,16 +24,12 @@ local function cleanOre(ORE)
 
 	local originalModelName = oreModelTag.Value
 
-	-- STRICT CHECK: Ignore everything that isn't crushed
 	if not string.find(originalModelName, "_Crushed") then
 		return
 	end
 
-	-- If it passed the check, lock it so we don't process it twice
 	cleanedOres[ORE] = true
 
-	-- 1. UPGRADE ONLY VALID ORES
-	-- Moving this here ensures ONLY _Crushed items get the value boost
 	ITEM_HANDLER.UPGRADE_ORE(
 		PLOT, 
 		script.Parent.Parent, 
@@ -44,7 +40,6 @@ local function cleanOre(ORE)
 		30
 	)
 
-	-- 2. PREPARE REFINED MODEL
 	local oreFolder = RepStorage:FindFirstChild("OreModels")
 	local refinedModelName = string.gsub(originalModelName, "_Crushed", "_Cleaned")
 	local refinedModel = oreFolder and oreFolder:FindFirstChild(refinedModelName)
@@ -55,7 +50,6 @@ local function cleanOre(ORE)
 		return
 	end
 
-	-- 3. CLONE AND SETUP
 	local newOre = refinedModel:Clone()
 	newOre.Name = ORE.Name
 	CollectionService:AddTag(newOre, "MovingOre")
@@ -80,7 +74,6 @@ local function cleanOre(ORE)
 		end
 	end
 
-	-- 4. POSITIONING & PHYSICS
 	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
 
 	if newOre:IsA("Model") then
@@ -90,6 +83,11 @@ local function cleanOre(ORE)
 		newOre.CFrame = CLEAN_OUTPUT.CFrame * CFrame.new(randomX, 0, 0)
 		newOre.Anchored = false
 	end
+
+	for _, part in ipairs(newOre:GetDescendants()) do
+		if part:IsA("BasePart") then part.CollisionGroup = "Ores" end
+	end
+	if newOre:IsA("BasePart") then newOre.CollisionGroup = "Ores" end
 
 	newOre.Parent = ORE.Parent
 
@@ -101,7 +99,6 @@ local function cleanOre(ORE)
 		end
 	end
 
-	-- 5. CLEANUP
 	local oldOreRef = ORE
 	ORE:Destroy()
 
