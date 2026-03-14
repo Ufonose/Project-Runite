@@ -93,6 +93,15 @@ end
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
+local oresDroppedFolders = {}
+for _, plot in ipairs(workspace.Plots:GetChildren()) do
+	local folder = plot:FindFirstChild("OresDropped")
+	if folder then
+		table.insert(oresDroppedFolders, folder)
+	end
+end
+rayParams.FilterDescendantsInstances = oresDroppedFolders
+
 -- ── MAIN LOOP ────────────────────────────────────────────────────────────────
 RunService.Heartbeat:Connect(function(dt)
 	local timeTime = os_clock()
