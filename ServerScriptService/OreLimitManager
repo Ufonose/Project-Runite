@@ -105,15 +105,6 @@ local function updateMinerStates(player, plot)
 			end
 		end
 	end
-
-	-- Debug output (only when changes occur)
-	if minersPaused > 0 then
-		print(string.format("⛔ Paused %d miners for %s - Ore count: %d/%d", 
-			minersPaused, player.Name, currentCount, oreLimit.Value))
-	elseif minersResumed > 0 then
-		print(string.format("✅ Resumed %d miners for %s - Ore count: %d/%d", 
-			minersResumed, player.Name, currentCount, oreLimit.Value))
-	end
 end
 
 -- Initialize for a player's plot
@@ -164,7 +155,7 @@ function OreLimitManager.InitializePlot(player, plot)
 				updateMinerStates(player, plot)
 			end)
 
-			print("✓ Monitoring OresDropped folder for", player.Name)
+			--print("✓ Monitoring OresDropped folder for", player.Name)
 		else
 			warn("OresDropped folder not found for", player.Name)
 		end
@@ -172,7 +163,7 @@ function OreLimitManager.InitializePlot(player, plot)
 		warn("MiscInfo folder not found for", player.Name)
 	end
 
-	print(string.format("✓ OreLimitManager initialized for %s", player.Name))
+	--print(string.format("✓ OreLimitManager initialized for %s", player.Name))
 end
 
 -- Periodic update (every 3 seconds as backup)
@@ -196,6 +187,6 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
-print("OreLimitManager module loaded!")
+--print("OreLimitManager module loaded!")
 
 return OreLimitManager
