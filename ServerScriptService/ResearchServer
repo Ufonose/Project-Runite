@@ -60,6 +60,7 @@ RepStorage.Events.GetResearchData.OnServerInvoke = function(player)
 		ResearchTokens      = player.ResearchTokens.Value,
 		AllObjectives       = getEffectiveObjectives(player),
 		ItemsCollected      = research.ItemsCollected,
+		ResearchBonuses     = ResearchData.GetTotalBonusesByType(research.CompletedObjectives),
 	}
 end
 
