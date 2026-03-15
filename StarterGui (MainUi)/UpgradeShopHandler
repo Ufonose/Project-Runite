@@ -624,15 +624,19 @@ function module.LOAD(MODULE_INFO)
 		end
 
 		LOAD_UPGRADES = function()
+			local researchBonuses = {} 
 			local success, result = pcall(function()
 				UPGRADES_DATA = RepStorage.Events.GetUpgradesData:InvokeServer()
 				PLAYER_UPGRADES = RepStorage.Events.GetPlayerUpgrades:InvokeServer()
+				local rData = RepStorage.Events.GetResearchData:InvokeServer()
+				researchBonuses = (rData and rData.ResearchBonuses) or {} 
 			end)
 
 			if not success then
 				warn("Failed to load upgrades:", result)
 				return
 			end
+			
 
 			if not UPGRADES_DATA or not PLAYER_UPGRADES then
 				warn("Upgrades data is nil")
@@ -750,15 +754,27 @@ function module.LOAD(MODULE_INFO)
 				local effectText = "Not Upgraded"
 				if currentLevel > 0 then
 					if upgradeId == "IronMineSpeed" or upgradeId == "CopperMineSpeed" or upgradeId == "GoldMineSpeed" then
-						effectText = "+" .. (currentLevel * 3) .. "% Speed"
+						local research = researchBonuses[upgradeId] or 0
+						effectText = currentLevel > 0 and ("+" .. (currentLevel * 3) .. "% Speed") or (research > 0 and "Not Upgraded" or "Not Upgraded")
+						if research > 0 then
+							effectText = (currentLevel > 0 and effectText or "Not Upgraded") .. " (+" .. research .. "% Bonus)"
+						end
 					elseif upgradeId == "ConveyorSpeed" then
 						effectText = "+" .. currentLevel .. " Speed"
 					elseif upgradeId == "CashBonus" then
-						effectText = "+" .. (currentLevel * 5) .. "% Cash"
+						local research = researchBonuses["CashBonus"] or 0
+						effectText = currentLevel > 0 and ("+" .. (currentLevel * 5) .. "% Cash") or "Not Upgraded"
+						if research > 0 then
+							effectText = (currentLevel > 0 and effectText or "Not Upgraded") .. " (+" .. research .. "% Bonus)"
+						end
 					elseif upgradeId == "GemDiscovery" then
 						effectText = "+" .. (currentLevel * 10) .. "% Gem Chance"
 					elseif upgradeId == "DoubleDropChance" then
-						effectText = currentLevel .. "% Double Drop"
+						local research = researchBonuses["DoubleDropChance"] or 0
+						effectText = currentLevel > 0 and (currentLevel .. "% Double Drop") or "Not Upgraded"
+						if research > 0 then
+							effectText = (currentLevel > 0 and effectText or "Not Upgraded") .. " (+" .. research .. "% Bonus)"
+						end
 					elseif upgradeId == "MovementSpeed" then
 						effectText = "Speed: " .. (16 + currentLevel)
 					end
