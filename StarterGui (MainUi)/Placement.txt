@@ -48,18 +48,18 @@ function module.LOAD(MODULE_INFO)
 
 	-- Function to flip conveyor direction
 	function module.FLIP_CONVEYOR_DIRECTION()
-		print("=== FLIP_CONVEYOR_DIRECTION CALLED ===")
+		--print("=== FLIP_CONVEYOR_DIRECTION CALLED ===")
 		if not module.PLACING_ITEMS then 
-			print("Not placing items, returning")
+			--print("Not placing items, returning")
 			return 
 		end
 
 		CONVEYOR_REVERSED = not CONVEYOR_REVERSED
-		print("Conveyor reversed:", CONVEYOR_REVERSED)
+		--print("Conveyor reversed:", CONVEYOR_REVERSED)
 
 		-- Apply reversal to all items being placed
 		for i, ITEM in pairs(CURRENT_PLACING) do
-			print("Processing item", i, ITEM.Name)
+			--print("Processing item", i, ITEM.Name)
 			-- Mark the item as reversed
 			ITEM:SetAttribute("ConveyorReversed", CONVEYOR_REVERSED)
 
@@ -68,7 +68,7 @@ function module.LOAD(MODULE_INFO)
 				if descendant:IsA("BasePart") and (descendant.Name == "Conv" or descendant.Name == "ConvSlope" or descendant.Name == "SideBeam" or descendant.Name == "SideStuck") then
 					-- Skip ConvMerge parts (they should never flip)
 					if descendant.Name == "ConvMerge" then
-						print("Skipping ConvMerge - cannot flip direction")
+						--print("Skipping ConvMerge - cannot flip direction")
 						continue
 					end
 
@@ -77,7 +77,7 @@ function module.LOAD(MODULE_INFO)
 					if beam then
 						-- Simply negate the current speed to flip direction
 						beam.TextureSpeed = -beam.TextureSpeed
-						print("Beam TextureSpeed flipped to:", beam.TextureSpeed)
+						--print("Beam TextureSpeed flipped to:", beam.TextureSpeed)
 					end
 				end
 			end
@@ -89,7 +89,7 @@ function module.LOAD(MODULE_INFO)
 		-- NEW: Play flip sound
 		SoundManager.RotateItem()
 
-		print("=== FLIP COMPLETE ===")
+		--print("=== FLIP COMPLETE ===")
 	end
 
 	function module.BEGIN_PLACING(ITEMS_PLACING, MOVING_ITEMS)
@@ -109,7 +109,7 @@ function module.LOAD(MODULE_INFO)
 		-- Initialize CONVEYOR_REVERSED based on the first item's current state
 		if ITEMS_PLACING[1] then
 			CONVEYOR_REVERSED = ITEMS_PLACING[1]:GetAttribute("ConveyorReversed") or false
-			print("Initialized CONVEYOR_REVERSED to:", CONVEYOR_REVERSED)
+			--print("Initialized CONVEYOR_REVERSED to:", CONVEYOR_REVERSED)
 		else
 			CONVEYOR_REVERSED = false
 		end
@@ -163,19 +163,20 @@ function module.LOAD(MODULE_INFO)
 			local PLACED_ITEMS_DONE = RepStorage.Events.PlaceItem:InvokeServer(PLR_PLOT.PlacedItems, PLACING_ITEMS_INFO)
 
 			if PLACED_ITEMS_DONE then
-				warn("ITEMS PLACED SUCCESS!")
+				--warn("ITEMS PLACED SUCCESS!")
 
 				-- NEW: Play place item sound
 				SoundManager.PlaceItem()
 
 				return true
 			else
-				warn("ITEMS PLACED FAILED!")
+				SoundManager.Error()
+				--warn("ITEMS PLACED FAILED!")
 			end
 		else
 			-- NEW: Item is colliding - play error sound
 			if module.PLACING_ITEMS then
-				warn("Cannot place - item is colliding!")
+				--warn("Cannot place - item is colliding!")
 				SoundManager.Error()
 			end
 		end
