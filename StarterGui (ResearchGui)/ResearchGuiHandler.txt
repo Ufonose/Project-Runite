@@ -859,6 +859,41 @@ local function createObjectiveCard(objectiveData, researchData, position)
 		rewardConstraint.MaxTextSize = 14
 		rewardConstraint.Parent = rewardLabel
 	end
+	
+	-- RESEARCH BONUS REWARD DISPLAY (Age 4 objectives)
+	local hasResearchBonus = objectiveData.Rewards and objectiveData.Rewards.ResearchBonus
+	if hasResearchBonus then
+		local bonus = objectiveData.Rewards.ResearchBonus
+
+		local bonusLabels = {
+			IronMineSpeed    = "+%d%% Iron Mine Speed",
+			CopperMineSpeed  = "+%d%% Copper Mine Speed",
+			GoldMineSpeed    = "+%d%% Gold Mine Speed",
+			CashBonus        = "+%d%% Cash Bonus",
+			DoubleDropChance = "+%d%% Double Drop Chance",
+		}
+
+		local template = bonusLabels[bonus.Type]
+		if template then
+			local bonusLabel = Instance.new("TextLabel")
+			bonusLabel.Size = UDim2.new(0.9273, 0, 0.0909, 0)
+			bonusLabel.Position = UDim2.new(0.0364, 0, 0.7, 0)
+			bonusLabel.BackgroundTransparency = 1
+			bonusLabel.Text = string.format(template, bonus.Value)
+			bonusLabel.TextColor3 = Color3.fromRGB(230, 188, 90)
+			bonusLabel.TextSize = 12
+			bonusLabel.Font = Enum.Font.GothamBold
+			bonusLabel.TextXAlignment = Enum.TextXAlignment.Left
+			bonusLabel.TextYAlignment = Enum.TextYAlignment.Center
+			bonusLabel.TextScaled = true
+			bonusLabel.ZIndex = 3
+			bonusLabel.Parent = card
+
+			local bonusConstraint = Instance.new("UITextSizeConstraint")
+			bonusConstraint.MaxTextSize = 14
+			bonusConstraint.Parent = bonusLabel
+		end
+	end
 
 	-- Unlocks section (machines + age unlock on same line)
 	-- Wrap in pcall to prevent errors from stopping card creation
