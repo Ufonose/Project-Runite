@@ -122,11 +122,33 @@ RunService.Heartbeat:Connect(function(dt)
 			local moveDir = ore.AssemblyLinearVelocity.Magnitude > 0.1
 				and ore.AssemblyLinearVelocity.Unit
 				or ore.CFrame.LookVector
-			result = workspace:Raycast(orePos - (moveDir * EDGE_BUFFER), RAY_DIRECTION, rayParams)
+			local r = workspace:Raycast(orePos - (moveDir * EDGE_BUFFER), RAY_DIRECTION, rayParams)
+			if r and r.Instance and (r.Instance.Name:find("Conv") or r.Instance.Name == "SideStuck") then
+				result = r
+			end
 		end
 
-		if result and result.Instance and result.Instance.Name:find("Conv") then
-			local part       = result.Instance
+		if result and result.Instance and (result.Instance.Name:find("Conv") or result.Instance.Name == "SideStuck") then
+			local part = result.Instance
+
+			-- If we landed on a SideStuck, redirect to nearest Conv in the same item
+			if part.Name == "SideStuck" then
+				local model = part.Parent
+				while model and not (model:IsA("Model") and model:FindFirstChild("Hitbox")) do
+					model = model.Parent
+				end
+				if model then
+					local nearest, nearestDist = nil, math.huge
+					for _, desc in ipairs(model:GetDescendants()) do
+						if desc:IsA("BasePart") and desc.Name == "Conv" then
+							local d = (desc.Position - orePos).Magnitude
+							if d < nearestDist then nearestDist = d; nearest = desc end
+						end
+					end
+					if nearest then part = nearest end
+				end
+			end
+
 			local isReversed = part:GetAttribute("ConveyorReversed")
 				or (part.Parent and part.Parent:GetAttribute("ConveyorReversed"))
 			local multiplier = (isReversed == true) and -1 or 1
