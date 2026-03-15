@@ -1,0 +1,9 @@
+-- ServerScriptService/CollisionGroupSetup
+local PhysicsService = game:GetService("PhysicsService")
+
+pcall(function()
+	PhysicsService:RegisterCollisionGroup("Ores")
+	PhysicsService:RegisterCollisionGroup("Players")
+	PhysicsService:CollisionGroupSetCollidable("Ores", "Players", false)
+	PhysicsService:CollisionGroupSetCollidable("Ores", "Ores", false)
+end)
