@@ -871,10 +871,7 @@ ResearchData.Objectives = {
 			{ItemName = "Iron Ore_Crushed", Amount = 400},
 			{ItemName = "Iron Ore_Cleaned", Amount = 400},
 		},
-		Rewards = {
-			ResearchTokens = 100,
-			UnlockMachines = {},
-		},
+		Rewards = { ResearchTokens = 0, ResearchBonus = {Type = "IronMineSpeed",   Value = 3},  UnlockMachines = {} },		
 		TreePosition = {X = 1, Y = 1}, -- (column 1, row 1)
 	},
 	{
@@ -887,10 +884,7 @@ ResearchData.Objectives = {
 			{ItemName = "Iron Ingot", Amount = 150},
 			{ItemName = "Iron Plate", Amount = 150},
 		},
-		Rewards = {
-			ResearchTokens = 100,
-			UnlockMachines = {},
-		},
+		Rewards = { ResearchTokens = 0, ResearchBonus = {Type = "IronMineSpeed",   Value = 7},  UnlockMachines = {} },
 		TreePosition = {X = 1, Y = 2}, -- (column 1, row 1)
 	},
 	{
@@ -904,10 +898,7 @@ ResearchData.Objectives = {
 			{ItemName = "Iron Coil", Amount = 200},
 			{ItemName = "Iron Pipe", Amount = 200},
 		},
-		Rewards = {
-			ResearchTokens = 100,
-			UnlockMachines = {},
-		},
+		Rewards = { ResearchTokens = 0, ResearchBonus = {Type = "IronMineSpeed",   Value = 10}, UnlockMachines = {} },
 		TreePosition = {X = 1, Y = 3}, -- (column 1, row 1)
 	},
 	{
@@ -921,10 +912,7 @@ ResearchData.Objectives = {
 			{ItemName = "Copper Ore_Crushed", Amount = 400},
 			{ItemName = "Copper Ore_Cleaned", Amount = 400},
 		},
-		Rewards = {
-			ResearchTokens = 100,
-			UnlockMachines = {},
-		},
+		Rewards = { ResearchTokens = 0, ResearchBonus = {Type = "CopperMineSpeed", Value = 3},  UnlockMachines = {} },
 		TreePosition = {X = 2, Y = 1}, -- (column 1, row 1)
 	},
 	{
@@ -937,10 +925,7 @@ ResearchData.Objectives = {
 			{ItemName = "Copper Ingot", Amount = 150},
 			{ItemName = "Copper Plate", Amount = 150},
 		},
-		Rewards = {
-			ResearchTokens = 100,
-			UnlockMachines = {},
-		},
+		Rewards = { ResearchTokens = 0, ResearchBonus = {Type = "CopperMineSpeed", Value = 7},  UnlockMachines = {} },
 		TreePosition = {X = 2, Y = 2}, -- (column 1, row 1)
 	},
 	{
@@ -954,10 +939,7 @@ ResearchData.Objectives = {
 			{ItemName = "Copper Coil", Amount = 200},
 			{ItemName = "Copper Pipe", Amount = 200},
 		},
-		Rewards = {
-			ResearchTokens = 100,
-			UnlockMachines = {},
-		},
+		Rewards = { ResearchTokens = 0, ResearchBonus = {Type = "CopperMineSpeed", Value = 10}, UnlockMachines = {} },
 		TreePosition = {X = 2, Y = 3}, -- (column 1, row 1)
 	},
 	{
@@ -971,10 +953,7 @@ ResearchData.Objectives = {
 			{ItemName = "Gold Ore_Crushed", Amount = 400},
 			{ItemName = "Gold Ore_Cleaned", Amount = 400},
 		},
-		Rewards = {
-			ResearchTokens = 100,
-			UnlockMachines = {},
-		},
+		Rewards = { ResearchTokens = 0, ResearchBonus = {Type = "GoldMineSpeed",   Value = 3},  UnlockMachines = {} },
 		TreePosition = {X = 3, Y = 1}, -- (column 1, row 1)
 	},
 	{
@@ -987,10 +966,7 @@ ResearchData.Objectives = {
 			{ItemName = "Gold Ingot", Amount = 150},
 			{ItemName = "Gold Plate", Amount = 150},
 		},
-		Rewards = {
-			ResearchTokens = 100,
-			UnlockMachines = {},
-		},
+		Rewards = { ResearchTokens = 0, ResearchBonus = {Type = "GoldMineSpeed",   Value = 7},  UnlockMachines = {} },
 		TreePosition = {X = 3, Y = 2}, -- (column 1, row 1)
 	},
 	{
@@ -1004,10 +980,7 @@ ResearchData.Objectives = {
 			{ItemName = "Gold Coil", Amount = 200},
 			{ItemName = "Gold Pipe", Amount = 200},
 		},
-		Rewards = {
-			ResearchTokens = 100,
-			UnlockMachines = {},
-		},
+		Rewards = { ResearchTokens = 0, ResearchBonus = {Type = "GoldMineSpeed",   Value = 10}, UnlockMachines = {} },
 		TreePosition = {X = 3, Y = 3}, -- (column 1, row 1)
 	},
 	{
@@ -1021,10 +994,7 @@ ResearchData.Objectives = {
 			{ItemName = "Ruby Gem", Amount = 80},
 			{ItemName = "Diamond Gem", Amount = 50},
 		},
-		Rewards = {
-			ResearchTokens = 100,
-			UnlockMachines = {},
-		},
+		Rewards = { ResearchTokens = 0, ResearchBonus = {Type = "CashBonus",       Value = 10}, UnlockMachines = {} },
 		TreePosition = {X = 4, Y = 1}, -- (column 1, row 1)
 	},
 	{
@@ -1038,10 +1008,7 @@ ResearchData.Objectives = {
 			{ItemName = "Polished Ruby Gem", Amount = 100},
 			{ItemName = "Polished Diamond Gem", Amount = 70},
 		},
-		Rewards = {
-			ResearchTokens = 100,
-			UnlockMachines = {},
-		},
+		Rewards = { ResearchTokens = 0, ResearchBonus = {Type = "CashBonus",       Value = 25}, UnlockMachines = {} },
 		TreePosition = {X = 4, Y = 2}, -- (column 1, row 1)
 	},
 	{
@@ -1054,10 +1021,7 @@ ResearchData.Objectives = {
 			{ItemName = "Impure Ingot", Amount = 150},
 			{ItemName = "Impure Plate", Amount = 150},
 		},
-		Rewards = {
-			ResearchTokens = 100,
-			UnlockMachines = {},
-		},
+		Rewards = { ResearchTokens = 0, ResearchBonus = {Type = "DoubleDropChance", Value = 2}, UnlockMachines = {} },
 		TreePosition = {X = 5, Y = 1}, -- (column 1, row 1)
 	},
 	{
@@ -1071,10 +1035,7 @@ ResearchData.Objectives = {
 			{ItemName = "Impure Coil", Amount = 200},
 			{ItemName = "Impure Pipe", Amount = 200},
 		},
-		Rewards = {
-			ResearchTokens = 100,
-			UnlockMachines = {},
-		},
+		Rewards = { ResearchTokens = 0, ResearchBonus = {Type = "DoubleDropChance", Value = 3}, UnlockMachines = {} },
 		TreePosition = {X = 5, Y = 2}, -- (column 1, row 1)
 	},
 
@@ -1220,6 +1181,18 @@ function ResearchData.GetEarnedTokens(completedObjectives)
 		end
 	end
 	return earned
+end
+
+function ResearchData.GetTotalBonusesByType(completedObjectives)
+	local bonuses = {}
+	for _, id in pairs(completedObjectives) do
+		local obj = ResearchData.GetObjective(id)
+		if obj and obj.Rewards.ResearchBonus then
+			local t = obj.Rewards.ResearchBonus.Type
+			bonuses[t] = (bonuses[t] or 0) + obj.Rewards.ResearchBonus.Value
+		end
+	end
+	return bonuses
 end
 
 return ResearchData
