@@ -228,6 +228,9 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 	-- -------------------------------------------------------
 	-- Legendary Mine
 	-- -------------------------------------------------------
+	-- -------------------------------------------------------
+	-- Legendary Mine
+	-- -------------------------------------------------------
 	if receiptInfo.ProductId == LEGENDARY_MINE_PRODUCT_ID then
 		local MinerHotspotHandler = require(ServerStorage.Modules.MinerHotspotHandler)
 		local LEGENDARY_HOTSPOT_ID = 9
@@ -242,9 +245,15 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 		table.insert(session["MinerHotspots"].UnlockedHotspots, LEGENDARY_HOTSPOT_ID)
 		MinerHotspotHandler.ActivateHotspot(player, LEGENDARY_HOTSPOT_ID)
 
+		-- Give 1x Item Sorter (ID 16) so the player can handle mixed ores
+		local itemGiveRemote = ServerStorage:FindFirstChild("Events") and ServerStorage.Events:FindFirstChild("ItemGive")
+		if itemGiveRemote then
+			itemGiveRemote:Invoke(player, 16, 1)
+		end
+
 		Events.LegendaryMineUnlocked:FireClient(player)
 		Events.MessageClient:FireClient(player, "screen", {
-			message = "⛏️ Legendary Mine unlocked! It has been placed on your plot."
+			message = "⛏️ Legendary Mine unlocked! It has been placed on your plot. 1x Item Sorter added to your inventory."
 		})
 
 		return Enum.ProductPurchaseDecision.PurchaseGranted
