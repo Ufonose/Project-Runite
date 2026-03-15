@@ -8,6 +8,17 @@ local SpeedrunHandler = require(ServerStorage.Modules.SpeedrunHandler)
 
 local ResearchHandler = {}
 
+local SPEEDRUN_REQ_DIVISOR = 4
+
+local function getEffectiveAmount(player, amount)
+	local session = PlayerSession.Get(player)
+	local inSpeedrun = session and session["Speedrun"] and session["Speedrun"].InSpeedrunMode == true
+	if inSpeedrun then
+		return math.max(1, math.round(amount / SPEEDRUN_REQ_DIVISOR))
+	end
+	return amount
+end
+
 local function getItemNameFromId(itemId)
 	for _, item in pairs(RepStorage.Items:GetChildren()) do
 		local itemStats = item:FindFirstChild("ItemStats")
@@ -121,7 +132,7 @@ function ResearchHandler.DepositItem(player, objectiveId, itemName, amount)
 		end
 	end
 
-	local newProgress = math.min(currentProgress + depositAmount, requirement.Amount)
+	local newProgress = math.min(currentProgress + depositAmount, getEffectiveAmount(player, requirement.Amount))
 	research.ObjectiveProgress[progressKey][itemName] = newProgress
 
 	if ResearchHandler.CheckObjectiveComplete(player, objectiveId) then
@@ -144,7 +155,7 @@ function ResearchHandler.CheckObjectiveComplete(player, objectiveId)
 
 	for _, requirement in pairs(objective.Requirements) do
 		local progress = research.ObjectiveProgress[tostring(objectiveId)][requirement.ItemName] or 0
-		if progress < requirement.Amount then
+		if progress < getEffectiveAmount(player, requirement.Amount) then
 			return false
 		end
 	end
