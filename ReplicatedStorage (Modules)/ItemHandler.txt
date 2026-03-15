@@ -131,6 +131,14 @@ function module.PROCESS_ORE(PLOT, FURNACE, SMELT_PART, ORE_ADD, ORE_MULTI, ORE)
 			CASH_VAL = CASH_VAL * cashBonusMultiplier
 		end
 		
+		-- ⭐ Apply Cash Bonus Research bonus  (ADD THIS)
+		if _G.GetResearchBonus then
+			local researchCashBonus = _G.GetResearchBonus(PLOT_OWNER, "CashBonus")
+			if researchCashBonus > 0 then
+				CASH_VAL = CASH_VAL * (1 + researchCashBonus / 100)
+			end
+		end
+		
 		-- ⭐ Apply 2x Cash Gamepass (stacks on top of upgrades)
 		if _G.PlayerHasDoubleCash and _G.PlayerHasDoubleCash(PLOT_OWNER) then
 			CASH_VAL = CASH_VAL * 2
