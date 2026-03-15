@@ -198,6 +198,7 @@ local function performReset(player)
 	-- 6. Restore starter items
 	if session["Items"]["2"] then session["Items"]["2"]["Amount"] = 18 end
 	if session["Items"]["7"] then session["Items"]["7"]["Amount"] = 4  end
+	if session["Items"]["16"] then session["Items"]["16"]["Amount"] = 1 end
 
 	-- 7. Reset cash
 	plrCash.Value    = 50000
