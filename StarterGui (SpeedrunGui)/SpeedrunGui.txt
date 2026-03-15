@@ -258,7 +258,7 @@ local heroDesc = Instance.new("TextLabel", heroFrame)
 heroDesc.Size            = UDim2.new(0.9, 0, 0.35, 0)
 heroDesc.Position        = UDim2.new(0.05, 0, 0.62, 0)
 heroDesc.BackgroundTransparency = 1
-heroDesc.Text            = "Build the most efficient mining factory you can and complete Research as fast as possible to compete for the top of the leaderboards!"
+heroDesc.Text            = "Build the most efficient mining factory you can, complete Research as fast as possible, and compete for the top of the leaderboards! With 4x reduced Research requirements and early unlocks, runs are designed to be fast, replayable, and competitive."
 heroDesc.TextColor3      = Color3.fromRGB(160, 160, 190)
 heroDesc.TextScaled      = true
 heroDesc.Font            = Enum.Font.Gotham
@@ -440,7 +440,7 @@ modalIcon.ZIndex          = 22
 
 local modalTitle = Instance.new("TextLabel", modal)
 modalTitle.Size            = UDim2.new(0.9, 0, 0.08, 0)
-modalTitle.Position        = UDim2.new(0.05, 0, 0.26, 0)
+modalTitle.Position        = UDim2.new(0.05, 0, 0.2, 0)
 modalTitle.BackgroundTransparency = 1
 modalTitle.Text            = "Enter Speedrun Mode?"
 modalTitle.TextColor3      = Color3.fromRGB(255, 255, 255)
@@ -450,10 +450,10 @@ modalTitle.ZIndex          = 22
 local mtTc = Instance.new("UITextSizeConstraint", modalTitle); mtTc.MaxTextSize = 20
 
 local modalBody = Instance.new("TextLabel", modal)
-modalBody.Size            = UDim2.new(0.86, 0, 0.45, 0)
-modalBody.Position        = UDim2.new(0.07, 0, 0.35, 0)
+modalBody.Size            = UDim2.new(0.86, 0, 0.57, 0)
+modalBody.Position        = UDim2.new(0.07, 0, 0.26, 0)
 modalBody.BackgroundTransparency = 1
-modalBody.Text = "Your current main plot will be saved exactly as it is now. Return at any time using \"Return to Main Plot\".\n\n• You start each run with 50,000 Cash\n• The full Shop is unlocked from the start\n• Your purchased Upgrades carry over (only from main plot)\n• Leaving the game mid-run is safe, your run is saved and the timer resumes when you rejoin\n\n⏱  Each age tier timer starts when you begin your first research in that age, so plan ahead if you want to compete on the individual age leaderboards!\nThe total run timer starts the moment you click Start Run and stops when all Research is completed."
+modalBody.Text = "Your current main plot will be saved exactly as it is now. Return at any time using \"Return to Main Plot\".\n\n• Research requires 4x fewer materials\n• You start each run with $50,000 + 1x Item Sorter\n• The Legendary Mine and the full Shop are unlocked from the start\n• Your purchased Upgrades carry over (only from main plot)\n• The Research Boost pass is disabled for fairness (Group Benefits still apply)\n• Leaving the game mid-run is safe, your run is saved and the timer resumes when you rejoin\n\n⏱  Each age tier timer starts when you begin your first research in that age, so plan ahead if you want to compete on the individual age leaderboards!\nThe total run timer starts the moment you click Start Run and stops when all Research is completed."
 modalBody.TextColor3      = Color3.fromRGB(170, 170, 200)
 modalBody.TextScaled      = true
 modalBody.Font            = Enum.Font.Gotham
