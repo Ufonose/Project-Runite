@@ -17,7 +17,7 @@ local CRUSH_SOUND = SMELT_INPUT:FindFirstChild("Crush")
 -- Settings
 local SPREAD_WIDTH = 1.5
 local DETECT_INTERVAL = 0.1 
-local REQUIRED_ORES = 5
+local REQUIRED_ORES = 4
 local SMELT_DELAY = 1
 
 -- Tracking
@@ -148,7 +148,7 @@ local function createIngot()
 	for _, ore in ipairs(oreQueue) do totalCash = totalCash + ore.CashValue end
 	local cashValue = Instance.new("NumberValue", newIngot)
 	cashValue.Name = "Cash"
-	cashValue.Value = (ingotName == "Impure Ingot") and 100 or (totalCash * 2)
+	cashValue.Value = (ingotName == "Impure Ingot") and 250 or (totalCash * 2.5)
 
 	local randomX = math.random(-SPREAD_WIDTH/2 * 100, SPREAD_WIDTH/2 * 100) / 100
 	newIngot:PivotTo(SMELT_OUTPUT.CFrame * CFrame.new(randomX, 0, 0))
