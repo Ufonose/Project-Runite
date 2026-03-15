@@ -5,37 +5,31 @@ local Plrs = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
 
 -- MODULES
-local PlayerSession = require(ServerStorage.Modules.PlayerDataManager) -- ADDED
+local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
 
 local MinerUpgradeApplier = {}
 
--- Helper: Get player's upgrade level for a specific mine type from MODULE
+-- Helper: map mine type -> upgrade ID
+local UPGRADE_MAP = {
+	["Iron Mine"]   = "IronMineSpeed",
+	["Copper Mine"] = "CopperMineSpeed",
+	["Gold Mine"]   = "GoldMineSpeed",
+}
+
+-- Helper: Get player's upgrade level for a specific mine type
 function MinerUpgradeApplier.GetPlayerUpgradeLevel(player, mineType)
 	local session = PlayerSession.Get(player)
-	if not session or not session["Upgrades"] then
-		return 0
-	end
+	if not session or not session["Upgrades"] then return 0 end
 
-	-- Map mine type to upgrade ID
-	local upgradeMap = {
-		["Iron Mine"] = "IronMineSpeed",
-		["Copper Mine"] = "CopperMineSpeed",
-		["Gold Mine"] = "GoldMineSpeed"
-	}
-
-	local upgradeId = upgradeMap[mineType]
-	if not upgradeId then
-		return 0
-	end
+	local upgradeId = UPGRADE_MAP[mineType]
+	if not upgradeId then return 0 end
 
 	return session["Upgrades"][upgradeId] or 0
 end
 
 -- Helper: Determine mine type from miner name
 local function GetMineType(minerName)
-	-- Remove trailing numbers: "Iron Mine 1" -> "Iron Mine"
 	local baseName = minerName:gsub("%s*%d+$", "")
-
 	if baseName:find("Iron Mine") then
 		return "Iron Mine"
 	elseif baseName:find("Copper Mine") then
@@ -43,57 +37,55 @@ local function GetMineType(minerName)
 	elseif baseName:find("Gold Mine") then
 		return "Gold Mine"
 	end
-
 	return nil
 end
 
--- Apply upgrade to a specific miner by adding a SpeedUpgradeLevel attribute
+-- Helper: Get total research speed bonus (as a fraction) for a mine type
+local function GetResearchBonus(player, mineType)
+	local upgradeId = UPGRADE_MAP[mineType]
+	if not upgradeId or not _G.GetResearchBonus then return 0 end
+	return (_G.GetResearchBonus(player, upgradeId) or 0) / 100
+end
+
+-- Apply upgrade to a specific miner
 function MinerUpgradeApplier.ApplyToMiner(miner, player)
 	local mineType = GetMineType(miner.Name)
-	if not mineType then
-		return false
-	end
+	if not mineType then return false end
 
 	local upgradeLevel = MinerUpgradeApplier.GetPlayerUpgradeLevel(player, mineType)
-
-	-- Store the upgrade level as an attribute on the miner
-	-- This is read by your individual Miner scripts to speed up the loop
 	miner:SetAttribute("SpeedUpgradeLevel", upgradeLevel)
+	miner:SetAttribute("ResearchSpeedBonus", GetResearchBonus(player, mineType))
 
 	return true
 end
 
 -- Apply upgrades to all miners in a player's plot
 function MinerUpgradeApplier.ApplyToPlayerPlot(player, mineType)
-	-- Find player's plot using the standard method used in other scripts
 	local playerPlot = player.SetPlot.Value
-
 	if not playerPlot then
 		warn("Plot not found for", player.Name)
 		return 0
 	end
 
-	-- Find PlacedItems folder
 	local placedItems = playerPlot:FindFirstChild("PlacedItems")
 	if not placedItems then
 		warn("PlacedItems not found in plot!")
 		return 0
 	end
 
-	-- Get upgrade level for this mine type
 	local upgradeLevel = MinerUpgradeApplier.GetPlayerUpgradeLevel(player, mineType)
+	local researchBonus = GetResearchBonus(player, mineType)
 
-	-- Apply to all matching miners on the plot
 	local minersUpdated = 0
 	for _, item in pairs(placedItems:GetChildren()) do
-		local itemMineType = GetMineType(item.Name)
-		if itemMineType == mineType then
+		if GetMineType(item.Name) == mineType then
 			item:SetAttribute("SpeedUpgradeLevel", upgradeLevel)
+			item:SetAttribute("ResearchSpeedBonus", researchBonus)
 			minersUpdated = minersUpdated + 1
 		end
 	end
 
-	print("MinerUpgradeApplier: Updated", minersUpdated, mineType, "items to level", upgradeLevel)
+	print("MinerUpgradeApplier: Updated", minersUpdated, mineType, "items to level", upgradeLevel, "+ research bonus", researchBonus)
 	return minersUpdated
 end
 
