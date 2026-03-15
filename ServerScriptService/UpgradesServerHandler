@@ -139,6 +139,10 @@ end
 
 _G.GetUpgradeMultiplier = GetUpgradeMultiplier
 
+_G.ReapplyMineSpeed = function(player, mineType)
+	MinerUpgradeApplier.ApplyToPlayerPlot(player, mineType)
+end
+
 -- ============================================================
 -- DEV PRODUCT HELPER: max a single upgrade instantly
 -- Called by GamepassHandler's ProcessReceipt
