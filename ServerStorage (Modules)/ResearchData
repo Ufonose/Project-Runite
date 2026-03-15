@@ -827,7 +827,7 @@ ResearchData.Objectives = {
 		RequiredObjectives = {53},
 		Requirements = {
 			{ItemName = "Polished Emerald Gem", Amount = 20},
-			{ItemName = "Polished Ruby Gem", Amount = 16},
+			{ItemName = "Polished Ruby Gem", Amount = 12},
 			{ItemName = "Polished Diamond Gem", Amount = 8},
 		},
 		Rewards = {
@@ -867,9 +867,9 @@ ResearchData.Objectives = {
 		Age = 4,
 		RequiredObjectives = {55}, 
 		Requirements = {
-			{ItemName = "Iron Ore", Amount = 1000},
-			{ItemName = "Iron Ore_Crushed", Amount = 1000},
-			{ItemName = "Iron Ore_Cleaned", Amount = 1000},
+			{ItemName = "Iron Ore", Amount = 400},
+			{ItemName = "Iron Ore_Crushed", Amount = 400},
+			{ItemName = "Iron Ore_Cleaned", Amount = 400},
 		},
 		Rewards = {
 			ResearchTokens = 100,
@@ -884,8 +884,8 @@ ResearchData.Objectives = {
 		Age = 4,
 		RequiredObjectives = {56}, 
 		Requirements = {
-			{ItemName = "Iron Ingot", Amount = 300},
-			{ItemName = "Iron Plate", Amount = 300},
+			{ItemName = "Iron Ingot", Amount = 150},
+			{ItemName = "Iron Plate", Amount = 150},
 		},
 		Rewards = {
 			ResearchTokens = 100,
@@ -900,9 +900,9 @@ ResearchData.Objectives = {
 		Age = 4,
 		RequiredObjectives = {57}, 
 		Requirements = {
-			{ItemName = "Iron Gear", Amount = 500},
-			{ItemName = "Iron Coil", Amount = 500},
-			{ItemName = "Iron Pipe", Amount = 500},
+			{ItemName = "Iron Gear", Amount = 200},
+			{ItemName = "Iron Coil", Amount = 200},
+			{ItemName = "Iron Pipe", Amount = 200},
 		},
 		Rewards = {
 			ResearchTokens = 100,
@@ -917,9 +917,9 @@ ResearchData.Objectives = {
 		Age = 4,
 		RequiredObjectives = {55}, 
 		Requirements = {
-			{ItemName = "Copper Ore", Amount = 1000},
-			{ItemName = "Copper Ore_Crushed", Amount = 1000},
-			{ItemName = "Copper Ore_Cleaned", Amount = 1000},
+			{ItemName = "Copper Ore", Amount = 400},
+			{ItemName = "Copper Ore_Crushed", Amount = 400},
+			{ItemName = "Copper Ore_Cleaned", Amount = 400},
 		},
 		Rewards = {
 			ResearchTokens = 100,
@@ -934,8 +934,8 @@ ResearchData.Objectives = {
 		Age = 4,
 		RequiredObjectives = {59}, 
 		Requirements = {
-			{ItemName = "Copper Ingot", Amount = 300},
-			{ItemName = "Copper Plate", Amount = 300},
+			{ItemName = "Copper Ingot", Amount = 150},
+			{ItemName = "Copper Plate", Amount = 150},
 		},
 		Rewards = {
 			ResearchTokens = 100,
@@ -950,9 +950,9 @@ ResearchData.Objectives = {
 		Age = 4,
 		RequiredObjectives = {60}, 
 		Requirements = {
-			{ItemName = "Copper Gear", Amount = 500},
-			{ItemName = "Copper Coil", Amount = 500},
-			{ItemName = "Copper Pipe", Amount = 500},
+			{ItemName = "Copper Gear", Amount = 200},
+			{ItemName = "Copper Coil", Amount = 200},
+			{ItemName = "Copper Pipe", Amount = 200},
 		},
 		Rewards = {
 			ResearchTokens = 100,
@@ -967,9 +967,9 @@ ResearchData.Objectives = {
 		Age = 4,
 		RequiredObjectives = {55}, 
 		Requirements = {
-			{ItemName = "Gold Ore", Amount = 1000},
-			{ItemName = "Gold Ore_Crushed", Amount = 1000},
-			{ItemName = "Gold Ore_Cleaned", Amount = 1000},
+			{ItemName = "Gold Ore", Amount = 400},
+			{ItemName = "Gold Ore_Crushed", Amount = 400},
+			{ItemName = "Gold Ore_Cleaned", Amount = 400},
 		},
 		Rewards = {
 			ResearchTokens = 100,
@@ -984,8 +984,8 @@ ResearchData.Objectives = {
 		Age = 4,
 		RequiredObjectives = {62}, 
 		Requirements = {
-			{ItemName = "Gold Ingot", Amount = 300},
-			{ItemName = "Gold Plate", Amount = 300},
+			{ItemName = "Gold Ingot", Amount = 150},
+			{ItemName = "Gold Plate", Amount = 150},
 		},
 		Rewards = {
 			ResearchTokens = 100,
@@ -1000,9 +1000,9 @@ ResearchData.Objectives = {
 		Age = 4,
 		RequiredObjectives = {63}, 
 		Requirements = {
-			{ItemName = "Gold Gear", Amount = 500},
-			{ItemName = "Gold Coil", Amount = 500},
-			{ItemName = "Gold Pipe", Amount = 500},
+			{ItemName = "Gold Gear", Amount = 200},
+			{ItemName = "Gold Coil", Amount = 200},
+			{ItemName = "Gold Pipe", Amount = 200},
 		},
 		Rewards = {
 			ResearchTokens = 100,
@@ -1051,8 +1051,8 @@ ResearchData.Objectives = {
 		Age = 4,
 		RequiredObjectives = {55}, 
 		Requirements = {
-			{ItemName = "Impure Ingot", Amount = 300},
-			{ItemName = "Impure Plate", Amount = 300},
+			{ItemName = "Impure Ingot", Amount = 150},
+			{ItemName = "Impure Plate", Amount = 150},
 		},
 		Rewards = {
 			ResearchTokens = 100,
@@ -1067,9 +1067,9 @@ ResearchData.Objectives = {
 		Age = 4,
 		RequiredObjectives = {67}, 
 		Requirements = {
-			{ItemName = "Impure Gear", Amount = 500},
-			{ItemName = "Impure Coil", Amount = 500},
-			{ItemName = "Impure Pipe", Amount = 500},
+			{ItemName = "Impure Gear", Amount = 200},
+			{ItemName = "Impure Coil", Amount = 200},
+			{ItemName = "Impure Pipe", Amount = 200},
 		},
 		Rewards = {
 			ResearchTokens = 100,
