@@ -93,14 +93,24 @@ end
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
-local oresDroppedFolders = {}
+local filteredInstances = {}
 for _, plot in ipairs(workspace.Plots:GetChildren()) do
-    local folder = plot:FindFirstChild("OresDropped")
-    if folder then
-        table.insert(oresDroppedFolders, folder)
-    end
+	local folder = plot:FindFirstChild("OresDropped")
+	if folder then
+		table.insert(filteredInstances, folder)
+	end
 end
-rayParams.FilterDescendantsInstances = oresDroppedFolders
+
+-- Exclude local character from raycasts
+if localPlayer.Character then
+	table.insert(filteredInstances, localPlayer.Character)
+end
+localPlayer.CharacterAdded:Connect(function(character)
+	table.insert(filteredInstances, character)
+	rayParams.FilterDescendantsInstances = filteredInstances
+end)
+
+rayParams.FilterDescendantsInstances = filteredInstances
 
 -- ── MAIN LOOP ────────────────────────────────────────────────────────────────
 RunService.Heartbeat:Connect(function(dt)
