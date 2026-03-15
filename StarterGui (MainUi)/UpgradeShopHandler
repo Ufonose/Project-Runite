@@ -750,34 +750,28 @@ function module.LOAD(MODULE_INFO)
 				nameConstraint.MaxTextSize = 13
 				nameConstraint.Parent = nameLabel
 
-				-- Effect text
+				-- Effect text			
 				local effectText = "Not Upgraded"
 				if currentLevel > 0 then
 					if upgradeId == "IronMineSpeed" or upgradeId == "CopperMineSpeed" or upgradeId == "GoldMineSpeed" then
-						local research = researchBonuses[upgradeId] or 0
-						effectText = currentLevel > 0 and ("+" .. (currentLevel * 3) .. "% Speed") or (research > 0 and "Not Upgraded" or "Not Upgraded")
-						if research > 0 then
-							effectText = (currentLevel > 0 and effectText or "Not Upgraded") .. " (+" .. research .. "% Bonus)"
-						end
+						effectText = "+" .. (currentLevel * 3) .. "% Speed"
 					elseif upgradeId == "ConveyorSpeed" then
 						effectText = "+" .. currentLevel .. " Speed"
 					elseif upgradeId == "CashBonus" then
-						local research = researchBonuses["CashBonus"] or 0
-						effectText = currentLevel > 0 and ("+" .. (currentLevel * 5) .. "% Cash") or "Not Upgraded"
-						if research > 0 then
-							effectText = (currentLevel > 0 and effectText or "Not Upgraded") .. " (+" .. research .. "% Bonus)"
-						end
+						effectText = "+" .. (currentLevel * 5) .. "% Cash"
 					elseif upgradeId == "GemDiscovery" then
 						effectText = "+" .. (currentLevel * 10) .. "% Gem Chance"
 					elseif upgradeId == "DoubleDropChance" then
-						local research = researchBonuses["DoubleDropChance"] or 0
-						effectText = currentLevel > 0 and (currentLevel .. "% Double Drop") or "Not Upgraded"
-						if research > 0 then
-							effectText = (currentLevel > 0 and effectText or "Not Upgraded") .. " (+" .. research .. "% Bonus)"
-						end
+						effectText = currentLevel .. "% Double Drop"
 					elseif upgradeId == "MovementSpeed" then
 						effectText = "Speed: " .. (16 + currentLevel)
 					end
+				end
+
+				-- Research bonus suffix — appended regardless of upgrade level
+				local researchBonus = researchBonuses[upgradeId] or 0
+				if researchBonus > 0 then
+					effectText = effectText .. " (+" .. researchBonus .. "% Bonus)"
 				end
 
 				local effectLabel = Instance.new("TextLabel")
@@ -981,6 +975,12 @@ function module.LOAD(MODULE_INFO)
 				maxButton.Visible = MAX_UPGRADE_PRODUCT_IDS[SELECTED_UPGRADE.Id] ~= nil
 			end
 			LOAD_UPGRADES()
+		end)
+		
+		Events:WaitForChild("ResearchBonusUnlocked").OnClientEvent:Connect(function()
+			if upgradesContainer.Visible then
+				LOAD_UPGRADES()
+			end
 		end)
 
 	end)
