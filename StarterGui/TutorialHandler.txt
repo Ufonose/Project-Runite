@@ -342,7 +342,7 @@ startStep1 = function()
 	titleLbl.Text = "🎓  Tutorial — Step 1/6"
 	descLbl.Text  = "Follow the beam and press E (or tap) to buy your FREE Starter Mine!"
 
-	local attA = Instance.new("Attachment"); attA.Position = Vector3.new(0, 0.5, -1); attA.Parent = hrp
+	local attA = Instance.new("Attachment"); attA.Position = Vector3.new(0, 0, 0); attA.Parent = hrp
 	local attB = Instance.new("Attachment"); attB.Position = Vector3.new(0, 0, 0);    attB.Parent = buyButton
 	local beam = makeBeam(attB, attA)
 	
