@@ -64,7 +64,8 @@ local function GetWaitTime(itemInfo, minerModel)
 	local baseMin = itemInfo.DropSpeedMin
 	local baseMax = itemInfo.DropSpeedMax
 	local upgradeLevel = minerModel:GetAttribute("SpeedUpgradeLevel") or 0
-	local speedMultiplier = 1 + (upgradeLevel * 0.05)
+	local researchBonus = minerModel:GetAttribute("ResearchSpeedBonus") or 0  -- ADD
+	local speedMultiplier = (1 + (upgradeLevel * 0.05)) + researchBonus        -- CHANGE
 	return (baseMin / speedMultiplier) + math.random() * ((baseMax / speedMultiplier) - (baseMin / speedMultiplier))
 end
 
@@ -157,6 +158,9 @@ local function startMiner(miner)
 				if miner:GetAttribute("OreLimitPaused") then continue end
 
 				local doubleDropChance = _G.GetUpgradeMultiplier and _G.GetUpgradeMultiplier(plot_owner, "DoubleDropChance") or 0
+				if _G.GetResearchBonus then
+					doubleDropChance = doubleDropChance + _G.GetResearchBonus(plot_owner, "DoubleDropChance")
+				end
 				local isDoubleDrop = (math.random() * 100) <= doubleDropChance
 				local name, worth = SelectRandomOre(itemInfo, plot)
 
