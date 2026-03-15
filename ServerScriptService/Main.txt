@@ -12,6 +12,7 @@ local DEBOUNCE = {}
 local MINIMUM_ITEM_QUANTITIES = {
 	["Basic Conveyor"] = 8,
 	["Corner Conveyor"] = 2,
+	["Item Sorter"] = 1,
 }
 
 function PLACE_ITEM(Plr, PLACED_ITEMS, ITEMS)
@@ -102,6 +103,8 @@ end
 function BUY_ITEM(Plr, ITEM_ID, AMOUNT)
 	local CASH = ServerStorage.ServerLockedPlayerInfo.PlayerCash:FindFirstChild(Plr.Name)
 	if not CASH then return false end
+	local session = PlayerSession.Get(Plr)
+	if not session then return false end
 
 	local CANT_BUY_TYPES = {"special", "cantbuy"}
 	local amt = AMOUNT or 1
@@ -110,6 +113,18 @@ function BUY_ITEM(Plr, ITEM_ID, AMOUNT)
 	local validIDs = {}
 
 	for _, id in pairs(IDs) do
+		local idStr = tostring(id)
+		-- Block purchase if item is not unlocked in the player's session
+		local unlocked = session["Items"][idStr] and session["Items"][idStr]["Unlocked"] == true
+		if not unlocked then
+			local itemModel = MAIN_LIB.ITEM_FROM_ID(id)
+			local itemName = itemModel and itemModel.Name or "that item"
+			RepStorage.Events.MessageClient:FireClient(Plr, "screen", {
+				message = "🔒 " .. itemName .. " is locked! Complete the required research to buy more."
+			})
+			continue
+		end
+
 		local itemModel = MAIN_LIB.ITEM_FROM_ID(id)
 		local stats = require(itemModel.ItemStats)
 		if not table.find(CANT_BUY_TYPES, stats.ItemType) then
@@ -147,7 +162,6 @@ function SELL_ITEM(Plr, ITEMS)
 		end
 
 		-- 2. Count TOTAL items (placed on plot + in inventory)
-		-- Adjust this path if your plot system uses a different folder name
 		local PLR_PLOT = Plr:FindFirstChild("SetPlot") and Plr.SetPlot.Value
 		local PLACED_ITEMS = PLR_PLOT and PLR_PLOT:FindFirstChild("PlacedItems")
 
