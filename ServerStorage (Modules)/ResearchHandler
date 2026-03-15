@@ -244,7 +244,14 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 	if completedAll3Ages then
 		RepStorage.Events.AllResearchCompleted:FireClient(player)
 	end
-
+	
+	if objective.Rewards.ResearchBonus then
+		local bonusEvent = RepStorage.Events:FindFirstChild("ResearchBonusUnlocked")
+		if bonusEvent then
+			bonusEvent:FireClient(player)
+		end
+	end
+	
 	-- ✅ Auto-start any objectives that just became available
 	task.defer(ResearchHandler.AutoStartAvailableObjectives, player)
 
