@@ -198,6 +198,19 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 		notificationMessage = notificationMessage .. " +" .. tokenReward .. " Research Tokens"
 	elseif #unlockedMachines > 0 then
 		notificationMessage = notificationMessage .. " 🔓 Unlocked: " .. table.concat(unlockedMachines, ", ")
+	elseif objective.Rewards.ResearchBonus then
+		local bonus = objective.Rewards.ResearchBonus
+		local bonusLabels = {
+			IronMineSpeed    = "+%d%% Iron Mine Speed",
+			CopperMineSpeed  = "+%d%% Copper Mine Speed",
+			GoldMineSpeed    = "+%d%% Gold Mine Speed",
+			CashBonus        = "+%d%% Cash Bonus",
+			DoubleDropChance = "+%d%% Double Drop Chance",
+		}
+		local template = bonusLabels[bonus.Type]
+		if template then
+			notificationMessage = notificationMessage .. " ⚡ Bonus: " .. string.format(template, bonus.Value)
+		end
 	end
 
 	RepStorage.Events.MessageClient:FireClient(player, "screen", {
@@ -206,6 +219,19 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 
 	-- Notify SpeedrunHandler for age splits and unlock detection
 	SpeedrunHandler.OnObjectiveCompleted(player, objectiveId)
+	
+	-- Re-apply mine speed to existing miners if this objective gives a speed bonus
+	if objective.Rewards.ResearchBonus then
+		local mineTypeMap = {
+			IronMineSpeed   = "Iron Mine",
+			CopperMineSpeed = "Copper Mine",
+			GoldMineSpeed   = "Gold Mine",
+		}
+		local mineType = mineTypeMap[objective.Rewards.ResearchBonus.Type]
+		if mineType and _G.ReapplyMineSpeed then
+			_G.ReapplyMineSpeed(player, mineType)
+		end
+	end
 
 	-- Fire AllResearchCompleted when Ages 1-3 are all done (unlocks Legendary Mine)
 	local completedAll3Ages = true
@@ -254,6 +280,16 @@ function ResearchHandler.AutoStartAvailableObjectives(player)
 		ResearchHandler.StartObjective(player, objective.Id)
 	end
 end
+
+-- Returns total research bonus (as a flat number, e.g. 10 for 10%) for a given upgradeId
+function ResearchHandler.GetResearchBonus(player, upgradeId)
+	local session = PlayerSession.Get(player)
+	if not session then return 0 end
+	local bonuses = ResearchData.GetTotalBonusesByType(session["Research"].CompletedObjectives)
+	return bonuses[upgradeId] or 0
+end
+
+_G.GetResearchBonus = ResearchHandler.GetResearchBonus
 
 -- Expose as global so GamepassHandler and ResearchServer can call it
 _G.AutoStartAvailableObjectives = ResearchHandler.AutoStartAvailableObjectives
