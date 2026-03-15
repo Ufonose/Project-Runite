@@ -79,6 +79,13 @@ RepStorage.Events.TriggerAutoResearch.OnServerEvent:Connect(function(player)
 	ResearchHandler.AutoStartAvailableObjectives(player)
 end)
 
+-- RemoteEvent: fires to client when a research bonus objective is completed
+if not RepStorage.Events:FindFirstChild("ResearchBonusUnlocked") then
+	local e = Instance.new("RemoteEvent")
+	e.Name = "ResearchBonusUnlocked"
+	e.Parent = RepStorage.Events
+end
+
 -- Auto Research: when a player joins, start any already-available objectives
 Players.PlayerAdded:Connect(function(player)
 	task.spawn(function()
