@@ -5,6 +5,33 @@ local Players       = game:GetService("Players")
 local ResearchHandler = require(ServerStorage.Modules.ResearchHandler)
 local ResearchData    = require(ServerStorage.Modules.ResearchData)
 
+local SPEEDRUN_REQ_DIVISOR = 4
+
+local function getEffectiveObjectives(player)
+	local session = require(ServerStorage.Modules.PlayerDataManager).Get(player)
+	local inSpeedrun = session and session["Speedrun"] and session["Speedrun"].InSpeedrunMode == true
+
+	if not inSpeedrun then
+		return ResearchData.Objectives
+	end
+
+	-- Deep copy and scale requirements down for speedrun mode
+	local scaled = {}
+	for _, obj in pairs(ResearchData.Objectives) do
+		local copy = {}
+		for k, v in pairs(obj) do copy[k] = v end
+		copy.Requirements = {}
+		for _, req in pairs(obj.Requirements) do
+			table.insert(copy.Requirements, {
+				ItemName = req.ItemName,
+				Amount   = math.max(1, math.round(req.Amount / SPEEDRUN_REQ_DIVISOR)),
+			})
+		end
+		table.insert(scaled, copy)
+	end
+	return scaled
+end
+
 -- Get research data for player
 RepStorage.Events.GetResearchData.OnServerInvoke = function(player)
 	-- Wait for DataLoaded if the session isn't ready yet
@@ -31,7 +58,7 @@ RepStorage.Events.GetResearchData.OnServerInvoke = function(player)
 		ActiveObjectives    = research.ActiveObjectives,
 		ObjectiveProgress   = research.ObjectiveProgress,
 		ResearchTokens      = player.ResearchTokens.Value,
-		AllObjectives       = ResearchData.Objectives,
+		AllObjectives       = getEffectiveObjectives(player),
 		ItemsCollected      = research.ItemsCollected,
 	}
 end
