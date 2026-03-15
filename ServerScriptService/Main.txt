@@ -10,7 +10,7 @@ local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
 -- Variables
 local DEBOUNCE = {}
 local MINIMUM_ITEM_QUANTITIES = {
-	["Standard Conveyor"] = 8,
+	["Basic Conveyor"] = 8,
 	["Corner Conveyor"] = 2,
 }
 
