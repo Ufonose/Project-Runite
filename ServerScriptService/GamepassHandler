@@ -8,24 +8,24 @@ local RefreshGroupStatus = ReplicatedStorage.Events:WaitForChild("RefreshGroupSt
 local PlayerDataManager = require(ServerStorage.Modules.PlayerDataManager)
 
 -- !! Gamepass IDs !!
-local DOUBLE_CASH_GAMEPASS_ID               = 1745379165
-local AUTO_RESEARCH_GAMEPASS_ID             = 1741387786
-local RESEARCH_BOOST_GAMEPASS_ID            = 1744553461
-local SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID     = 1744113516
-local MAX_ALL_UPGRADES_GAMEPASS_ID          = 1745314478
+local DOUBLE_CASH_GAMEPASS_ID               = 1749393968
+local AUTO_RESEARCH_GAMEPASS_ID             = 1749830340
+local RESEARCH_BOOST_GAMEPASS_ID            = 1749402192
+local SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID     = 1749338050
+local MAX_ALL_UPGRADES_GAMEPASS_ID          = 1749556761
 
 -- !! Developer Product IDs !!
-local LEGENDARY_MINE_PRODUCT_ID             = 3553756561
+local LEGENDARY_MINE_PRODUCT_ID             = 3557707616
 
 local MAX_UPGRADE_PRODUCT_IDS = {
-	[3554030580] = "IronMineSpeed",
-	[3554030624] = "CopperMineSpeed",
-	[3554030671] = "GoldMineSpeed",
-	[3554030725] = "ConveyorSpeed",
-	[3554031037] = "CashBonus",
-	[3554030819] = "GemDiscovery",
-	[3554030856] = "DoubleDropChance",
-	[3554030775] = "MovementSpeed",
+	[3557703813] = "IronMineSpeed",
+	[3557705481] = "CopperMineSpeed",
+	[3557705673] = "GoldMineSpeed",
+	[3557705796] = "ConveyorSpeed",
+	[3557706003] = "CashBonus",
+	[3557706369] = "GemDiscovery",
+	[3557706721] = "DoubleDropChance",
+	[3557706866] = "MovementSpeed",
 }
 
 -- ============================================================
