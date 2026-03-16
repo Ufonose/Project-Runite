@@ -769,8 +769,7 @@ function module.LOAD(MODULE_INFO)
 			refreshCard3()
 		end)
 		Events:WaitForChild("AllResearchCompleted").OnClientEvent:Connect(function()
-			allResearchComplete = true
-			refreshCard5()
+			checkCard5ResearchStatus()  -- re-verify from server rather than assuming true
 		end)
 
 		-- ==================== TAB SWITCHING ====================
