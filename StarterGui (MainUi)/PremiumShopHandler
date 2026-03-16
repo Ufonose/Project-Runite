@@ -10,11 +10,11 @@ function module.LOAD(MODULE_INFO)
 	local MarketplaceService = game:GetService("MarketplaceService")
 
 	-- !! Must match GamepassHandler !!
-	local DOUBLE_CASH_GAMEPASS_ID           = 1745379165
-	local AUTO_RESEARCH_GAMEPASS_ID         = 1741387786
-	local RESEARCH_BOOST_GAMEPASS_ID        = 1744553461
-	local MAX_ALL_UPGRADES_GAMEPASS_ID      = 1745314478
-	local SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID = 1744113516
+	local DOUBLE_CASH_GAMEPASS_ID           = 1749393968
+	local AUTO_RESEARCH_GAMEPASS_ID         = 1749830340
+	local RESEARCH_BOOST_GAMEPASS_ID        = 1749402192
+	local MAX_ALL_UPGRADES_GAMEPASS_ID      = 1749556761
+	local SPEEDRUN_EARLY_ACCESS_GAMEPASS_ID = 1749338050
 
 	task.spawn(function()
 		local shopFolder = script.Parent
