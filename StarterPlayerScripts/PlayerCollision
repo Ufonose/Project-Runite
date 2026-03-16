@@ -1,8 +1,22 @@
 local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
 
-for _, part in ipairs(character:GetDescendants()) do
-	if part:IsA("BasePart") then
-		part.CollisionGroup = "Players"
+local function applyToCharacter(character)
+	-- Apply to all current parts
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CollisionGroup = "Players"
+		end
 	end
+	-- Apply to any parts that load in after (accessories etc.)
+	character.DescendantAdded:Connect(function(part)
+		if part:IsA("BasePart") then
+			part.CollisionGroup = "Players"
+		end
+	end)
 end
+
+local character = player.Character or player.CharacterAdded:Wait()
+applyToCharacter(character)
+
+-- Handle respawns
+player.CharacterAdded:Connect(applyToCharacter)
