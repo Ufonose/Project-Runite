@@ -19,6 +19,8 @@ local function getEffectiveAmount(player, amount)
 	return amount
 end
 
+ResearchHandler.GetEffectiveAmount = getEffectiveAmount
+
 local function getItemNameFromId(itemId)
 	for _, item in pairs(RepStorage.Items:GetChildren()) do
 		local itemStats = item:FindFirstChild("ItemStats")
