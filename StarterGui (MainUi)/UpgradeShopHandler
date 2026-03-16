@@ -13,18 +13,18 @@ function module.LOAD(MODULE_INFO)
 	local LOAD_UPGRADES = nil
 
 	-- !! Must match GamepassHandler !!
-	local MAX_ALL_UPGRADES_GAMEPASS_ID = 1745314478
+	local MAX_ALL_UPGRADES_GAMEPASS_ID = 1749556761
 
 	-- !! Must match MAX_UPGRADE_PRODUCT_IDS in GamepassHandler !!
 	local MAX_UPGRADE_PRODUCT_IDS = {
-		IronMineSpeed    = 3554030580,
-		CopperMineSpeed  = 3554030624,
-		GoldMineSpeed    = 3554030671,
-		ConveyorSpeed    = 3554030725,
-		CashBonus        = 3554031037,
-		GemDiscovery     = 3554030819,
-		DoubleDropChance = 3554030856,
-		MovementSpeed    = 3554030775,
+		IronMineSpeed    = 3557703813,
+		CopperMineSpeed  = 3557705481,
+		GoldMineSpeed    = 3557705673,
+		ConveyorSpeed    = 3557705796,
+		CashBonus        = 3557706003,
+		GemDiscovery     = 3557706369,
+		DoubleDropChance = 3557706721,
+		MovementSpeed    = 3557706866,
 	}
 
 	task.spawn(function()
