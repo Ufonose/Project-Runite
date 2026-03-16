@@ -94,14 +94,25 @@ local function CreateModernLoadingScreen()
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
 	title.Size = UDim2.new(1, -40, 0, 60)
-	title.Position = UDim2.new(0, 20, 0, 30)
+	title.Position = UDim2.new(0, 20, 0, 10)
 	title.BackgroundTransparency = 1
-	title.Text = "MINING TYCOON"
+	title.Text = "The Deep Deposit"
 	title.TextColor3 = Color3.fromRGB(255, 255, 255)
 	title.TextSize = 32
 	title.Font = Enum.Font.GothamBold
 	title.TextStrokeTransparency = 0.8
 	title.Parent = container
+	
+	local studio = Instance.new("TextLabel")
+	studio.Size = UDim2.new(1, -40, 0, 20)
+	studio.Position = UDim2.new(0, 20, 0, 55)
+	studio.BackgroundTransparency = 1
+	studio.Text = "by Stonepeak Studios"
+	studio.TextColor3 = Color3.fromRGB(120, 120, 140)
+	studio.TextSize = 13
+	studio.Font = Enum.Font.Gotham
+	studio.TextXAlignment = Enum.TextXAlignment.Center
+	studio.Parent = container
 
 	-- Loading status text
 	local statusText = Instance.new("TextLabel")
@@ -162,29 +173,33 @@ local function CreateModernLoadingScreen()
 	percentText.TextXAlignment = Enum.TextXAlignment.Right
 	percentText.Parent = container
 
+	-- Rotate tips
+	local tips = {
+		"Tip: Conveyors with green arrows can have their direction flipped by pressig F!",
+		"Tip: Complete research objectives to unlock new machines and cave barriers!",		
+		"Tip: Research Tokens are earned by completing objectives!",
+		"Tip: Each Age of research unlocks more powerful machines!",
+		"Tip: Joining the Stonepeak Studios group gives you in-game perks!",
+		"Tip: The Assembler can produce Gears, Coils and Pipes!",
+		"Tip: Elevated Conveyors can be placed on top of ground conveyors!",
+		"Tip: Head to the surface to visit other players' mines and see their setups!",
+		"Tip: Check out the leaderboards on the surface!",		
+
+	}
+
 	-- Loading tips
 	local tipsText = Instance.new("TextLabel")
 	tipsText.Name = "TipsText"
 	tipsText.Size = UDim2.new(1, -40, 0, 50)
 	tipsText.Position = UDim2.new(0, 20, 0, 220)
 	tipsText.BackgroundTransparency = 1
-	tipsText.Text = "Tip: Upgrade your conveyors for faster ore processing!"
+	tipsText.Text = tips[math.random(#tips)]
 	tipsText.TextColor3 = Color3.fromRGB(180, 180, 200)
 	tipsText.TextSize = 14
 	tipsText.Font = Enum.Font.Gotham
 	tipsText.TextWrapped = true
 	tipsText.TextTransparency = 0.5
 	tipsText.Parent = container
-
-	-- Rotate tips
-	local tips = {
-		"Tip: Research unlocks powerful automation upgrades!",
-		"Tip: Cave barriers can be unlocked with research tokens!",
-		"Tip: Merge conveyors combine multiple ore streams!",
-		"Tip: Sorting conveyors help organize your production!",
-		"Tip: Build vertically to save plot space!",
-		"Tip: Hotspots yield rare gems and valuable ores!",
-	}
 
 	coroutine.wrap(function()
 		local tipIndex = 1
