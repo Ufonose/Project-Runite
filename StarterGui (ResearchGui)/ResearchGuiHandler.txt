@@ -261,7 +261,7 @@ autoToggleStroke.Parent = autoToggleBtn
 local autoResearchOwned = false
 local autoResearchChecked = false
 
-local AUTO_RESEARCH_GAMEPASS_ID = 1741387786  -- !! Must match GamepassHandler !!
+local AUTO_RESEARCH_GAMEPASS_ID = 1749830340  -- !! Must match GamepassHandler !!
 
 local function refreshToggleVisual()
 	if not autoResearchOwned then
