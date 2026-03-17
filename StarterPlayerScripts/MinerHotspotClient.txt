@@ -146,7 +146,7 @@ local function createModernHotspotUI(parent, info)
 	local function resetCostDisplay()
 		if info.IsResearchLocked then
 			costLabel.RichText = true
-			costLabel.Text = "🔒 Complete Ages 1, 2 & 3\n<font color='#00cc66'>⚡ Instant Buy: \u{E002}50</font>"
+			costLabel.Text = "🔒 Complete Ages 1, 2 & 3\n<font color='#00cc66'>⚡ Instant Buy: \u{E002}119</font>"
 			costLabel.TextColor3 = Color3.fromRGB(200, 150, 80)
 			costLabel.TextSize = Camera.ViewportSize.X < 900 and 9 or 13
 		elseif info.Config.CashCost then
