@@ -1,0 +1,138 @@
+-- ServerScriptService/BadgeHandler
+
+local BadgeService  = game:GetService("BadgeService")
+local Players       = game:GetService("Players")
+local ServerStorage = game:GetService("ServerStorage")
+local ResearchData  = require(ServerStorage.Modules.ResearchData)
+
+-- ══════════════════════════════════════════════════════════════════
+-- 🏅 BADGE IDs
+-- ══════════════════════════════════════════════════════════════════
+local BADGE_IDS = {
+	Welcome  = 3275051877328291,
+	Age1     = 3253107794226853,
+	Age2     = 3275051877328291,
+	Age3     = 1094139741430434,
+	Age4     = 2299988713308145,
+	Cash1M   = 3563050983639266,
+	Cash10M  = 1503814460231759,
+	Cash100M = 3700261325147667,
+
+	SpeedrunComplete  = 1875868871357016,
+	SpeedrunVeteran   = 3373196609417555, -- replace with real ID (10 speedruns)
+	SpeedrunFast      = 0, -- replace with real ID (time threshold below)
+	Secret           = 2678603333400742,
+}
+
+-- ── Speedrun time badge threshold (seconds) ──────────────────────
+-- Set this after playtesting. e.g. 1800 = sub 30 minutes
+local SPEEDRUN_FAST_THRESHOLD = 0 -- 0 = disabled until you set it
+
+local CASH_MILESTONES = { 1000000, 10000000, 100000000 }
+local CASH_BADGE_MAP  = { BADGE_IDS.Cash1M, BADGE_IDS.Cash10M, BADGE_IDS.Cash100M }
+
+-- ══════════════════════════════════════════════════════════════════
+-- CORE: award with ownership check to avoid redundant API calls
+-- ══════════════════════════════════════════════════════════════════
+local function awardBadge(player, badgeId)
+	if badgeId == 0 then return end
+	task.spawn(function()
+		print("[Badge] Attempting to award badge", badgeId, "to", player.Name)
+		local ok, hasBadge = pcall(BadgeService.UserHasBadgeAsync, BadgeService, player.UserId, badgeId)
+		if ok and not hasBadge then
+			local success, err = pcall(BadgeService.AwardBadgeAsync, BadgeService, player.UserId, badgeId)
+			print("[Badge] Award result:", success, err)
+		end
+	end)
+end
+
+-- ══════════════════════════════════════════════════════════════════
+-- WELCOME BADGE
+-- ══════════════════════════════════════════════════════════════════
+local function onPlayerAdded(player)
+	awardBadge(player, BADGE_IDS.Welcome)
+
+	-- Cash milestone watcher
+	local te = player:WaitForChild("TotalEarned", 30)
+	if te then
+		local triggeredMilestones = {}
+		te.Changed:Connect(function(newVal)
+			for i, threshold in ipairs(CASH_MILESTONES) do
+				if newVal >= threshold and not triggeredMilestones[i] then
+					triggeredMilestones[i] = true
+					awardBadge(player, CASH_BADGE_MAP[i])
+				end
+			end
+		end)
+	end
+
+	-- Speedrun completion watcher
+	local srCount = player:WaitForChild("SpeedrunCount", 30)
+	if srCount then
+		srCount.Changed:Connect(function(newVal)
+			if newVal >= 1 then
+				awardBadge(player, BADGE_IDS.SpeedrunComplete)
+			end
+			if newVal >= 10 then
+				awardBadge(player, BADGE_IDS.SpeedrunVeteran)
+			end
+		end)
+	end
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+for _, plr in ipairs(Players:GetPlayers()) do
+	task.spawn(onPlayerAdded, plr)
+end
+
+-- ══════════════════════════════════════════════════════════════════
+-- AGE COMPLETION — called from ResearchHandler via _G hook
+-- ══════════════════════════════════════════════════════════════════
+local AGE_BADGE_MAP = { BADGE_IDS.Age1, BADGE_IDS.Age2, BADGE_IDS.Age3, BADGE_IDS.Age4 }
+
+_G.CheckAgeBadge = function(player, ageId, completedObjectives)
+	-- Don't award age badges during speedrun mode
+	local PlayerSession = require(ServerStorage.Modules.PlayerDataManager)
+	local session = PlayerSession.Get(player)
+	if session and session["Speedrun"] and session["Speedrun"].InSpeedrunMode then return end
+
+	local ageObjectives = ResearchData.GetObjectivesByAge(ageId)
+	if #ageObjectives == 0 then return end
+	for _, obj in pairs(ageObjectives) do
+		if not table.find(completedObjectives, obj.Id) then return end
+	end
+	local badgeId = AGE_BADGE_MAP[ageId]
+	if badgeId then
+		awardBadge(player, badgeId)
+	end
+end
+
+-- ══════════════════════════════════════════════════════════════════
+-- SPEEDRUN FAST TIME BADGE — called from SpeedrunHandler via _G hook
+-- ══════════════════════════════════════════════════════════════════
+_G.CheckSpeedrunBadge = function(player, elapsedSeconds)
+	if SPEEDRUN_FAST_THRESHOLD > 0 and elapsedSeconds <= SPEEDRUN_FAST_THRESHOLD then
+		awardBadge(player, BADGE_IDS.SpeedrunFast)
+	end
+end
+
+-- ══════════════════════════════════════════════════════════════════
+-- SECRET BADGE — touch trigger in Workspace.Lobby
+-- ══════════════════════════════════════════════════════════════════
+local lobby = workspace:WaitForChild("Lobby")
+local secretPart = lobby:WaitForChild("SecretTrigger")
+
+local secretTriggered = {}
+
+secretPart.Touched:Connect(function(hit)
+	local character = hit.Parent
+	local player = Players:GetPlayerFromCharacter(character)
+	if player and not secretTriggered[player.UserId] then
+		secretTriggered[player.UserId] = true
+		awardBadge(player, BADGE_IDS.Secret)
+	end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	secretTriggered[player.UserId] = nil
+end)
