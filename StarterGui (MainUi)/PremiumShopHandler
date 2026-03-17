@@ -443,7 +443,7 @@ function module.LOAD(MODULE_INFO)
 			iconImage   = "rbxassetid://133328167380961",
 			titleText   = "2x Cash",
 			titleColor  = Color3.fromRGB(255, 215, 0),
-			descText    = "Permanently doubles all cash earned from ore deposits. Stacks with the Cash Bonus upgrade for massive earnings.",
+			descText    = "Permanently doubles all cash earned from all deposits. Stacks with the Cash Bonus upgrade for massive earnings.",
 		})
 
 		local card2 = buildCard({
