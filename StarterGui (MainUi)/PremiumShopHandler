@@ -636,9 +636,13 @@ function module.LOAD(MODULE_INFO)
 						local ok, data = pcall(function() return getSpeedrunData:InvokeServer() end)
 						if ok and data then
 							IN_SPEEDRUN = data.InSpeedrunMode == true or data.IsActive == true
-							refreshCard3()
 						end
 					end
+					refreshCard1()
+					refreshCard2()
+					refreshCard3()
+					refreshCard4()
+					refreshCard5()
 				end)
 				return
 			end
