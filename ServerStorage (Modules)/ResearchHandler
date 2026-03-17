@@ -256,6 +256,11 @@ function ResearchHandler.CompleteObjective(player, objectiveId)
 	
 	-- ✅ Auto-start any objectives that just became available
 	task.defer(ResearchHandler.AutoStartAvailableObjectives, player)
+	
+	-- 🏅 Badge check for age completion
+	if _G.CheckAgeBadge then
+		_G.CheckAgeBadge(player, objective.Age, research.CompletedObjectives)
+	end
 
 	return true
 end
