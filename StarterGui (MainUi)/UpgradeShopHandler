@@ -333,7 +333,7 @@ function module.LOAD(MODULE_INFO)
 		local strikeLabel = Instance.new("TextLabel")
 		strikeLabel.Size = UDim2.new(1, 0, 1, 0)
 		strikeLabel.BackgroundTransparency = 1
-		strikeLabel.Text = "\u{E002} 400"  -- !! Set your original price here !!
+		strikeLabel.Text = "\u{E002} 230"  -- !! Set your original price here !!
 		strikeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 		strikeLabel.Font = Enum.Font.Gotham
 		strikeLabel.TextScaled = true
@@ -358,7 +358,7 @@ function module.LOAD(MODULE_INFO)
 		discountLabel.Size = UDim2.new(1, 0, 0.28, 0)
 		discountLabel.Position = UDim2.new(0, 0, 0.68, 0)
 		discountLabel.BackgroundTransparency = 1
-		discountLabel.Text = "\u{E002} 250"  -- !! Set your discount price here !!
+		discountLabel.Text = "\u{E002} 199"  -- !! Set your discount price here !!
 		discountLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 		discountLabel.Font = Enum.Font.GothamBold
 		discountLabel.TextScaled = true
