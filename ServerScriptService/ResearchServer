@@ -34,6 +34,9 @@ end
 
 -- Get research data for player
 RepStorage.Events.GetResearchData.OnServerInvoke = function(player)
+	local session = require(ServerStorage.Modules.PlayerDataManager).Get(player)
+	local inSpeedrun = session and session["Speedrun"] and session["Speedrun"].InSpeedrunMode == true
+
 	-- Wait for DataLoaded if the session isn't ready yet
 	local research = ResearchHandler.GetPlayerResearch(player)
 	if not research then
@@ -51,6 +54,7 @@ RepStorage.Events.GetResearchData.OnServerInvoke = function(player)
 			AllObjectives       = ResearchData.Objectives,
 			ItemsCollected      = {},
 			IsLoading           = true,
+			InSpeedrunMode      = inSpeedrun,
 		}
 	end
 	return {
@@ -61,6 +65,7 @@ RepStorage.Events.GetResearchData.OnServerInvoke = function(player)
 		AllObjectives       = getEffectiveObjectives(player),
 		ItemsCollected      = research.ItemsCollected,
 		ResearchBonuses     = ResearchData.GetTotalBonusesByType(research.CompletedObjectives),
+		InSpeedrunMode      = inSpeedrun,
 	}
 end
 
