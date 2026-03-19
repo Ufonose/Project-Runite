@@ -1439,6 +1439,21 @@ local function createAgeTab(ageData, researchData)
 		end
 	end
 
+	-- Determine if this age is locked (ages 2-4 require previous age's main obj)
+	local isLocked = false
+	if ageData.Id > 1 and not researchData.InSpeedrunMode then
+		local prevMainId = nil
+		for _, obj in pairs(researchData.AllObjectives) do
+			if obj.Age == (ageData.Id - 1) and obj.IsMainObjective then
+				prevMainId = obj.Id
+				break
+			end
+		end
+		if prevMainId then
+			isLocked = not table.find(researchData.CompletedObjectives, prevMainId)
+		end
+	end
+
 	local isUnlocked = true
 	local isSelected = ageData.Id == currentAge and currentView == "objectives"
 	local isCompleted = completedObjectives == totalObjectives and totalObjectives > 0
@@ -1447,7 +1462,8 @@ local function createAgeTab(ageData, researchData)
 	button.Name = "AgeTab_" .. ageData.Id
 	button.Size = UDim2.new(1, 0, 0, 80 * SCALE_FACTOR)
 	-- Green if completed, selected color if selected, default otherwise
-	button.BackgroundColor3 = isCompleted and Color3.fromRGB(40, 80, 40) or (isSelected and ageData.Color or Color3.fromRGB(40, 40, 45))
+	button.BackgroundColor3 = isLocked and Color3.fromRGB(28, 28, 30)
+		or (isCompleted and Color3.fromRGB(40, 80, 40) or (isSelected and ageData.Color or Color3.fromRGB(40, 40, 45)))
 	button.BorderSizePixel = 0
 	button.LayoutOrder = ageData.Id
 	button.AutoButtonColor = false
@@ -1505,7 +1521,7 @@ local function createAgeTab(ageData, researchData)
 	progressLabel.Size = UDim2.new(0.15, 0, 0.3125, 0)  -- Reduced from 0.25 to 0.15 for smaller text
 	progressLabel.Position = UDim2.new(0.825, 0, 0.1, 0)  -- Adjusted position (0.275 + 0.55 = 0.825)
 	progressLabel.BackgroundTransparency = 1
-	progressLabel.Text = completedObjectives .. "/" .. totalObjectives
+	progressLabel.Text = isLocked and "" or (completedObjectives .. "/" .. totalObjectives)
 	progressLabel.TextColor3 = isCompleted and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(134, 207, 255)
 	progressLabel.TextSize = 12
 	progressLabel.Font = Enum.Font.GothamBold
@@ -1524,8 +1540,8 @@ local function createAgeTab(ageData, researchData)
 	descLabel.Size = UDim2.new(0.7, 0, 0.5, 0)  -- Back to original size
 	descLabel.Position = UDim2.new(0.275, 0, 0.4375, 0)  -- Back to original position
 	descLabel.BackgroundTransparency = 1
-	descLabel.Text = ageData.Description
-	descLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+	descLabel.Text = isLocked and ("🔒 Complete Age " .. (ageData.Id - 1)) or ageData.Description
+	descLabel.TextColor3 = isLocked and Color3.fromRGB(120, 120, 120) or Color3.fromRGB(180, 180, 180)
 	descLabel.TextSize = 11
 	descLabel.Font = Enum.Font.Gotham
 	descLabel.TextWrapped = true
@@ -1540,7 +1556,9 @@ local function createAgeTab(ageData, researchData)
 	descConstraint.Parent = descLabel
 
 	button.MouseButton1Click:Connect(function()
-		if isUnlocked then
+		if isLocked then
+			SoundManager.Error()
+		elseif isUnlocked then
 			SoundManager.ButtonClick()
 			currentAge = ageData.Id
 			currentView = "objectives"
