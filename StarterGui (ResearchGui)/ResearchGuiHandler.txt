@@ -1835,13 +1835,12 @@ menuObject.Changed:Connect(function()
 		updateScaleFactor()
 		refreshAgeTabsAndTree()
 		checkAutoResearchOwnership()
-		Controls:Disable()
+		if isMobile then Controls:Disable() end
 		ContextActionService:BindAction("ResearchGuiInputSink", function()
 			return Enum.ContextActionResult.Sink
 		end, false, Enum.UserInputType.MouseWheel, Enum.UserInputType.Touch)
 	else
-		resetTouchState()
-		Controls:Enable()
+		if isMobile then Controls:Enable() end
 		ContextActionService:UnbindAction("ResearchGuiInputSink")
 	end
 end)
