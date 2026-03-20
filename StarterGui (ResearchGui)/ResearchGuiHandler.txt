@@ -1304,6 +1304,9 @@ function refreshTree()
 	for _, child in pairs(connectionsFrame:GetChildren()) do
 		child:Destroy()
 	end
+	
+	-- Restore tree-specific settings
+	treeContainer.ScrollingEnabled = false
 
 	-- Clear card references
 	cardReferences = {}
@@ -1371,6 +1374,10 @@ function displayStatistics()
 
 	-- Clear statistics references
 	statisticsReferences = {}
+	-- Reset scale/layout for stats view
+	treeScale.Scale = 1
+	treeWrapper.Size = UDim2.new(1, 0, 1, 0)
+	treeContainer.ScrollingEnabled = true
 
 	-- Get research data (contains ItemsCollected table)
 	researchData = RepStorage.Events.GetResearchData:InvokeServer()
