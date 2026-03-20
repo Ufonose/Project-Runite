@@ -8,6 +8,9 @@ local researchGui = script.Parent
 local SoundManager = require(RepStorage.Modules.SoundManager)
 local UserInputService = game:GetService("UserInputService")
 local MarketplaceService = game:GetService("MarketplaceService")
+local ContextActionService = game:GetService("ContextActionService")
+local PlayerModule = require(player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"))
+local Controls = PlayerModule:GetControls()
 
 -- Check if player is on mobile device
 local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
@@ -18,6 +21,11 @@ local CARD_HEIGHT = 220
 local HORIZONTAL_SPACING = 80
 local VERTICAL_SPACING = 50
 local SCALE_FACTOR = 1
+local zoomLevel = 1.0
+local MIN_ZOOM = 0.8
+local MAX_ZOOM = 1.5
+local ZOOM_STEP = 0.1
+local baseCanvasSize = Vector2.new(2000, 2000)
 
 -- View state tracking
 local currentAge = 1
@@ -403,6 +411,7 @@ treeContainer.BorderSizePixel = 0
 treeContainer.ScrollBarThickness = 5  -- Will be updated dynamically
 treeContainer.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 105)
 treeContainer.CanvasSize = UDim2.new(0, 2000, 0, 2000)
+treeContainer.ScrollingEnabled = false
 treeContainer.ZIndex = 7
 treeContainer.Parent = mainFrame
 
@@ -410,47 +419,6 @@ local treeCorner = Instance.new("UICorner")
 treeCorner.CornerRadius = UDim.new(0, 12)
 treeCorner.Parent = treeContainer
 
--- Mouse drag panning for desktop (add after treeStroke)
-local dragging = false
-local dragStart = nil
-local startCanvasPos = nil
-local dragConnection = nil
-
-treeContainer.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		dragStart = input.Position
-		startCanvasPos = treeContainer.CanvasPosition
-
-		-- Connect to input changed to track mouse movement
-		if dragConnection then dragConnection:Disconnect() end
-		dragConnection = UserInputService.InputChanged:Connect(function(inputChanged)
-			if inputChanged.UserInputType == Enum.UserInputType.MouseMovement and dragging then
-				local delta = dragStart - inputChanged.Position
-
-				-- Calculate max scroll values (ensure they're not negative)
-				local maxScrollX = math.max(0, treeContainer.CanvasSize.X.Offset - treeContainer.AbsoluteSize.X)
-				local maxScrollY = math.max(0, treeContainer.CanvasSize.Y.Offset - treeContainer.AbsoluteSize.Y)
-
-				local newCanvasPos = Vector2.new(
-					math.clamp(startCanvasPos.X + delta.X, 0, maxScrollX),
-					math.clamp(startCanvasPos.Y + delta.Y, 0, maxScrollY)
-				)
-				treeContainer.CanvasPosition = newCanvasPos
-			end
-		end)
-	end
-end)
-
-treeContainer.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = false
-		if dragConnection then
-			dragConnection:Disconnect()
-			dragConnection = nil
-		end
-	end
-end)
 
 -- Tree container stroke
 local treeStroke = Instance.new("UIStroke")
@@ -509,13 +477,172 @@ updateMainFrameSize()
 -- Update when screen size changes (device rotation, window resize)
 workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateMainFrameSize)
 
+-- Zoom wrapper
+local treeWrapper = Instance.new("Frame")
+treeWrapper.Name = "TreeWrapper"
+treeWrapper.Size = UDim2.new(0, 2000, 0, 2000)
+treeWrapper.BackgroundTransparency = 1
+treeWrapper.ZIndex = 1
+treeWrapper.Parent = treeContainer
+
+local treeScale = Instance.new("UIScale")
+treeScale.Scale = 1
+treeScale.Parent = treeWrapper
+
+-- Drag panning (desktop + mobile)
+local dragging = false
+local dragStart = nil
+local startCanvasPos = nil
+local dragConnection = nil
+
+-- Pinch zoom (mobile)
+local touchPoints = {}
+local pinchActive = false
+local pinchStartDist = 0
+local pinchStartZoom = 1
+
+local function resetTouchState()
+	touchPoints = {}
+	pinchActive = false
+	pinchStartDist = 0
+	dragging = false
+	dragStart = nil
+	startCanvasPos = nil
+	if dragConnection then
+		dragConnection:Disconnect()
+		dragConnection = nil
+	end
+end
+
+-- Desktop drag (mouse)
+treeContainer.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startCanvasPos = treeContainer.CanvasPosition
+		if dragConnection then dragConnection:Disconnect() end
+		dragConnection = UserInputService.InputChanged:Connect(function(inputChanged)
+			if inputChanged.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+				local delta = dragStart - inputChanged.Position
+				local maxScrollX = math.max(0, treeContainer.CanvasSize.X.Offset - treeContainer.AbsoluteSize.X)
+				local maxScrollY = math.max(0, treeContainer.CanvasSize.Y.Offset - treeContainer.AbsoluteSize.Y)
+				treeContainer.CanvasPosition = Vector2.new(
+					math.clamp(startCanvasPos.X + delta.X, 0, maxScrollX),
+					math.clamp(startCanvasPos.Y + delta.Y, 0, maxScrollY)
+				)
+			end
+		end)
+	end
+end)
+
+treeContainer.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+		if dragConnection then
+			dragConnection:Disconnect()
+			dragConnection = nil
+		end
+	end
+end)
+
+-- Mouse wheel zoom (desktop)
+treeContainer.InputChanged:Connect(function(input)
+	if input.UserInputType ~= Enum.UserInputType.MouseWheel then return end
+	if not mainFrame.Visible or currentView ~= "objectives" then return end
+	local prev = zoomLevel
+	zoomLevel = math.clamp(zoomLevel + input.Position.Z * ZOOM_STEP, MIN_ZOOM, MAX_ZOOM)
+	if zoomLevel == prev then return end
+	local mousePos = UserInputService:GetMouseLocation()
+	local relativePos = mousePos - treeContainer.AbsolutePosition
+	local canvasPoint = (treeContainer.CanvasPosition + relativePos) / prev
+	treeScale.Scale = zoomLevel
+	treeContainer.CanvasSize = UDim2.new(0, baseCanvasSize.X * zoomLevel, 0, baseCanvasSize.Y * zoomLevel)
+	local newCanvasX = math.clamp(canvasPoint.X * zoomLevel - relativePos.X, 0, math.max(0, baseCanvasSize.X * zoomLevel - treeContainer.AbsoluteSize.X))
+	local newCanvasY = math.clamp(canvasPoint.Y * zoomLevel - relativePos.Y, 0, math.max(0, baseCanvasSize.Y * zoomLevel - treeContainer.AbsoluteSize.Y))
+	treeContainer.CanvasPosition = Vector2.new(newCanvasX, newCanvasY)
+end)
+
+
+UserInputService.InputBegan:Connect(function(input)
+	if not mainFrame.Visible or currentView ~= "objectives" then return end
+	if input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+	touchPoints[input] = input.Position
+
+	local count = 0
+	for _ in pairs(touchPoints) do count = count + 1 end
+
+	if count == 1 then
+		dragging = true
+		dragStart = input.Position
+		startCanvasPos = treeContainer.CanvasPosition
+		pinchActive = false
+	elseif count == 2 then
+		dragging = false
+		pinchActive = true
+		local positions = {}
+		for _, pos in pairs(touchPoints) do table.insert(positions, pos) end
+		pinchStartDist = (positions[1] - positions[2]).Magnitude
+		pinchStartZoom = zoomLevel
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if not mainFrame.Visible or currentView ~= "objectives" then return end
+	if input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+	touchPoints[input] = input.Position
+
+	local count = 0
+	for _ in pairs(touchPoints) do count = count + 1 end
+
+	if count >= 2 then
+		local positions = {}
+		for _, pos in pairs(touchPoints) do table.insert(positions, pos) end
+
+		if not pinchActive then
+			pinchActive = true
+			pinchStartDist = (positions[1] - positions[2]).Magnitude
+			pinchStartZoom = zoomLevel
+		else
+			local dist = (positions[1] - positions[2]).Magnitude
+			if pinchStartDist > 0 then
+				local newZoom = math.clamp(pinchStartZoom * (dist / pinchStartDist), MIN_ZOOM, MAX_ZOOM)
+				if newZoom ~= zoomLevel then
+					zoomLevel = newZoom
+					treeScale.Scale = zoomLevel
+					treeContainer.CanvasSize = UDim2.new(0, baseCanvasSize.X * zoomLevel, 0, baseCanvasSize.Y * zoomLevel)
+				end
+			end
+		end
+	elseif count == 1 and dragging and dragStart and not pinchActive then
+		local delta = dragStart - input.Position
+		local maxScrollX = math.max(0, treeContainer.CanvasSize.X.Offset - treeContainer.AbsoluteSize.X)
+		local maxScrollY = math.max(0, treeContainer.CanvasSize.Y.Offset - treeContainer.AbsoluteSize.Y)
+		treeContainer.CanvasPosition = Vector2.new(
+			math.clamp(startCanvasPos.X + delta.X, 0, maxScrollX),
+			math.clamp(startCanvasPos.Y + delta.Y, 0, maxScrollY)
+		)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType ~= Enum.UserInputType.Touch then return end
+	touchPoints[input] = nil
+	local count = 0
+	for _ in pairs(touchPoints) do count = count + 1 end
+	if count < 2 then pinchActive = false end
+	if count == 0 then resetTouchState() end
+end)
+
+
 -- Connection lines frame (behind cards)
 local connectionsFrame = Instance.new("Frame")
 connectionsFrame.Name = "Connections"
 connectionsFrame.Size = UDim2.new(1, 0, 1, 0)
 connectionsFrame.BackgroundTransparency = 1
 connectionsFrame.ZIndex = 1
-connectionsFrame.Parent = treeContainer
+connectionsFrame.Parent = treeWrapper
 
 -- Cards frame (above lines)
 local cardsFrame = Instance.new("Frame")
@@ -523,7 +650,7 @@ cardsFrame.Name = "Cards"
 cardsFrame.Size = UDim2.new(1, 0, 1, 0)
 cardsFrame.BackgroundTransparency = 1
 cardsFrame.ZIndex = 2
-cardsFrame.Parent = treeContainer
+cardsFrame.Parent = treeWrapper
 
 -- Function to draw connection line between two objectives
 local function drawConnection(fromPos, toPos, isCompleted)
@@ -1226,7 +1353,10 @@ function refreshTree()
 	end
 
 	-- Update canvas size
-	treeContainer.CanvasSize = UDim2.new(0, maxX + 50, 0, maxY + 50)
+	baseCanvasSize = Vector2.new(maxX + 50, maxY + 50)
+	treeWrapper.Size = UDim2.new(0, baseCanvasSize.X, 0, baseCanvasSize.Y)
+	treeScale.Scale = zoomLevel
+	treeContainer.CanvasSize = UDim2.new(0, baseCanvasSize.X * zoomLevel, 0, baseCanvasSize.Y * zoomLevel)
 end
 
 -- Function to display statistics (INITIAL BUILD ONLY)
@@ -1692,16 +1822,22 @@ menuObject.Parent = researchGui
 
 -- Handle menu visibility
 menuObject.Changed:Connect(function()
-	--print("ResearchGui MenuObject changed to:", menuObject.Value)
 	mainFrame.Visible = menuObject.Value
 	if mainFrame.Visible then
 		SoundManager.MenuOpen()
 		updateScaleFactor()
 		refreshAgeTabsAndTree()
 		checkAutoResearchOwnership()
+		Controls:Disable()
+		ContextActionService:BindAction("ResearchGuiInputSink", function()
+			return Enum.ContextActionResult.Sink
+		end, false, Enum.UserInputType.MouseWheel, Enum.UserInputType.Touch)
+	else
+		resetTouchState()
+		Controls:Enable()
+		ContextActionService:UnbindAction("ResearchGuiInputSink")
 	end
 end)
-
 -- Initially hide
 mainFrame.Visible = false
 
